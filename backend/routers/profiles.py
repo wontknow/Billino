@@ -16,9 +16,11 @@ def create_profile(profile: Profile, session: Session = Depends(get_session)):
     session.refresh(profile)
     return profile
 
+
 @router.get("/", response_model=list[Profile])
 def list_profiles(session: Session = Depends(get_session)):
     return session.exec(select(Profile)).all()
+
 
 @router.get("/{profile_id}", response_model=Profile)
 def get_profile(profile_id: int, session: Session = Depends(get_session)):
@@ -26,6 +28,7 @@ def get_profile(profile_id: int, session: Session = Depends(get_session)):
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
     return profile
+
 
 @router.put("/{profile_id}", response_model=Profile)
 def update_profile(
@@ -44,6 +47,7 @@ def update_profile(
     session.commit()
     session.refresh(profile)
     return profile
+
 
 @router.delete("/{profile_id}", status_code=204)
 def delete_profile(profile_id: int, session: Session = Depends(get_session)):
