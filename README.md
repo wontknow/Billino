@@ -206,6 +206,62 @@ jobs:
 
 ---
 
+## 🗄️ Datenbankschema (Stand: Profile & Invoices)
+
+Das Backend nutzt **SQLite** mit [SQLModel](https://sqlmodel.tiangolo.com/).  
+Aktuell sind die folgenden Tabellen und Relationen definiert:
+
+## 🗄️ Datenbankschema (Stand: Profile & Invoices)
+
+Das Backend nutzt **SQLite** mit [SQLModel](https://sqlmodel.tiangolo.com/).  
+Aktuell sind die folgenden Tabellen und Relationen definiert:
+
+```mermaid
+erDiagram
+    CUSTOMER ||--o{ INVOICE : "hat"
+    PROFILE  ||--o{ INVOICE : "erstellt"
+    INVOICE  ||--o{ INVOICE_ITEM : "enthält"
+
+    CUSTOMER {
+        int id PK
+        string name
+        string address "nullable"
+    }
+
+    PROFILE {
+        int id PK
+        string name
+        string address
+        string bank_data "nullable"
+        string tax_number "nullable"
+    }
+
+    INVOICE {
+        int id PK
+        string number
+        string date
+        int customer_id FK
+        int profile_id FK
+        float total_amount
+    }
+
+    INVOICE_ITEM {
+        int id PK
+        int invoice_id FK
+        int quantity
+        string description
+        float price
+    }
+  ```
+  ### Beschreibung 
+
+  - Customer: Stammdaten der Kunden (1:n zu Invoices)
+  - Profile: Absender-Profile, z. B. verschiedene Geschäftseinheiten (1:n zu Invoices)
+  - Invoice: Rechnung mit eindeutiger Nummer, Datum und Verknüpfung zu Customer und Profile
+  - InvoiceItem: Positionen einer Rechnung (z. B. Dienstleistungen, Produkte)
+
+---
+
 ## 📚 Referenzen (Docs)
 - FastAPI: https://fastapi.tiangolo.com  
 - SQLModel: https://sqlmodel.tiangolo.com  
