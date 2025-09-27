@@ -1,6 +1,21 @@
-# 💇 Friseur Rechnungen – Offline Tool
+# ✂️ Invoice Tool für Kleinunternehmer 
 
-[![CI](https://github.com/wontknow/Billino/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/wontknow/Billino/actions/workflows/ci.yml)
+[![Build Status](https://github.com/wontknow/Billino/actions/workflows/ci.yml/badge.svg)](https://github.com/wontknow/Billino/actions)
+[![Coverage Status](https://img.shields.io/codecov/c/github/wontknow/Billino?logo=codecov)](https://codecov.io/gh/wontknow/Billino)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![GitHub release](https://img.shields.io/github/v/release/wontknow/Billino?logo=github)](https://github.com/wontknow/Billino/releases)
+[![Last Commit](https://img.shields.io/github/last-commit/wontknow/Billino?logo=git)](https://github.com/wontknow/Billino/commits/main)
+
+<!-- Nice to have -->
+[![Docs](https://img.shields.io/badge/docs-passing-success)](https://github.com/wontknow/Billino/wiki)
+[![Security](https://img.shields.io/snyk/vulnerabilities/github/wontknow/Billino?logo=snyk)](https://snyk.io/test/github/wontknow/Billino)
+
+<!-- Später aktivieren -->
+<!-- [![Uptime](https://img.shields.io/uptimerobot/status/m123456789-abcdef123456?logo=uptime)](https://stats.uptimerobot.com/xxxxxxx) -->
+<!-- [![Downloads](https://img.shields.io/github/downloads/wontknow/Billino/total?logo=github)](https://github.com/wontknow/Billino/releases) -->
+
+
+
 
 Ein **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trennung – entwickelt für den Einsatz ohne Cloud, aber mit professioneller Architektur und Möglichkeit zur späteren Erweiterung (Hosting, Multi-User, Cloud-Sync).
 
