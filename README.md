@@ -1,19 +1,32 @@
 # ✂️ Invoice Tool für Kleinunternehmer 
 
+<!-- Core badges -->
 [![Build Status](https://github.com/wontknow/Billino/actions/workflows/ci.yml/badge.svg)](https://github.com/wontknow/Billino/actions)
 [![Coverage Status](https://img.shields.io/codecov/c/github/wontknow/Billino?logo=codecov)](https://codecov.io/gh/wontknow/Billino)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![GitHub release](https://img.shields.io/github/v/release/wontknow/Billino?logo=github)](https://github.com/wontknow/Billino/releases)
 [![Last Commit](https://img.shields.io/github/last-commit/wontknow/Billino?logo=git)](https://github.com/wontknow/Billino/commits/main)
 
-<!-- Nice to have -->
+<!-- Docs & Tech -->
 [![Docs](https://img.shields.io/badge/docs-passing-success)](https://github.com/wontknow/Billino/wiki)
-[![Security](https://img.shields.io/snyk/vulnerabilities/github/wontknow/Billino?logo=snyk)](https://snyk.io/test/github/wontknow/Billino)
+![Tech](https://img.shields.io/badge/stack-FastAPI%20|%20Next.js%20|%20Tauri-orange)
 
-<!-- Später aktivieren -->
+<!-- Repo activity -->
+![GitHub issues](https://img.shields.io/github/issues/wontknow/Billino)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/wontknow/Billino)
+![GitHub contributors](https://img.shields.io/github/contributors/wontknow/Billino)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/wontknow/Billino)
+
+<!-- Optional (commented) -->
+<!-- ![GitHub repo size](https://img.shields.io/github/repo-size/wontknow/Billino) -->
+<!-- ![Lines of code](https://img.shields.io/tokei/lines/github/wontknow/Billino) -->
+<!-- ![GitHub discussions](https://img.shields.io/github/discussions/wontknow/Billino) -->
+<!-- ![GitHub Wiki](https://img.shields.io/badge/wiki-available-brightgreen?logo=github) -->
+<!-- ![Platform](https://img.shields.io/badge/platform-Windows%20|%20Linux%20|%20macOS-blue) -->
+
+<!-- Future (commented) -->
 <!-- [![Uptime](https://img.shields.io/uptimerobot/status/m123456789-abcdef123456?logo=uptime)](https://stats.uptimerobot.com/xxxxxxx) -->
 <!-- [![Downloads](https://img.shields.io/github/downloads/wontknow/Billino/total?logo=github)](https://github.com/wontknow/Billino/releases) -->
-
 
 
 
