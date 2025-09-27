@@ -1,0 +1,23 @@
+# Node
+node_modules
+.next
+out
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+env/
+*.db
+
+# Tauri / Rust
+target/
+
+# OS/Editor
+.DS_Store
+*.log
+
+# Builds
+dist/
+invoices/
