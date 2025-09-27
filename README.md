@@ -1,6 +1,6 @@
 # 💇 Friseur Rechnungen – Offline Tool
 
-[![Build Status](https://github.com/DEIN_GITHUB_USER/friseur-rechnungen/actions/workflows/ci.yml/badge.svg)](https://github.com/DEIN_GITHUB_USER/friseur-rechnungen/actions)
+[![CI](https://github.com/wontknow/Billino/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/wontknow/Billino/actions/workflows/ci.yml)
 
 Ein **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trennung – entwickelt für den Einsatz ohne Cloud, aber mit professioneller Architektur und Möglichkeit zur späteren Erweiterung (Hosting, Multi-User, Cloud-Sync).
 
