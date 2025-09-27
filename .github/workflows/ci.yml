@@ -18,4 +18,9 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install -r requirements.txt
-      - run: pytest --cov=.
+      - name: Run Lint (black & isort)
+        run: |
+          black --check .
+          isort --check-only .
+      - name: Run Tests
+        run: pytest --cov=.

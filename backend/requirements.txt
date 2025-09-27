@@ -3,3 +3,5 @@ uvicorn
 pytest
 httpx
 pytest-cov
+black 
+isort
