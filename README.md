@@ -175,8 +175,8 @@ jobs:
 
 ## 📑 Projektphasen (Roadmap)
 
-- [ ] Phase 0 – Repo-Bootstrap (Ordner, CI/CD, Readme, Templates)
-- [ ] Phase 1 – Backend-Skeleton (FastAPI Healthcheck)
+- [x] Phase 0 – Repo-Bootstrap (Ordner, CI/CD, Readme, Templates)
+- [x] Phase 1 – Backend-Skeleton (FastAPI Healthcheck)
 - [ ] Phase 2 – DB-Anbindung (SQLite via SQLModel)
 - [ ] Phase 3 – Models + CRUD (Kunden, Profile)
 - [ ] Phase 4 – Invoice-Core (Rechnung, Nummernlogik)
