@@ -1,10 +1,10 @@
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import SQLModel, create_engine, Session
 from sqlalchemy.pool import StaticPool
+from sqlmodel import Session, SQLModel, create_engine
 
-from main import app
 from database import get_session, init_db
+from main import app
 
 # Einmalige Test-DB im Speicher (mit StaticPool für persistente Verbindung)
 TEST_DB_URL = "sqlite:///:memory:"
@@ -15,7 +15,7 @@ def engine():
     engine = create_engine(
         TEST_DB_URL,
         connect_args={"check_same_thread": False},
-        poolclass=StaticPool,   # <--- hält dieselbe DB für alle Connections
+        poolclass=StaticPool,  # <--- hält dieselbe DB für alle Connections
     )
     init_db(engine)  # erstellt alle Tabellen aus models
     return engine
@@ -30,6 +30,7 @@ def session(engine):
 @pytest.fixture
 def client(engine):
     """FastAPI TestClient mit Session-Override."""
+
     def get_session_override():
         with Session(engine) as session:
             yield session
@@ -47,7 +48,7 @@ def test_models_registered(engine):
 def test_create_customer_with_address(client):
     response = client.post(
         "/customers",
-        json={"name": "Anna Müller", "address": "Hauptstr. 1, 12345 Berlin"}
+        json={"name": "Anna Müller", "address": "Hauptstr. 1, 12345 Berlin"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -65,7 +66,6 @@ def test_create_customer_without_address(client):
     assert data["address"] is None
 
 
-
 def test_list_customers(client):
     client.post("/customers", json={"name": "Peter Schmidt", "address": "Nebenstr. 2"})
     resp = client.get("/customers")
@@ -76,11 +76,16 @@ def test_list_customers(client):
 
 def test_update_customer(client):
     # Erst anlegen
-    resp = client.post("/customers", json={"name": "Max Mustermann", "address": "Altstr. 1"})
+    resp = client.post(
+        "/customers", json={"name": "Max Mustermann", "address": "Altstr. 1"}
+    )
     cust = resp.json()
 
     # Update-Request
-    resp2 = client.put(f"/customers/{cust['id']}", json={"name": "Maxi Mustermann", "address": "Neu Str. 99"})
+    resp2 = client.put(
+        f"/customers/{cust['id']}",
+        json={"name": "Maxi Mustermann", "address": "Neu Str. 99"},
+    )
     assert resp2.status_code == 200
     updated = resp2.json()
     assert updated["name"] == "Maxi Mustermann"
@@ -94,13 +99,15 @@ def test_update_customer(client):
 
 def test_delete_customer(client):
     # Erst anlegen
-    resp = client.post("/customers", json={"name": "Lösch Mich", "address": "Testweg 5"})
+    resp = client.post(
+        "/customers", json={"name": "Lösch Mich", "address": "Testweg 5"}
+    )
     cust = resp.json()
 
     # Delete-Request
     resp2 = client.delete(f"/customers/{cust['id']}")
     assert resp2.status_code == 204
-    assert resp2.content == b''
+    assert resp2.content == b""
 
     # Prüfen, dass Kunde nicht mehr in Liste ist
     resp3 = client.get("/customers")

@@ -1,9 +1,10 @@
 # backend/main.py
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from database import init_db
-from routers import health, customers
+from routers import customers, health
 
 
 @asynccontextmanager
@@ -24,4 +25,3 @@ app = FastAPI(
 
 app.include_router(health.router)
 app.include_router(customers.router)
-

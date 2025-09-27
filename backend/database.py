@@ -4,9 +4,7 @@ import os
 from pathlib import Path
 from typing import Iterator, Optional
 
-from sqlmodel import SQLModel, create_engine, Session
-
-
+from sqlmodel import Session, SQLModel, create_engine
 
 _DB_FILE = Path(__file__).resolve().parent / "invoices.db"
 
@@ -42,6 +40,7 @@ def init_db(engine=None) -> None:
     if engine is None:
         engine = get_engine()
     import models
+
     SQLModel.metadata.create_all(engine)
 
 

@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
-from fastapi import HTTPException
 
 from database import get_session
 from models import Customer
+
 router = APIRouter(prefix="/customers", tags=["customers"])
 
 
@@ -22,8 +22,13 @@ def create_customer(customer: Customer, session: Session = Depends(get_session))
 def list_customers(session: Session = Depends(get_session)):
     return session.exec(select(Customer)).all()
 
+
 @router.put("/{customer_id}", response_model=Customer)
-def update_customer(customer_id: int, updated_customer: Customer, session: Session = Depends(get_session)):
+def update_customer(
+    customer_id: int,
+    updated_customer: Customer,
+    session: Session = Depends(get_session),
+):
     customer = session.get(Customer, customer_id)
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -33,6 +38,7 @@ def update_customer(customer_id: int, updated_customer: Customer, session: Sessi
     session.commit()
     session.refresh(customer)
     return customer
+
 
 @router.delete("/{customer_id}", status_code=204)
 def delete_customer(customer_id: int, session: Session = Depends(get_session)):
