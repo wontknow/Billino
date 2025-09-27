@@ -2,7 +2,7 @@
 import pytest
 from sqlalchemy import event
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import SQLModel, create_engine, Session, select
+from sqlmodel import Session, SQLModel, create_engine, select
 
 from database import init_db
 
@@ -51,9 +51,9 @@ def test_insert_with_foreign_keys(session: Session):
     """
     # Lazy-Import, damit Tests schon vor Implementierung geladen werden
     from models.customer import Customer
-    from models.profile import Profile
     from models.invoice import Invoice
     from models.invoice_item import Invoice_Item
+    from models.profile import Profile
 
     cust = Customer(name="Max Mustermann")
     prof = Profile(
@@ -94,7 +94,9 @@ def test_insert_with_foreign_keys(session: Session):
     assert loaded_inv.customer_id == cust.id
     assert loaded_inv.profile_id == prof.id
 
-    items = session.exec(select(Invoice_Item).where(Invoice_Item.invoice_id == inv.id)).all()
+    items = session.exec(
+        select(Invoice_Item).where(Invoice_Item.invoice_id == inv.id)
+    ).all()
     assert len(items) == 1
     assert items[0].description == "Haarschnitt Damen"
 
@@ -111,7 +113,7 @@ def test_foreign_key_enforced(session: Session):
         number="25|99999",
         date="2025-09-01",
         customer_id=999999,  # existiert nicht
-        profile_id=999999,   # existiert nicht
+        profile_id=999999,  # existiert nicht
         total_amount=10.0,
     )
     session.add(bad_invoice)
