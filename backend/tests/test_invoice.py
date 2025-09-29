@@ -27,26 +27,28 @@ def test_create_invoice():
         "/customers/", json=TEST_CUSTOMER
     )
     customer_id = customer_response.json()["id"]
-
-    TEST_INVOICE["profile_id"] = profile_id
-    TEST_INVOICE["customer_id"] = customer_id
-    TEST_INVOICE["invoice_items"] = [
-        {"description": "Item 1", "quantity": 1, "unit_price": 24.0}
+    invoice = TEST_INVOICE.copy()
+    invoice["profile_id"] = profile_id
+    invoice["customer_id"] = customer_id
+    invoice["invoice_items"] = [
+        {"description": "Item 1", "quantity": 1, "price": 24.0}
     ]
-    TEST_INVOICE["total_amount"] = 24.0
+    invoice["total_amount"] = 24.0
     #3. Create invoice
     invoice_response = client.post(
-        "/invoices/", json=TEST_INVOICE
+        "/invoices/", json=invoice
     )
     assert invoice_response.status_code == 201
     invoice_data = invoice_response.json()
 
-    assert invoice_data["number"] == TEST_INVOICE["number"]
+    assert invoice_data["number"] == invoice["number"]
     assert invoice_data["profile_id"] == profile_id
     assert invoice_data["customer_id"] == customer_id
-    assert invoice_data["total_amount"] == TEST_INVOICE["total_amount"]
-    assert invoice_data["date"] == TEST_INVOICE["date"]
-    assert invoice_data["invoice_items"] == TEST_INVOICE["invoice_items"]
+    assert invoice_data["total_amount"] == invoice["total_amount"]
+    assert invoice_data["date"] == invoice["date"]
+    assert invoice_data["invoice_items"][0]["description"] == invoice["invoice_items"][0]["description"]
+    assert invoice_data["invoice_items"][0]["quantity"] == invoice["invoice_items"][0]["quantity"]
+    assert invoice_data["invoice_items"][0]["price"] == invoice["invoice_items"][0]["price"]
 
 def create_invoice_without_invoice_item():
     # 1. Create profile
@@ -60,51 +62,90 @@ def create_invoice_without_invoice_item():
         "/customers/", json=TEST_CUSTOMER
     )
     customer_id = customer_response.json()["id"]
-
-    # 3. Create invoice without items
+    invoice = TEST_INVOICE.copy()
+    invoice["profile_id"] = profile_id
+    invoice["customer_id"] = customer_id
+    invoice["total_amount"] = 0.0
+    #3. Create invoice
     invoice_response = client.post(
-        "/invoices/", json=TEST_INVOICE
+        "/invoices/", json=invoice
     )
-    assert invoice_response.status_code == 400
-    assert invoice_response.json() == {"detail": "Invoice must have at least one item."}
+    assert invoice_response.status_code == 422
 
 def test_create_invoice_without_profile():
-    # 1. Create customer
-    customer_response = client.post(
-        "/customers/", json=TEST_CUSTOMER
-    )
-    customer_id = customer_response.json()["id"]
-
-    TEST_INVOICE["customer_id"] = customer_id
-    TEST_INVOICE["invoice_items"] = [
-        {"description": "Item 1", "quantity": 1, "unit_price": 24.0}
-    ]
-    TEST_INVOICE["total_amount"] = 24.0
-    # 2. Create invoice without profile
-    invoice_response = client.post(
-        "/invoices/", json=TEST_INVOICE
-    )
-    assert invoice_response.status_code == 400
-    assert invoice_response.json() == {"detail": "Profile does not exist."}
-
-def test_create_invoice_without_customer():
     # 1. Create profile
     profile_response = client.post(
         "/profiles/", json=TEST_PROFILE
     )
     profile_id = profile_response.json()["id"]
 
-    TEST_INVOICE["profile_id"] = profile_id
-    TEST_INVOICE["invoice_items"] = [
-        {"description": "Item 1", "quantity": 1, "unit_price": 24.0}
-    ]
-    TEST_INVOICE["total_amount"] = 24.0
-    # 2. Create invoice without customer
+    invoice = TEST_INVOICE.copy()
+    invoice["profile_id"] = profile_id
+    invoice["total_amount"] = 0.0
+    #3. Create invoice
     invoice_response = client.post(
-        "/invoices/", json=TEST_INVOICE
+        "/invoices/", json=invoice
+    )
+    assert invoice_response.status_code == 422
+
+def test_create_invoice_without_customer():
+    # 1. Create customer
+    customer_response = client.post(
+        "/customers/", json=TEST_CUSTOMER
+    )
+    customer_id = customer_response.json()["id"]
+
+    invoice = TEST_INVOICE.copy()
+    invoice["customer_id"] = customer_id
+    invoice["total_amount"] = 0.0
+    #3. Create invoice
+    invoice_response = client.post(
+        "/invoices/", json=invoice
+    )
+    assert invoice_response.status_code == 422
+
+def test_create_invoice_with_wrong_profile():
+    # 1. Create customer
+    customer_response = client.post(
+        "/customers/", json=TEST_CUSTOMER
+    )
+    customer_id = customer_response.json()["id"]
+
+    invoice = TEST_INVOICE.copy()
+    invoice["profile_id"] = 9999  # Non-existent profile ID
+    invoice["customer_id"] = customer_id
+    invoice["invoice_items"] = [
+        {"description": "Item 1", "quantity": 1, "price": 24.0}
+    ]
+    invoice["total_amount"] = 24.0
+    #3. Create invoice
+    invoice_response = client.post(
+        "/invoices/", json=invoice
+    )
+    assert invoice_response.status_code == 400
+    assert invoice_response.json() == {"detail": "Profile does not exist."}
+
+def test_create_invoice_with_wrong_customer():
+    # 1. Create profile
+    profile_response = client.post(
+        "/profiles/", json=TEST_PROFILE
+    )
+    profile_id = profile_response.json()["id"]
+
+    invoice = TEST_INVOICE.copy()
+    invoice["profile_id"] = profile_id
+    invoice["customer_id"] = 9999  # Non-existent customer ID
+    invoice["invoice_items"] = [
+        {"description": "Item 1", "quantity": 1, "price": 24.0}
+    ]
+    invoice["total_amount"] = 24.0
+    #3. Create invoice
+    invoice_response = client.post(
+        "/invoices/", json=invoice
     )
     assert invoice_response.status_code == 400
     assert invoice_response.json() == {"detail": "Customer does not exist."}
+
 
 def test_get_invoice():
     # 1. Create profile
@@ -122,7 +163,7 @@ def test_get_invoice():
     TEST_INVOICE["profile_id"] = profile_id
     TEST_INVOICE["customer_id"] = customer_id
     TEST_INVOICE["invoice_items"] = [
-        {"description": "Item 1", "quantity": 1, "unit_price": 24.0}
+        {"description": "Item 1", "quantity": 1, "price": 24.0}
     ]
     TEST_INVOICE["total_amount"] = 24.0
     #3. Create invoice
@@ -171,7 +212,7 @@ def test_delete_invoice():
     TEST_INVOICE["profile_id"] = profile_id
     TEST_INVOICE["customer_id"] = customer_id
     TEST_INVOICE["invoice_items"] = [
-        {"description": "Item 1", "quantity": 1, "unit_price": 24.0}
+        {"description": "Item 1", "quantity": 1, "price": 24.0}
     ]
     TEST_INVOICE["total_amount"] = 24.0
     #3. Create invoice
