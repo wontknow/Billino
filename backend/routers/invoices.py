@@ -3,13 +3,13 @@ from sqlmodel import Session, select
 
 from database import get_session
 from models import (
+    Customer,
     Invoice,
     InvoiceCreate,
     InvoiceItem,
-    InvoiceRead,
     InvoiceItemRead,
+    InvoiceRead,
     Profile,
-    Customer,
 )
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
@@ -19,7 +19,9 @@ router = APIRouter(prefix="/invoices", tags=["invoices"])
 def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_session)):
     # Muss mindestens ein Item enthalten
     if not invoice.invoice_items:
-        raise HTTPException(status_code=400, detail="Invoice must have at least one item.")
+        raise HTTPException(
+            status_code=400, detail="Invoice must have at least one item."
+        )
 
     # Profile und Customer validieren
     if not session.get(Profile, invoice.profile_id):

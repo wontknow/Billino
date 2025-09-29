@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from database import init_db
-from routers import customers, health, profiles, invoices
+from routers import customers, health, invoices, profiles
 
 
 @asynccontextmanager

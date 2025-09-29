@@ -1,10 +1,13 @@
 from typing import List
+
 from sqlmodel import SQLModel
+
 
 class InvoiceItemCreate(SQLModel):
     quantity: int
     description: str
     price: float
+
 
 class InvoiceCreate(SQLModel):
     number: str
