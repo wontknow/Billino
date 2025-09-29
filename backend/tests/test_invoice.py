@@ -1,0 +1,197 @@
+from fastapi.testclient import TestClient
+
+from main import app
+
+client = TestClient(app)
+
+TEST_PROFILE = {"name": "Invoice Profile", "address": "123 Invoice Street"}
+TEST_CUSTOMER = {"name": "Invoice Customer"}
+TEST_INVOICE = {
+    "number": "25|113",
+    "date": "2025-09-10",
+    "profile_id": None,
+    "customer_id": None,
+    "invoice_items": [],
+    "total_amount": 0.0,
+}
+
+def test_create_invoice():
+    # 1. Create profile
+    profile_response = client.post(
+        "/profiles/", json=TEST_PROFILE
+    )
+    profile_id = profile_response.json()["id"]
+
+    #2. Create customer
+    customer_response = client.post(
+        "/customers/", json=TEST_CUSTOMER
+    )
+    customer_id = customer_response.json()["id"]
+
+    TEST_INVOICE["profile_id"] = profile_id
+    TEST_INVOICE["customer_id"] = customer_id
+    TEST_INVOICE["invoice_items"] = [
+        {"description": "Item 1", "quantity": 1, "unit_price": 24.0}
+    ]
+    TEST_INVOICE["total_amount"] = 24.0
+    #3. Create invoice
+    invoice_response = client.post(
+        "/invoices/", json=TEST_INVOICE
+    )
+    assert invoice_response.status_code == 201
+    invoice_data = invoice_response.json()
+
+    assert invoice_data["number"] == TEST_INVOICE["number"]
+    assert invoice_data["profile_id"] == profile_id
+    assert invoice_data["customer_id"] == customer_id
+    assert invoice_data["total_amount"] == TEST_INVOICE["total_amount"]
+    assert invoice_data["date"] == TEST_INVOICE["date"]
+    assert invoice_data["invoice_items"] == TEST_INVOICE["invoice_items"]
+
+def create_invoice_without_invoice_item():
+    # 1. Create profile
+    profile_response = client.post(
+        "/profiles/", json=TEST_PROFILE
+    )
+    profile_id = profile_response.json()["id"]
+
+    # 2. Create customer
+    customer_response = client.post(
+        "/customers/", json=TEST_CUSTOMER
+    )
+    customer_id = customer_response.json()["id"]
+
+    # 3. Create invoice without items
+    invoice_response = client.post(
+        "/invoices/", json=TEST_INVOICE
+    )
+    assert invoice_response.status_code == 400
+    assert invoice_response.json() == {"detail": "Invoice must have at least one item."}
+
+def test_create_invoice_without_profile():
+    # 1. Create customer
+    customer_response = client.post(
+        "/customers/", json=TEST_CUSTOMER
+    )
+    customer_id = customer_response.json()["id"]
+
+    TEST_INVOICE["customer_id"] = customer_id
+    TEST_INVOICE["invoice_items"] = [
+        {"description": "Item 1", "quantity": 1, "unit_price": 24.0}
+    ]
+    TEST_INVOICE["total_amount"] = 24.0
+    # 2. Create invoice without profile
+    invoice_response = client.post(
+        "/invoices/", json=TEST_INVOICE
+    )
+    assert invoice_response.status_code == 400
+    assert invoice_response.json() == {"detail": "Profile does not exist."}
+
+def test_create_invoice_without_customer():
+    # 1. Create profile
+    profile_response = client.post(
+        "/profiles/", json=TEST_PROFILE
+    )
+    profile_id = profile_response.json()["id"]
+
+    TEST_INVOICE["profile_id"] = profile_id
+    TEST_INVOICE["invoice_items"] = [
+        {"description": "Item 1", "quantity": 1, "unit_price": 24.0}
+    ]
+    TEST_INVOICE["total_amount"] = 24.0
+    # 2. Create invoice without customer
+    invoice_response = client.post(
+        "/invoices/", json=TEST_INVOICE
+    )
+    assert invoice_response.status_code == 400
+    assert invoice_response.json() == {"detail": "Customer does not exist."}
+
+def test_get_invoice():
+    # 1. Create profile
+    profile_response = client.post(
+        "/profiles/", json=TEST_PROFILE
+    )
+    profile_id = profile_response.json()["id"]
+
+    #2. Create customer
+    customer_response = client.post(
+        "/customers/", json=TEST_CUSTOMER
+    )
+    customer_id = customer_response.json()["id"]
+
+    TEST_INVOICE["profile_id"] = profile_id
+    TEST_INVOICE["customer_id"] = customer_id
+    TEST_INVOICE["invoice_items"] = [
+        {"description": "Item 1", "quantity": 1, "unit_price": 24.0}
+    ]
+    TEST_INVOICE["total_amount"] = 24.0
+    #3. Create invoice
+    invoice_response = client.post(
+        "/invoices/", json=TEST_INVOICE
+    )
+    invoice_id = invoice_response.json()["id"]
+
+    #4. Get invoice
+    get_response = client.get(f"/invoices/{invoice_id}")
+    assert get_response.status_code == 200
+    invoice_data = get_response.json()
+
+    assert invoice_data["id"] == invoice_id
+    assert invoice_data["number"] == TEST_INVOICE["number"]
+    assert invoice_data["profile_id"] == profile_id
+    assert invoice_data["customer_id"] == customer_id
+    assert invoice_data["total_amount"] == TEST_INVOICE["total_amount"]
+    assert invoice_data["date"] == TEST_INVOICE["date"]
+    assert invoice_data["invoice_items"] == TEST_INVOICE["invoice_items"]
+
+def test_get_invoice_with_invalid_id():
+    response = client.get("/invoices/9999")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Invoice not found."}
+
+def test_get_invoice_list():
+    response = client.get("/invoices/")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+
+def test_delete_invoice():
+    # 1. Create profile
+    profile_response = client.post(
+        "/profiles/", json=TEST_PROFILE
+    )
+    profile_id = profile_response.json()["id"]
+
+    #2. Create customer
+    customer_response = client.post(
+        "/customers/", json=TEST_CUSTOMER
+    )
+    customer_id = customer_response.json()["id"]
+
+    TEST_INVOICE["profile_id"] = profile_id
+    TEST_INVOICE["customer_id"] = customer_id
+    TEST_INVOICE["invoice_items"] = [
+        {"description": "Item 1", "quantity": 1, "unit_price": 24.0}
+    ]
+    TEST_INVOICE["total_amount"] = 24.0
+    #3. Create invoice
+    invoice_response = client.post(
+        "/invoices/", json=TEST_INVOICE
+    )
+    invoice_id = invoice_response.json()["id"]
+
+    #4. Delete invoice
+    delete_response = client.delete(f"/invoices/{invoice_id}")
+    assert delete_response.status_code == 204
+
+    #5. Verify deletion
+    get_response = client.get(f"/invoices/{invoice_id}")
+    assert get_response.status_code == 404
+    assert get_response.json() == {"detail": "Invoice not found."}
+
+def test_delete_invoice_with_invalid_id():
+    response = client.delete("/invoices/9999")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Invoice not found."}
+
+
