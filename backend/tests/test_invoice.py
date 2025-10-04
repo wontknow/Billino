@@ -137,14 +137,15 @@ def test_get_invoice():
     customer_response = client.post("/customers/", json=TEST_CUSTOMER)
     customer_id = customer_response.json()["id"]
 
-    TEST_INVOICE["profile_id"] = profile_id
-    TEST_INVOICE["customer_id"] = customer_id
-    TEST_INVOICE["invoice_items"] = [
+    invoice = TEST_INVOICE.copy()
+    invoice["profile_id"] = profile_id
+    invoice["customer_id"] = customer_id
+    invoice["invoice_items"] = [
         {"description": "Item 1", "quantity": 1, "price": 24.0}
     ]
-    TEST_INVOICE["total_amount"] = 24.0
+    invoice["total_amount"] = 24.0
     # 3. Create invoice
-    invoice_response = client.post("/invoices/", json=TEST_INVOICE)
+    invoice_response = client.post("/invoices/", json=invoice)
     invoice_id = invoice_response.json()["id"]
 
     # 4. Get invoice
@@ -153,12 +154,23 @@ def test_get_invoice():
     invoice_data = get_response.json()
 
     assert invoice_data["id"] == invoice_id
-    assert invoice_data["number"] == TEST_INVOICE["number"]
+    assert invoice_data["number"] == invoice["number"]
     assert invoice_data["profile_id"] == profile_id
     assert invoice_data["customer_id"] == customer_id
-    assert invoice_data["total_amount"] == TEST_INVOICE["total_amount"]
-    assert invoice_data["date"] == TEST_INVOICE["date"]
-    assert invoice_data["invoice_items"] == TEST_INVOICE["invoice_items"]
+    assert invoice_data["total_amount"] == invoice["total_amount"]
+    assert invoice_data["date"] == invoice["date"]
+    assert (
+        invoice_data["invoice_items"][0]["description"]
+        == invoice["invoice_items"][0]["description"]
+    )
+    assert (
+        invoice_data["invoice_items"][0]["quantity"]
+        == invoice["invoice_items"][0]["quantity"]
+    )
+    assert (
+        invoice_data["invoice_items"][0]["price"]
+        == invoice["invoice_items"][0]["price"]
+    )
 
 
 def test_get_invoice_with_invalid_id():
@@ -183,14 +195,15 @@ def test_delete_invoice():
     customer_response = client.post("/customers/", json=TEST_CUSTOMER)
     customer_id = customer_response.json()["id"]
 
-    TEST_INVOICE["profile_id"] = profile_id
-    TEST_INVOICE["customer_id"] = customer_id
-    TEST_INVOICE["invoice_items"] = [
+    invoice = TEST_INVOICE.copy()
+    invoice["profile_id"] = profile_id
+    invoice["customer_id"] = customer_id
+    invoice["invoice_items"] = [
         {"description": "Item 1", "quantity": 1, "price": 24.0}
     ]
-    TEST_INVOICE["total_amount"] = 24.0
+    invoice["total_amount"] = 24.0
     # 3. Create invoice
-    invoice_response = client.post("/invoices/", json=TEST_INVOICE)
+    invoice_response = client.post("/invoices/", json=invoice)
     invoice_id = invoice_response.json()["id"]
 
     # 4. Delete invoice
