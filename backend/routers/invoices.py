@@ -75,12 +75,15 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
         ],
     )
 
+
 @router.get("/", response_model=list[InvoiceRead])
 def read_invoices(session: Session = Depends(get_session)):
     invoices = session.exec(select(Invoice)).all()
     result = []
     for inv in invoices:
-        items = session.exec(select(InvoiceItem).where(InvoiceItem.invoice_id == inv.id)).all()
+        items = session.exec(
+            select(InvoiceItem).where(InvoiceItem.invoice_id == inv.id)
+        ).all()
         result.append(
             InvoiceRead(
                 id=inv.id,
@@ -103,12 +106,15 @@ def read_invoices(session: Session = Depends(get_session)):
         )
     return result
 
+
 @router.get("/{invoice_id}", response_model=InvoiceRead)
 def read_invoice(invoice_id: int, session: Session = Depends(get_session)):
     invoice = session.get(Invoice, invoice_id)
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found.")
-    items = session.exec(select(InvoiceItem).where(InvoiceItem.invoice_id == invoice.id)).all()
+    items = session.exec(
+        select(InvoiceItem).where(InvoiceItem.invoice_id == invoice.id)
+    ).all()
     return InvoiceRead(
         id=invoice.id,
         number=invoice.number,
@@ -128,13 +134,16 @@ def read_invoice(invoice_id: int, session: Session = Depends(get_session)):
         ],
     )
 
+
 @router.delete("/{invoice_id}", status_code=204)
 def delete_invoice(invoice_id: int, session: Session = Depends(get_session)):
     invoice = session.get(Invoice, invoice_id)
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found.")
     # Zuerst die zugehörigen Items löschen
-    items = session.exec(select(InvoiceItem).where(InvoiceItem.invoice_id == invoice.id)).all()
+    items = session.exec(
+        select(InvoiceItem).where(InvoiceItem.invoice_id == invoice.id)
+    ).all()
     for item in items:
         session.delete(item)
     # Dann die Invoice selbst löschen

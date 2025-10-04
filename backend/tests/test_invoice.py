@@ -140,9 +140,7 @@ def test_get_invoice():
     invoice = TEST_INVOICE.copy()
     invoice["profile_id"] = profile_id
     invoice["customer_id"] = customer_id
-    invoice["invoice_items"] = [
-        {"description": "Item 1", "quantity": 1, "price": 24.0}
-    ]
+    invoice["invoice_items"] = [{"description": "Item 1", "quantity": 1, "price": 24.0}]
     invoice["total_amount"] = 24.0
     # 3. Create invoice
     invoice_response = client.post("/invoices/", json=invoice)
@@ -198,9 +196,7 @@ def test_delete_invoice():
     invoice = TEST_INVOICE.copy()
     invoice["profile_id"] = profile_id
     invoice["customer_id"] = customer_id
-    invoice["invoice_items"] = [
-        {"description": "Item 1", "quantity": 1, "price": 24.0}
-    ]
+    invoice["invoice_items"] = [{"description": "Item 1", "quantity": 1, "price": 24.0}]
     invoice["total_amount"] = 24.0
     # 3. Create invoice
     invoice_response = client.post("/invoices/", json=invoice)
