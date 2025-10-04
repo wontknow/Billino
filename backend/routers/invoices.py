@@ -20,7 +20,7 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
     # Muss mindestens ein Item enthalten
     if not invoice.invoice_items:
         raise HTTPException(
-            status_code=400, detail="Invoice must have at least one item."
+            status_code=422, detail="Invoice must have at least one item."
         )
 
     # Profile und Customer validieren
