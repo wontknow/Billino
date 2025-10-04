@@ -46,13 +46,13 @@ def test_insert_with_foreign_keys(session: Session):
     Happy Path:
     - Customer + Profile anlegen
     - Invoice referenziert beide
-    - Invoice_Item referenziert Invoice
+    - InvoiceItem referenziert Invoice
     - Alles committen und wieder auslesen
     """
     # Lazy-Import, damit Tests schon vor Implementierung geladen werden
     from models.customer import Customer
     from models.invoice import Invoice
-    from models.invoice_item import Invoice_Item
+    from models.invoice_item import InvoiceItem
     from models.profile import Profile
 
     cust = Customer(name="Max Mustermann")
@@ -79,7 +79,7 @@ def test_insert_with_foreign_keys(session: Session):
     session.commit()
     session.refresh(inv)
 
-    item = Invoice_Item(
+    item = InvoiceItem(
         invoice_id=inv.id,
         quantity=1,
         description="Haarschnitt Damen",
@@ -95,7 +95,7 @@ def test_insert_with_foreign_keys(session: Session):
     assert loaded_inv.profile_id == prof.id
 
     items = session.exec(
-        select(Invoice_Item).where(Invoice_Item.invoice_id == inv.id)
+        select(InvoiceItem).where(InvoiceItem.invoice_id == inv.id)
     ).all()
     assert len(items) == 1
     assert items[0].description == "Haarschnitt Damen"
