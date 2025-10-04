@@ -53,7 +53,7 @@ def test_create_invoice():
     )
 
 
-def create_invoice_without_invoice_item():
+def test_create_invoice_without_invoice_item():
     # 1. Create profile
     profile_response = client.post("/profiles/", json=TEST_PROFILE)
     profile_id = profile_response.json()["id"]
