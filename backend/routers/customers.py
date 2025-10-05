@@ -32,8 +32,12 @@ def update_customer(
     customer = session.get(Customer, customer_id)
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
-    customer.name = updated_customer.name
-    customer.address = updated_customer.address
+    if customer.name != updated_customer.name:
+        customer.name = updated_customer.name
+    if customer.address != updated_customer.address:
+        customer.address = updated_customer.address
+    if customer.city != updated_customer.city:
+        customer.city = updated_customer.city
     session.add(customer)
     session.commit()
     session.refresh(customer)

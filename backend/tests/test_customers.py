@@ -48,22 +48,41 @@ def test_models_registered(engine):
 def test_create_customer_with_address(client):
     response = client.post(
         "/customers",
-        json={"name": "Anna Müller", "address": "Hauptstr. 1, 12345 Berlin"},
+        json={
+            "name": "Anna Müller",
+            "address": "Hauptstr. 1, 12345 Berlin",
+            "city": "Berlin",
+        },
     )
     assert response.status_code == 200
     data = response.json()
     assert data["id"] is not None
     assert data["name"] == "Anna Müller"
     assert data["address"] == "Hauptstr. 1, 12345 Berlin"
+    assert data["city"] == "Berlin"
 
 
 def test_create_customer_without_address(client):
-    response = client.post("/customers", json={"name": "Peter Schmidt"})
+    response = client.post(
+        "/customers", json={"name": "Peter Schmidt", "city": "München"}
+    )
     assert response.status_code == 200
     data = response.json()
     assert data["id"] is not None
     assert data["name"] == "Peter Schmidt"
     assert data["address"] is None
+
+
+def test_create_customer_without_city(client):
+    response = client.post(
+        "/customers", json={"name": "Peter Schmidt", "address": "Nebenstr. 2"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] is not None
+    assert data["name"] == "Peter Schmidt"
+    assert data["address"] == "Nebenstr. 2"
+    assert data["city"] is None
 
 
 def test_list_customers(client):
@@ -77,19 +96,21 @@ def test_list_customers(client):
 def test_update_customer(client):
     # Erst anlegen
     resp = client.post(
-        "/customers", json={"name": "Max Mustermann", "address": "Altstr. 1"}
+        "/customers",
+        json={"name": "Max Mustermann", "address": "Altstr. 1", "city": "Old City"},
     )
     cust = resp.json()
 
     # Update-Request
     resp2 = client.put(
         f"/customers/{cust['id']}",
-        json={"name": "Maxi Mustermann", "address": "Neu Str. 99"},
+        json={"name": "Maxi Mustermann", "address": "Neu Str. 99", "city": "Old City"},
     )
     assert resp2.status_code == 200
     updated = resp2.json()
     assert updated["name"] == "Maxi Mustermann"
     assert updated["address"] == "Neu Str. 99"
+    assert updated["city"] == "Old City"
 
     # Prüfen ob GET-Liste auch geupdatet ist
     resp3 = client.get("/customers")
@@ -100,7 +121,8 @@ def test_update_customer(client):
 def test_delete_customer(client):
     # Erst anlegen
     resp = client.post(
-        "/customers", json={"name": "Lösch Mich", "address": "Testweg 5"}
+        "/customers",
+        json={"name": "Lösch Mich", "address": "Testweg 5", "city": "Test City"},
     )
     cust = resp.json()
 

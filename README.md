@@ -226,6 +226,7 @@ erDiagram
         int id PK
         string name
         string address "nullable"
+        string city "nullable"
     }
 
     PROFILE {
