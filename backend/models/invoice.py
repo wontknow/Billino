@@ -9,4 +9,5 @@ class Invoice(SQLModel, table=True):
     date: str
     customer_id: int = Field(foreign_key="customer.id")
     profile_id: int = Field(foreign_key="profile.id")
+    include_tax: bool = Field(default=False)
     total_amount: float
