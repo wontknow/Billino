@@ -4,7 +4,7 @@ from main import app
 
 client = TestClient(app)
 
-TEST_PROFILE = {"name": "Invoice Profile", "address": "123 Invoice Street"}
+TEST_PROFILE = {"name": "Invoice Profile", "address": "123 Invoice Street", "city": "Invoice City"}
 TEST_CUSTOMER = {"name": "Invoice Customer"}
 TEST_INVOICE = {
     "number": "25|113",
