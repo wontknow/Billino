@@ -41,10 +41,15 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
 
     # confirm that total_amount matches sum of items
     total = sum(item.quantity * item.price for item in invoice.invoice_items)
-    if total != invoice.total_amount:
+    if total != invoice.total_amount and invoice.include_tax is False:
         raise HTTPException(
             status_code=422,
             detail="Total amount does not match sum of invoice items.",
+        )
+    if total * 1.19 != invoice.total_amount and invoice.include_tax is True:
+        raise HTTPException(
+            status_code=422,
+            detail="Total amount does not match sum of invoice items with tax.",
         )
 
     session.add(db_invoice)
