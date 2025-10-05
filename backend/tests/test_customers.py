@@ -93,7 +93,7 @@ def test_update_customer(client):
     # Update-Request
     resp2 = client.put(
         f"/customers/{cust['id']}",
-        json={"name": "Maxi Mustermann", "address": "Neu Str. 99"},
+        json={"name": "Maxi Mustermann", "address": "Neu Str. 99", "city": "Old City"},
     )
     assert resp2.status_code == 200
     updated = resp2.json()
