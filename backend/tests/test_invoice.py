@@ -16,6 +16,7 @@ TEST_INVOICE = {
     "profile_id": None,
     "customer_id": None,
     "invoice_items": [],
+    "include_tax": False,
     "total_amount": 0.0,
 }
 
