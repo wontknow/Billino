@@ -7,7 +7,12 @@ client = TestClient(app)
 
 def test_create_profile():
     response = client.post(
-        "/profiles/", json={"name": "Test Profile", "address": "123 Test Street", "city": "Test City"}
+        "/profiles/",
+        json={
+            "name": "Test Profile",
+            "address": "123 Test Street",
+            "city": "Test City",
+        },
     )
     assert response.status_code == 201
     assert response.json()["name"] == "Test Profile"
@@ -38,7 +43,8 @@ def test_create_profile_with_optional_fields():
 def test_get_profile():
     # Erstellt ein Profil zum Abrufen
     create_response = client.post(
-        "/profiles/", json={"name": "Get Profile", "address": "789 Get Street", "city": "Get City"}
+        "/profiles/",
+        json={"name": "Get Profile", "address": "789 Get Street", "city": "Get City"},
     )
     profile_id = create_response.json()["id"]
 
@@ -61,13 +67,22 @@ def test_get_profile_list():
 def test_update_profile():
     # Erstellt ein Profil zum Aktualisieren
     create_response = client.post(
-        "/profiles/", json={"name": "Update Profile", "address": "123 Update Street", "city": "Update City"}
+        "/profiles/",
+        json={
+            "name": "Update Profile",
+            "address": "123 Update Street",
+            "city": "Update City",
+        },
     )
     profile_id = create_response.json()["id"]
 
     response = client.put(
         f"/profiles/{profile_id}",
-        json={"name": "Updated Profile", "address": "456 Updated Street", "city": "Updated City"},
+        json={
+            "name": "Updated Profile",
+            "address": "456 Updated Street",
+            "city": "Updated City",
+        },
     )
     assert response.status_code == 200
     data = response.json()
@@ -80,7 +95,12 @@ def test_update_profile():
 def test_delete_profile():
     # Erstellt ein Profil zum Löschen
     create_response = client.post(
-        "/profiles/", json={"name": "Delete Profile", "address": "123 Delete Street", "city": "Delete City"}
+        "/profiles/",
+        json={
+            "name": "Delete Profile",
+            "address": "123 Delete Street",
+            "city": "Delete City",
+        },
     )
     profile_id = create_response.json()["id"]
 
