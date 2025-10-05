@@ -75,7 +75,7 @@ README.md
 ```bash
 cd backend
 python -m venv .venv && source .venv/bin/activate
-pip install fastapi uvicorn sqlmodel reportlab
+pip install -r .\requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 Swagger-UI: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
