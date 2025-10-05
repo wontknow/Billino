@@ -38,6 +38,15 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
         include_tax=invoice.include_tax,
         total_amount=invoice.total_amount,
     )
+
+    # confirm that total_amount matches sum of items
+    total = sum(item.quantity * item.price for item in invoice.invoice_items)
+    if total != invoice.total_amount:
+        raise HTTPException(
+            status_code=422,
+            detail="Total amount does not match sum of invoice items.",
+        )
+
     session.add(db_invoice)
     session.flush()  # erzeugt ID für Invoice, ohne Commit
 
