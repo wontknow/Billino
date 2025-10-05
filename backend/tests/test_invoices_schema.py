@@ -59,6 +59,7 @@ def test_insert_with_foreign_keys(session: Session):
     prof = Profile(
         name="Salon Sunshine",
         address="Hauptstr. 1",
+        city="12345 Berlin",
         bank_data="DE00 1234 5678 9000 0000 00",
         tax_number="12/345/67890",
     )
