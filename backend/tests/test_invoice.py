@@ -57,6 +57,24 @@ def test_create_invoice():
         == invoice["invoice_items"][0]["price"]
     )
 
+def test_create_invoice_wrong_total_amount():
+     # 1. Create profile
+    profile_response = client.post("/profiles/", json=TEST_PROFILE)
+    profile_id = profile_response.json()["id"]
+
+    # 2. Create customer
+    customer_response = client.post("/customers/", json=TEST_CUSTOMER)
+    customer_id = customer_response.json()["id"]
+    invoice = TEST_INVOICE.copy()
+    invoice["profile_id"] = profile_id
+    invoice["customer_id"] = customer_id
+    invoice["invoice_items"] = [{"description": "Item 1", "quantity": 1, "price": 20.0}]
+    invoice["total_amount"] = 24.0
+    # 3. Create invoice
+    invoice_response = client.post("/invoices/", json=invoice)
+    assert invoice_response.status_code == 422
+    assert invoice_response.json() == {"detail": "Total amount does not match sum of invoice items."}
+
 
 def test_create_invoice_without_invoice_item():
     # 1. Create profile
