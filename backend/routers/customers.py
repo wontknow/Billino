@@ -34,6 +34,7 @@ def update_customer(
         raise HTTPException(status_code=404, detail="Customer not found")
     customer.name = updated_customer.name
     customer.address = updated_customer.address
+    customer.city = updated_customer.city
     session.add(customer)
     session.commit()
     session.refresh(customer)
