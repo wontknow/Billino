@@ -74,6 +74,7 @@ def test_insert_with_foreign_keys(session: Session):
         date="2025-09-01",
         customer_id=cust.id,
         profile_id=prof.id,
+        include_tax=True,
         total_amount=49.90,
     )
     session.add(inv)
@@ -115,6 +116,7 @@ def test_foreign_key_enforced(session: Session):
         date="2025-09-01",
         customer_id=999999,  # existiert nicht
         profile_id=999999,  # existiert nicht
+        include_tax=True,
         total_amount=10.0,
     )
     session.add(bad_invoice)

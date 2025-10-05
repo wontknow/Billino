@@ -244,6 +244,7 @@ erDiagram
         string date
         int customer_id FK
         int profile_id FK
+        bool include_tax
         float total_amount
     }
 
