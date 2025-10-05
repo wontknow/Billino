@@ -35,6 +35,7 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
         date=invoice.date,
         customer_id=invoice.customer_id,
         profile_id=invoice.profile_id,
+        include_tax=invoice.include_tax,
         total_amount=invoice.total_amount,
     )
     session.add(db_invoice)
@@ -62,6 +63,7 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
         date=db_invoice.date,
         customer_id=db_invoice.customer_id,
         profile_id=db_invoice.profile_id,
+        include_tax=db_invoice.include_tax,
         total_amount=db_invoice.total_amount,
         invoice_items=[
             InvoiceItemRead(
@@ -91,6 +93,7 @@ def read_invoices(session: Session = Depends(get_session)):
                 date=inv.date,
                 customer_id=inv.customer_id,
                 profile_id=inv.profile_id,
+                include_tax=inv.include_tax,
                 total_amount=inv.total_amount,
                 invoice_items=[
                     InvoiceItemRead(
@@ -121,6 +124,7 @@ def read_invoice(invoice_id: int, session: Session = Depends(get_session)):
         date=invoice.date,
         customer_id=invoice.customer_id,
         profile_id=invoice.profile_id,
+        include_tax=invoice.include_tax,
         total_amount=invoice.total_amount,
         invoice_items=[
             InvoiceItemRead(
