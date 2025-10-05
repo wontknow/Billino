@@ -232,6 +232,7 @@ erDiagram
         int id PK
         string name
         string address
+        string city
         string bank_data "nullable"
         string tax_number "nullable"
     }

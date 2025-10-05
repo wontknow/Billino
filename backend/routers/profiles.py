@@ -41,6 +41,7 @@ def update_profile(
         raise HTTPException(status_code=404, detail="Profile not found")
     profile.name = updated_profile.name
     profile.address = updated_profile.address
+    profile.city = updated_profile.city
     profile.bank_data = updated_profile.bank_data
     profile.tax_number = updated_profile.tax_number
     session.add(profile)
