@@ -177,9 +177,9 @@ jobs:
 
 - [x] Phase 0 – Repo-Bootstrap (Ordner, CI/CD, Readme, Templates)
 - [x] Phase 1 – Backend-Skeleton (FastAPI Healthcheck)
-- [ ] Phase 2 – DB-Anbindung (SQLite via SQLModel)
-- [ ] Phase 3 – Models + CRUD (Kunden, Profile)
-- [ ] Phase 4 – Invoice-Core (Rechnung, Nummernlogik)
+- [x] Phase 2 – DB-Anbindung (SQLite via SQLModel)
+- [x] Phase 3 – Models + CRUD (Kunden, Profile)
+- [x] Phase 4 – Invoice-Core (Rechnung, Nummernlogik)
 - [ ] Phase 5 – PDF-Renderer (A4)
 - [ ] Phase 6 – PDF-Renderer (A6x4)
 - [ ] Phase 7 – Frontend Bootstrap (Next.js + shadcn/ui)
