@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from sqlmodel import SQLModel
 
@@ -17,3 +17,6 @@ class InvoiceCreate(SQLModel):
     include_tax: bool
     total_amount: float
     invoice_items: List[InvoiceItemCreate]
+    include_tax: Optional[bool] = None
+    tax_rate: Optional[float] = None
+    is_gross_amount: bool = True
