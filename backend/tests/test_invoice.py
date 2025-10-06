@@ -57,8 +57,9 @@ def test_create_invoice():
         == invoice["invoice_items"][0]["price"]
     )
 
+
 def test_create_invoice_wrong_total_amount():
-     # 1. Create profile
+    # 1. Create profile
     profile_response = client.post("/profiles/", json=TEST_PROFILE)
     profile_id = profile_response.json()["id"]
 
@@ -73,7 +74,9 @@ def test_create_invoice_wrong_total_amount():
     # 3. Create invoice
     invoice_response = client.post("/invoices/", json=invoice)
     assert invoice_response.status_code == 422
-    assert invoice_response.json() == {"detail": "Total amount does not match sum of invoice items."}
+    assert invoice_response.json() == {
+        "detail": "Total amount does not match sum of invoice items."
+    }
 
 
 def test_create_invoice_without_invoice_item():
