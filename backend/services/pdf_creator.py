@@ -7,42 +7,12 @@ from reportlab.pdfgen import canvas
 from models import Customer, InvoiceItemRead, InvoiceRead, Profile
 
 
-def create_invoice_pdf_a4() -> bytes:
+def create_invoice_pdf_a4(
+    customer: Customer, invoice: InvoiceRead, profile: Profile
+) -> bytes:
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
-
-    # --- Beispiel-Daten ---
-    customer = Customer(
-        id=1, name="Max Mustermann", address="Musterstraße 1", city="12345 Musterstadt"
-    )
-    profile = Profile(
-        id=1,
-        name="Salon Sunshine",
-        address="Hauptstraße 12",
-        city="12345 Berlin",
-        bank_data="DE12 3456 7890 1234 5678 90",
-
-        tax_number="12/345/67890",
-    )
-    invoice = InvoiceRead(
-        id=1,
-        number="2024|001",
-        date="2024-01-01",
-        customer_id=customer.id,
-        profile_id=profile.id,
-        include_tax=False,
-        total_amount=24.00,
-        invoice_items=[
-            InvoiceItemRead(
-                id=1,
-                invoice_id=1,
-                quantity=1,
-                description="Haarschnitt Damen",
-                price=24.00,
-            )
-        ],
-    )
 
     # --- Header ---
     c.setFont("Helvetica-Bold", 18)
@@ -61,21 +31,23 @@ def create_invoice_pdf_a4() -> bytes:
     c.drawString(left_x, y_start, profile.name)
     c.drawString(left_x, y_start - 15, profile.address)
     c.drawString(left_x, y_start - 30, profile.city)
-    c.drawString(left_x, y_start - 45, f"IBAN: {profile.bank_data}")
+    if profile.bank_data:
+        c.drawString(left_x, y_start - 45, f"IBAN: {profile.bank_data}")
 
     # Rechte Spalte: Rechnungsinfo
     c.drawString(right_x, y_start, f"Datum: {invoice.date}")
-    c.drawString(right_x, y_start - 15, f"Steuernummer: {profile.tax_number}")
-
-    
+    if profile.tax_number:
+        c.drawString(right_x, y_start - 15, f"Steuernummer: {profile.tax_number}")
 
     # --- Empfänger mittig ---
     c.setFont("Helvetica-Bold", 12)
     c.drawString(30, y_start - 80, "Rechnung an:")
     c.setFont("Helvetica", 11)
     c.drawString(30, y_start - 95, customer.name)
-    c.drawString(30, y_start - 110, customer.address)
-    c.drawString(30, y_start - 125, customer.city)
+    if customer.address:
+        c.drawString(30, y_start - 110, customer.address)
+    if customer.city:
+        c.drawString(30, y_start - 125, customer.city)
 
     # --- Tabelle Kopf ---
     table_y = y_start - 160
@@ -100,17 +72,25 @@ def create_invoice_pdf_a4() -> bytes:
 
     c.setFont("Helvetica-Bold", 11)
     c.drawRightString(width - 120, current_y, "Gesamtbetrag netto:")
-    c.drawRightString(width - 30, current_y, f"{sum(item.quantity * item.price for item in invoice.invoice_items):.2f} €")
+    c.drawRightString(
+        width - 30,
+        current_y,
+        f"{sum(item.quantity * item.price for item in invoice.invoice_items):.2f} €",
+    )
     current_y -= 20
 
     c.setFont("Helvetica", 11)
-    c.drawRightString(width - 120, current_y, "zzgl. MwSt (19%):")
+    c.drawRightString(width - 120, current_y, "zzgl. USt (19%):")
     if invoice.include_tax:
-        c.drawRightString(width - 30, current_y, f"{sum(item.quantity * item.price for item in invoice.invoice_items) * 0.19:.2f} €")
+        c.drawRightString(
+            width - 30,
+            current_y,
+            f"{sum(item.quantity * item.price for item in invoice.invoice_items) * 0.19:.2f} €",
+        )
     current_y -= 20
 
     c.setFont("Helvetica-Bold", 12)
-    c.drawRightString(width - 120, current_y, "Gesamtbetrag inkl. MwSt:")
+    c.drawRightString(width - 120, current_y, "Gesamtbetrag inkl. USt:")
     c.drawRightString(width - 30, current_y, f"{invoice.total_amount:.2f} €")
 
     # --- Footer ---
@@ -123,8 +103,9 @@ def create_invoice_pdf_a4() -> bytes:
     # Footer: gesetzlicher Hinweis (§19 UStG)
     if not invoice.include_tax:
         c.setFont("Helvetica-Oblique", 9)
-        c.drawCentredString(width / 2, 25, "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.")
-
+        c.drawCentredString(
+            width / 2, 25, "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet."
+        )
 
     # --- Fertigstellen ---
     c.showPage()
@@ -140,5 +121,40 @@ def create_invoice_pdf_a4() -> bytes:
 
 
 if __name__ == "__main__":
-    pdf_bytes = create_invoice_pdf_a4()
+
+    # --- Beispiel-Daten ---
+    customer = Customer(
+        id=1,
+        name="Max Mustermann",  # ,
+        # address="Musterstraße 1",
+        # city="12345 Musterstadt"
+    )
+    profile = Profile(
+        id=1,
+        name="Salon Sunshine",
+        address="Hauptstraße 12",
+        city="12345 Berlin",
+        bank_data="DE12 3456 7890 1234 5678 90",
+        tax_number="12/345/67890",
+    )
+    invoice = InvoiceRead(
+        id=1,
+        number="2024|001",
+        date="2024-01-01",
+        customer_id=customer.id,
+        profile_id=profile.id,
+        include_tax=False,
+        total_amount=24.00,
+        invoice_items=[
+            InvoiceItemRead(
+                id=1,
+                invoice_id=1,
+                quantity=1,
+                description="Haarschnitt Damen",
+                price=24.00,
+            )
+        ],
+    )
+
+    pdf_bytes = create_invoice_pdf_a4(customer, invoice, profile)
     print(f"✅ PDF erstellt: {len(pdf_bytes)} Bytes")
