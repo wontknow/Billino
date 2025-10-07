@@ -57,8 +57,11 @@ def test_create_invoice():
         == invoice["invoice_items"][0]["price"]
     )
 
+
 def test_create_invoice_with_tax_fields():
-    profile_response = client.post("/profiles/", json={"name": "TaxTest", "address": "A", "city": "B"})
+    profile_response = client.post(
+        "/profiles/", json={"name": "TaxTest", "address": "A", "city": "B"}
+    )
     profile_id = profile_response.json()["id"]
 
     customer_response = client.post("/customers/", json={"name": "TaxCustomer"})
@@ -73,7 +76,7 @@ def test_create_invoice_with_tax_fields():
         "include_tax": True,
         "tax_rate": 0.19,
         "is_gross_amount": True,
-        "invoice_items": [{"description": "Cut", "quantity": 1, "price": 100.00}]
+        "invoice_items": [{"description": "Cut", "quantity": 1, "price": 100.00}],
     }
 
     resp = client.post("/invoices/", json=invoice_data)

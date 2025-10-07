@@ -7,6 +7,7 @@ class InvoiceItemCreate(SQLModel):
     quantity: int
     description: str
     price: float
+    tax_rate: Optional[float] = None
 
 
 class InvoiceCreate(SQLModel):

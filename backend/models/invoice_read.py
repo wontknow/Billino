@@ -9,6 +9,7 @@ class InvoiceItemRead(SQLModel):
     quantity: int
     description: str
     price: float
+    tax_rate: Optional[float] = None
 
 
 class InvoiceRead(SQLModel):
@@ -22,4 +23,3 @@ class InvoiceRead(SQLModel):
     include_tax: Optional[bool] = None
     tax_rate: Optional[float] = None
     is_gross_amount: bool = True
-

@@ -74,9 +74,9 @@ def test_insert_with_foreign_keys(session: Session):
         date="2025-09-01",
         customer_id=cust.id,
         profile_id=prof.id,
-        include_tax=False,          # <— hier statt True auch mal False testen
-        tax_rate=0.07,              # <— neuer Wert
-        is_gross_amount=False,      # <— neuer Wert
+        include_tax=False,  # <— hier statt True auch mal False testen
+        tax_rate=0.07,  # <— neuer Wert
+        is_gross_amount=False,  # <— neuer Wert
         total_amount=49.90,
     )
     session.add(inv)
