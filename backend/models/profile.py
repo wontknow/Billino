@@ -1,5 +1,4 @@
 from typing import Optional
-
 from sqlmodel import Field, SQLModel
 
 
@@ -10,3 +9,5 @@ class Profile(SQLModel, table=True):
     city: str
     bank_data: Optional[str] = None
     tax_number: Optional[str] = None
+    include_tax: bool = Field(default=True, description="Ob Umsatzsteuer ausgewiesen wird (§19 UStG)")
+    default_tax_rate: float = Field(default=0.19, description="Standard-Steuersatz (z. B. 0.19 oder 0.07)")
