@@ -74,7 +74,9 @@ def test_insert_with_foreign_keys(session: Session):
         date="2025-09-01",
         customer_id=cust.id,
         profile_id=prof.id,
-        include_tax=True,
+        include_tax=False,          # <— hier statt True auch mal False testen
+        tax_rate=0.07,              # <— neuer Wert
+        is_gross_amount=False,      # <— neuer Wert
         total_amount=49.90,
     )
     session.add(inv)
@@ -95,6 +97,9 @@ def test_insert_with_foreign_keys(session: Session):
     loaded_inv = session.exec(select(Invoice).where(Invoice.id == inv.id)).one()
     assert loaded_inv.customer_id == cust.id
     assert loaded_inv.profile_id == prof.id
+    assert inv.include_tax is False
+    assert inv.tax_rate == 0.07
+    assert inv.is_gross_amount is False
 
     items = session.exec(
         select(InvoiceItem).where(InvoiceItem.invoice_id == inv.id)

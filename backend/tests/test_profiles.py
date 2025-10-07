@@ -109,3 +109,19 @@ def test_delete_profile():
 
     response = client.get(f"/profiles/{profile_id}")
     assert response.status_code == 404
+
+def test_profile_tax_defaults():
+    """Prüft, dass neue Steuerfelder in Profil standardmäßig korrekt gesetzt sind."""
+    response = client.post(
+        "/profiles/",
+        json={
+            "name": "Tax Profile",
+            "address": "Steuerstraße 1",
+            "city": "Tax City"
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    # Default Werte prüfen
+    assert data["include_tax"] is True
+    assert data["default_tax_rate"] == 0.19
