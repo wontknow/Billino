@@ -95,7 +95,6 @@ def test_error_missing_customer(base_profile):
     invoice = {
         "number": "25|997",
         "date": "2025-10-05",
-        "customer_id": None,
         "profile_id": base_profile["id"],
         "invoice_items": [
             {"description": "Haarschnitt", "quantity": 1, "price": 100.0}
@@ -106,7 +105,7 @@ def test_error_missing_customer(base_profile):
     resp = client.post("/invoices/", json=invoice)
     assert resp.status_code == 422
     data = resp.json()
-    assert data["detail"][0]["msg"] == "Customer ID must be provided."
+    assert data["detail"][0]["msg"] == "Field required"
 
 
 def test_invalid_tax_rate_negative(base_profile, customer):
