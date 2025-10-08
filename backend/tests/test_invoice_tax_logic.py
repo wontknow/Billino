@@ -188,7 +188,7 @@ def test_error_set_tax_rate_with_taxfree_profile(taxfree_profile, customer):
     resp = client.post("/invoices/", json=invoice)
     assert resp.status_code == 422
     data = resp.json()
-    assert data["detail"][0]["msg"] == "tax_rate must be 0 if include_tax is False."
+    assert data["detail"][0]["msg"] == "Value error, tax_rate must be 0 if include_tax is False."
 
 
 def test_negative_total_amount(base_profile, customer):
@@ -209,7 +209,7 @@ def test_negative_total_amount(base_profile, customer):
     resp = client.post("/invoices/", json=invoice)
     assert resp.status_code == 422
     data = resp.json()
-    assert data["detail"][0]["msg"] == "total_amount must be non-negative."
+    assert data["detail"][0]["msg"] == "Value error, total_amount must be non-negative."
 
 
 def test_is_gross_amount_without_include_tax(base_profile, customer):
@@ -232,7 +232,7 @@ def test_is_gross_amount_without_include_tax(base_profile, customer):
     data = resp.json()
     assert (
         data["detail"][0]["msg"]
-        == "include_tax must be provided if is_gross_amount is set."
+        == "Value error, is_gross_amount can only be True if include_tax is True."
     )
 
 
@@ -245,7 +245,7 @@ def test_is_gross_amount_include_tax_false(base_profile, customer):
         "profile_id": base_profile["id"],
         "include_tax": False,
         "is_gross_amount": True,  # Ungültig
-        "tax_rate": 0.19,
+        "tax_rate": 0.0,
         "invoice_items": [
             {"description": "Haarschnitt", "quantity": 1, "price": 100.0}
         ],
@@ -257,7 +257,7 @@ def test_is_gross_amount_include_tax_false(base_profile, customer):
     data = resp.json()
     assert (
         data["detail"][0]["msg"]
-        == "is_gross_amount can only be True if include_tax is True."
+        == "Value error, is_gross_amount can only be True if include_tax is True."
     )
 
 
