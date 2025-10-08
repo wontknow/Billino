@@ -17,11 +17,6 @@ router = APIRouter(prefix="/invoices", tags=["invoices"])
 
 @router.post("/", response_model=InvoiceRead, status_code=201)
 def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_session)):
-    # Muss mindestens ein Item enthalten
-    if not invoice.invoice_items:
-        raise HTTPException(
-            status_code=422, detail="Invoice must have at least one item."
-        )
 
     profile = session.get(Profile, invoice.profile_id)
     customer = session.get(Customer, invoice.customer_id)
@@ -34,7 +29,7 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
     # Vererbe Steuersatz vom Profil, wenn nicht explizit angegeben
     if invoice.include_tax is None:
         invoice.include_tax = profile.include_tax
-        
+
 
     if invoice.include_tax:
         if invoice.tax_rate is None:
