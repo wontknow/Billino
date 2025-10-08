@@ -126,7 +126,7 @@ def test_invalid_tax_rate_negative(base_profile, customer):
     resp = client.post("/invoices/", json=invoice)
     assert resp.status_code == 422
     data = resp.json()
-    assert data["detail"][0]["msg"] == "tax_rate must be between 0 and 1."
+    assert data["detail"][0]["msg"] == "Value error, tax_rate must be between 0 and 1."
 
 
 def test_invalid_tax_rate_too_high(base_profile, customer):
@@ -147,7 +147,7 @@ def test_invalid_tax_rate_too_high(base_profile, customer):
     resp = client.post("/invoices/", json=invoice)
     assert resp.status_code == 422
     data = resp.json()
-    assert data["detail"][0]["msg"] == "tax_rate must be between 0 and 1."
+    assert data["detail"][0]["msg"] == "Value error, tax_rate must be between 0 and 1."
 
 
 def test_include_tax_true_without_tax_rate(base_profile, customer):
@@ -168,7 +168,7 @@ def test_include_tax_true_without_tax_rate(base_profile, customer):
     assert resp.status_code == 422
     data = resp.json()
     assert (
-        data["detail"][0]["msg"] == "tax_rate must be provided if include_tax is True."
+        data["detail"][0]["msg"] == "Value error, tax_rate must be provided if include_tax is True."
     )
 
 
@@ -353,7 +353,7 @@ def test_net_amount_with_tax_rate_negative(reduced_profile, customer):
     resp = client.post("/invoices/", json=invoice)
     assert resp.status_code == 422
     data = resp.json()
-    assert data["detail"][0]["msg"] == "tax_rate must be between 0 and 1."
+    assert data["detail"][0]["msg"] == "Value error, tax_rate must be between 0 and 1."
 
 
 def test_net_amount_include_tax_false(reduced_profile, customer):
