@@ -78,7 +78,6 @@ def test_error_missing_profile(customer):
         "number": "25|998",
         "date": "2025-10-05",
         "customer_id": customer["id"],
-        "profile_id": None,
         "invoice_items": [
             {"description": "Haarschnitt", "quantity": 1, "price": 100.0}
         ],
@@ -88,7 +87,7 @@ def test_error_missing_profile(customer):
     resp = client.post("/invoices/", json=invoice)
     assert resp.status_code == 422
     data = resp.json()
-    assert data["detail"][0]["msg"] == "Profile ID must be provided."
+    assert data["detail"][0]["msg"] == "Field required"
 
 
 def test_error_missing_customer(base_profile):
