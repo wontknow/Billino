@@ -23,12 +23,25 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
             status_code=422, detail="Invoice must have at least one item."
         )
 
+    profile = session.get(Profile, invoice.profile_id)
+    customer = session.get(Customer, invoice.customer_id)
     # Profile und Customer validieren
-    if not session.get(Profile, invoice.profile_id):
+    if not profile:
         raise HTTPException(status_code=400, detail="Profile does not exist.")
-    if not session.get(Customer, invoice.customer_id):
+    if not customer:
         raise HTTPException(status_code=400, detail="Customer does not exist.")
+    
+    # Vererbe Steuersatz vom Profil, wenn nicht explizit angegeben
+    if invoice.include_tax is None:
+        invoice.include_tax = profile.include_tax
+        
 
+    if invoice.include_tax:
+        if invoice.tax_rate is None:
+            invoice.tax_rate = profile.default_tax_rate
+    else:
+        invoice.tax_rate = 0.0
+    
     # Invoice + Items in einer Transaktion anlegen
     db_invoice = Invoice(
         number=invoice.number,
