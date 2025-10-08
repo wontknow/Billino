@@ -93,14 +93,14 @@ def test_happy_inherits_tax_from_profile(base_profile, customer):
     assert round(data["tax_rate"], 2) == 0.19
 
 
-def test_happy_overrides_tax_fields(base_profile, customer):
+def test_happy_overrides_tax_fields(taxfree_profile, customer):
     """Invoice kann include_tax und tax_rate überschreiben"""
     invoice = {
         "number": "25|501",
         "date": "2025-10-05",
         "customer_id": customer["id"],
-        "profile_id": base_profile["id"],
-        "include_tax": False,
+        "profile_id": taxfree_profile["id"],
+        "include_tax": True,
         "tax_rate": 0.07,
         "invoice_items": [{"description": "Färben", "quantity": 1, "price": 50.0}],
         "total_amount": 50.0,
@@ -110,8 +110,9 @@ def test_happy_overrides_tax_fields(base_profile, customer):
     assert resp.status_code == 201
     data = resp.json()
 
-    assert data["include_tax"] is False
+    assert data["include_tax"] is True
     assert round(data["tax_rate"], 2) == 0.07
+    
 
 
 def test_happy_taxfree_profile(taxfree_profile, customer):
