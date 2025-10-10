@@ -41,7 +41,7 @@ class InvoiceCreate(SQLModel):
         if self.include_tax is True:
             if self.tax_rate is None:
                 raise ValueError("tax_rate must be provided if include_tax is True.")
-            if self.tax_rate <= 0 or self.tax_rate > 1:
+            if self.tax_rate < 0 or self.tax_rate > 1:
                 raise ValueError("tax_rate must be between 0 and 1.")
 
         return self
