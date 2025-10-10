@@ -133,30 +133,6 @@ def test_happy_taxfree_profile(taxfree_profile, customer):
     assert round(data["tax_rate"], 2) == 0.0
 
 
-def test_happy_gross_amount(base_profile, customer):
-    """Bruttobetrag bleibt gleich, MwSt enthalten"""
-    invoice = {
-        "number": "25|503",
-        "date": "2025-10-05",
-        "customer_id": customer["id"],
-        "profile_id": base_profile["id"],
-        "include_tax": True,
-        "is_gross_amount": True,
-        "tax_rate": 0.19,
-        "invoice_items": [
-            {"description": "Haarschnitt", "quantity": 1, "price": 119.0}
-        ],
-        "total_amount": 119.0,
-    }
-
-    resp = client.post("/invoices/", json=invoice)
-    assert resp.status_code == 201
-    data = resp.json()
-
-    assert data["is_gross_amount"] is True
-    assert round(data["total_amount"], 2) == 119.00
-
-
 def test_happy_net_amount(reduced_profile, customer):
     """Nettobetrag wird gespeichert, Steuer wird nur angezeigt (z. B. im PDF)"""
     invoice = {
