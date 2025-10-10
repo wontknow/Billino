@@ -236,6 +236,8 @@ erDiagram
         string city
         string bank_data "nullable"
         string tax_number "nullable"
+        bool include_tax "weist MwSt aus (§19 UStG=false)"
+        float default_tax_rate "Standard-Steuersatz, z.B. 0.19"
     }
 
     INVOICE {
@@ -244,8 +246,10 @@ erDiagram
         string date
         int customer_id FK
         int profile_id FK
-        bool include_tax
-        float total_amount
+        bool include_tax "Übernimmt Standard aus Profile"
+        float tax_rate "z.B. 0.19 oder 0.07"
+        bool is_gross_amount "True = Betrag inkl. MwSt"
+        float total_amount "Gesamtbetrag (netto oder brutto je nach Flag)"
     }
 
     INVOICE_ITEM {
@@ -253,8 +257,9 @@ erDiagram
         int invoice_id FK
         int quantity
         string description
-        float price
+        float price "Einzelpreis (netto oder brutto, je nach Invoice)"
     }
+
   ```
   ### Beschreibung 
 

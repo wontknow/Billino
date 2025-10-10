@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from sqlmodel import SQLModel
 
@@ -9,6 +9,7 @@ class InvoiceItemRead(SQLModel):
     quantity: int
     description: str
     price: float
+    tax_rate: Optional[float] = None
 
 
 class InvoiceRead(SQLModel):
@@ -17,6 +18,8 @@ class InvoiceRead(SQLModel):
     date: str
     customer_id: int
     profile_id: int
-    include_tax: bool
     total_amount: float
     invoice_items: List[InvoiceItemRead] = []
+    include_tax: Optional[bool] = None
+    tax_rate: Optional[float] = None
+    is_gross_amount: bool = True

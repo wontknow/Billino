@@ -11,3 +11,6 @@ class InvoiceItem(SQLModel, table=True):
     quantity: int
     description: str
     price: float
+    tax_rate: Optional[float] = Field(
+        default=None, description="Optionaler Steuersatz pro Position"
+    )

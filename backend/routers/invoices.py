@@ -17,17 +17,55 @@ router = APIRouter(prefix="/invoices", tags=["invoices"])
 
 @router.post("/", response_model=InvoiceRead, status_code=201)
 def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_session)):
-    # Muss mindestens ein Item enthalten
-    if not invoice.invoice_items:
+
+    profile = session.get(Profile, invoice.profile_id)
+    customer = session.get(Customer, invoice.customer_id)
+    # Profile und Customer validieren
+    if not profile:
+        raise HTTPException(status_code=400, detail="Profile does not exist.")
+    if not customer:
+        raise HTTPException(status_code=400, detail="Customer does not exist.")
+
+    # Vererbe Steuersatz vom Profil, wenn nicht explizit angegeben
+    if invoice.include_tax is None:
+        invoice.include_tax = profile.include_tax
+
+    if invoice.include_tax:
+        if invoice.tax_rate is None:
+            invoice.tax_rate = profile.default_tax_rate
+    else:
+        invoice.tax_rate = 0.0
+
+    # 1. Summenprüfung vor DB-Aktion
+    calculated_total = round(
+        sum(item.quantity * item.price for item in invoice.invoice_items), 2
+    )
+    tolerance = 0.01
+    difference = round(calculated_total - invoice.total_amount, 2)
+
+    if difference >= tolerance:
         raise HTTPException(
-            status_code=422, detail="Invoice must have at least one item."
+            status_code=422,
+            detail=[
+                {
+                    "loc": ["body", "total_amount"],
+                    "msg": "Sum of invoice items exceeds total_amount by more than 0.01.",
+                    "type": "value_error",
+                }
+            ],
         )
 
-    # Profile und Customer validieren
-    if not session.get(Profile, invoice.profile_id):
-        raise HTTPException(status_code=400, detail="Profile does not exist.")
-    if not session.get(Customer, invoice.customer_id):
-        raise HTTPException(status_code=400, detail="Customer does not exist.")
+    if -difference >= tolerance:
+        raise HTTPException(
+            status_code=422,
+            detail=[
+                {
+                    "loc": ["body", "total_amount"],
+                    "msg": "Sum of invoice items is less than total_amount by more than 0.01.",
+                    "type": "value_error",
+                }
+            ],
+        )
 
     # Invoice + Items in einer Transaktion anlegen
     db_invoice = Invoice(
@@ -36,6 +74,8 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
         customer_id=invoice.customer_id,
         profile_id=invoice.profile_id,
         include_tax=invoice.include_tax,
+        tax_rate=invoice.tax_rate,
+        is_gross_amount=invoice.is_gross_amount,
         total_amount=invoice.total_amount,
     )
     session.add(db_invoice)
@@ -64,6 +104,8 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
         customer_id=db_invoice.customer_id,
         profile_id=db_invoice.profile_id,
         include_tax=db_invoice.include_tax,
+        tax_rate=db_invoice.tax_rate,
+        is_gross_amount=db_invoice.is_gross_amount,
         total_amount=db_invoice.total_amount,
         invoice_items=[
             InvoiceItemRead(
