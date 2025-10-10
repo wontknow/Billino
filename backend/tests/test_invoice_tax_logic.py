@@ -168,7 +168,8 @@ def test_include_tax_true_without_tax_rate(base_profile, customer):
     assert resp.status_code == 422
     data = resp.json()
     assert (
-        data["detail"][0]["msg"] == "Value error, tax_rate must be provided if include_tax is True."
+        data["detail"][0]["msg"]
+        == "Value error, tax_rate must be provided if include_tax is True."
     )
 
 
@@ -188,7 +189,10 @@ def test_error_set_tax_rate_with_taxfree_profile(taxfree_profile, customer):
     resp = client.post("/invoices/", json=invoice)
     assert resp.status_code == 422
     data = resp.json()
-    assert data["detail"][0]["msg"] == "Value error, tax_rate must be 0 if include_tax is False."
+    assert (
+        data["detail"][0]["msg"]
+        == "Value error, tax_rate must be 0 if include_tax is False."
+    )
 
 
 def test_negative_total_amount(base_profile, customer):
@@ -311,9 +315,6 @@ def test_net_amount_without_tax_rate(reduced_profile, customer):
     )
 
 
-
-
-
 def test_net_amount_with_tax_rate_negative(reduced_profile, customer):
     """Fehler, wenn is_gross_amount False aber tax_rate negativ"""
     invoice = {
@@ -334,9 +335,6 @@ def test_net_amount_with_tax_rate_negative(reduced_profile, customer):
     assert resp.status_code == 422
     data = resp.json()
     assert data["detail"][0]["msg"] == "Value error, tax_rate must be between 0 and 1."
-
-
-
 
 
 def test_rounding_error_too_high(base_profile, customer):

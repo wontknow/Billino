@@ -112,7 +112,6 @@ def test_happy_overrides_tax_fields(taxfree_profile, customer):
 
     assert data["include_tax"] is True
     assert round(data["tax_rate"], 2) == 0.07
-    
 
 
 def test_happy_taxfree_profile(taxfree_profile, customer):
@@ -186,6 +185,7 @@ def test_happy_net_amount(reduced_profile, customer):
     brutto_berechnet = data["total_amount"] * (1 + data["tax_rate"])
     assert round(brutto_berechnet, 2) == 107.00
 
+
 def test_happy_gross_amount(base_profile, customer):
     """Bruttobetrag wird gespeichert, Netto wird aus total_amount abgeleitet"""
     invoice = {
@@ -220,7 +220,6 @@ def test_happy_gross_amount(base_profile, customer):
     assert round(steuer, 2) == 19.00
 
 
-
 def test_happy_rounding_and_sum_consistency(base_profile, customer):
     """Summe der Items ≈ total_amount (max 1 Cent Abweichung)"""
     invoice = {
@@ -244,6 +243,7 @@ def test_happy_rounding_and_sum_consistency(base_profile, customer):
     subtotal = sum(i["quantity"] * i["price"] for i in invoice["invoice_items"])
     assert abs(subtotal - data["total_amount"]) < 0.05
 
+
 def test_happy_net_amount_with_tax_rate_zero(taxfree_profile, customer):
     """Nettobetrag + 0% MwSt = Gesamtbetrag (steuerfrei)"""
     invoice = {
@@ -253,7 +253,7 @@ def test_happy_net_amount_with_tax_rate_zero(taxfree_profile, customer):
         "profile_id": taxfree_profile["id"],
         "include_tax": False,
         "is_gross_amount": False,
-        "tax_rate": 0.0,  
+        "tax_rate": 0.0,
         "invoice_items": [{"description": "Steuerfrei", "quantity": 1, "price": 100.0}],
         "total_amount": 100.0,
     }
@@ -263,6 +263,7 @@ def test_happy_net_amount_with_tax_rate_zero(taxfree_profile, customer):
     data = resp.json()
     assert data["include_tax"] is False
     assert round(data["tax_rate"], 2) == 0.0
+
 
 def test_happy_taxfree_invoice_with_is_gross_amount_flag(taxfree_profile, customer):
     """is_gross_amount kann beliebig sein, wenn include_tax False"""
@@ -285,4 +286,3 @@ def test_happy_taxfree_invoice_with_is_gross_amount_flag(taxfree_profile, custom
     assert data["include_tax"] is False
     assert data["is_gross_amount"] is False
     assert data["tax_rate"] == 0.0
-

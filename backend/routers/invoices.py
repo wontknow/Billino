@@ -25,11 +25,10 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
         raise HTTPException(status_code=400, detail="Profile does not exist.")
     if not customer:
         raise HTTPException(status_code=400, detail="Customer does not exist.")
-    
+
     # Vererbe Steuersatz vom Profil, wenn nicht explizit angegeben
     if invoice.include_tax is None:
         invoice.include_tax = profile.include_tax
-
 
     if invoice.include_tax:
         if invoice.tax_rate is None:
@@ -38,30 +37,35 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
         invoice.tax_rate = 0.0
 
     # 1. Summenprüfung vor DB-Aktion
-    calculated_total = round(sum(item.quantity * item.price for item in invoice.invoice_items), 2)
+    calculated_total = round(
+        sum(item.quantity * item.price for item in invoice.invoice_items), 2
+    )
     tolerance = 0.01
     difference = round(calculated_total - invoice.total_amount, 2)
 
     if difference >= tolerance:
         raise HTTPException(
             status_code=422,
-            detail=[{
-                "loc": ["body", "total_amount"],
-                "msg": "Sum of invoice items exceeds total_amount by more than 0.01.",
-                "type": "value_error",
-            }],
+            detail=[
+                {
+                    "loc": ["body", "total_amount"],
+                    "msg": "Sum of invoice items exceeds total_amount by more than 0.01.",
+                    "type": "value_error",
+                }
+            ],
         )
 
     if -difference >= tolerance:
         raise HTTPException(
             status_code=422,
-            detail=[{
-                "loc": ["body", "total_amount"],
-                "msg": "Sum of invoice items is less than total_amount by more than 0.01.",
-                "type": "value_error",
-            }],
+            detail=[
+                {
+                    "loc": ["body", "total_amount"],
+                    "msg": "Sum of invoice items is less than total_amount by more than 0.01.",
+                    "type": "value_error",
+                }
+            ],
         )
-
 
     # Invoice + Items in einer Transaktion anlegen
     db_invoice = Invoice(
