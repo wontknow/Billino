@@ -282,7 +282,7 @@ def test_is_gross_amount_without_tax_rate(base_profile, customer):
     data = resp.json()
     assert (
         data["detail"][0]["msg"]
-        == "tax_rate must be provided if is_gross_amount is True."
+        == "Value error, tax_rate must be provided if is_gross_amount is True."
     )
 
 
@@ -307,31 +307,11 @@ def test_net_amount_without_tax_rate(reduced_profile, customer):
     data = resp.json()
     assert (
         data["detail"][0]["msg"]
-        == "tax_rate must be provided if is_gross_amount is False."
+        == "Value error, tax_rate must be provided if include_tax is True."
     )
 
 
-def test_net_amount_with_tax_rate_zero(taxfree_profile, customer):
-    """Fehler, wenn is_gross_amount False aber tax_rate 0"""
-    invoice = {
-        "number": "25|987",
-        "date": "2025-10-05",
-        "customer_id": customer["id"],
-        "profile_id": taxfree_profile["id"],
-        "include_tax": False,
-        "is_gross_amount": False,
-        "tax_rate": 0.0,  # Ungültig
-        "invoice_items": [{"description": "Steuerfrei", "quantity": 1, "price": 100.0}],
-        "total_amount": 100.0,
-    }
 
-    resp = client.post("/invoices/", json=invoice)
-    assert resp.status_code == 422
-    data = resp.json()
-    assert (
-        data["detail"][0]["msg"]
-        == "tax_rate must be greater than 0 if is_gross_amount is False."
-    )
 
 
 def test_net_amount_with_tax_rate_negative(reduced_profile, customer):
@@ -356,29 +336,7 @@ def test_net_amount_with_tax_rate_negative(reduced_profile, customer):
     assert data["detail"][0]["msg"] == "Value error, tax_rate must be between 0 and 1."
 
 
-def test_net_amount_include_tax_false(reduced_profile, customer):
-    """Fehler, wenn is_gross_amount False aber include_tax False"""
-    invoice = {
-        "number": "25|985",
-        "date": "2025-10-05",
-        "customer_id": customer["id"],
-        "profile_id": reduced_profile["id"],
-        "include_tax": False,
-        "is_gross_amount": False,  # Ungültig
-        "tax_rate": 0.07,
-        "invoice_items": [
-            {"description": "Kunstverkauf", "quantity": 1, "price": 100.0}
-        ],
-        "total_amount": 107.0,
-    }
 
-    resp = client.post("/invoices/", json=invoice)
-    assert resp.status_code == 422
-    data = resp.json()
-    assert (
-        data["detail"][0]["msg"]
-        == "is_gross_amount can only be False if include_tax is True."
-    )
 
 
 def test_rounding_error_too_high(base_profile, customer):
@@ -392,7 +350,7 @@ def test_rounding_error_too_high(base_profile, customer):
         "tax_rate": 0.19,
         "invoice_items": [
             {"description": "Waschen", "quantity": 1, "price": 10.55},
-            {"description": "Schneiden", "quantity": 1, "price": 23.45},
+            {"description": "Schneiden", "quantity": 1, "price": 23.46},
         ],
         "total_amount": 34.00,  # Korrekt wäre 34.00 + 0.01
     }
@@ -417,7 +375,7 @@ def test_rounding_error_too_low(base_profile, customer):
         "tax_rate": 0.19,
         "invoice_items": [
             {"description": "Waschen", "quantity": 1, "price": 10.55},
-            {"description": "Schneiden", "quantity": 1, "price": 23.45},
+            {"description": "Schneiden", "quantity": 1, "price": 23.44},
         ],
         "total_amount": 34.00,  # Korrekt wäre 34.00 - 0.01
     }

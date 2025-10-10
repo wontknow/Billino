@@ -159,19 +159,19 @@ def test_happy_gross_amount(base_profile, customer):
 
 
 def test_happy_net_amount(reduced_profile, customer):
-    """Nettobetrag + MwSt = Gesamtbetrag"""
+    """Nettobetrag wird gespeichert, Steuer wird nur angezeigt (z. B. im PDF)"""
     invoice = {
         "number": "25|504",
         "date": "2025-10-05",
         "customer_id": customer["id"],
         "profile_id": reduced_profile["id"],
         "include_tax": True,
-        "is_gross_amount": False,
+        "is_gross_amount": False,  # Netto-Angabe
         "tax_rate": 0.07,
         "invoice_items": [
             {"description": "Kunstverkauf", "quantity": 1, "price": 100.0}
         ],
-        "total_amount": 107.0,
+        "total_amount": 100.0,  # Netto-Betrag, noch ohne Steuer
     }
 
     resp = client.post("/invoices/", json=invoice)
@@ -180,7 +180,45 @@ def test_happy_net_amount(reduced_profile, customer):
 
     assert data["include_tax"] is True
     assert round(data["tax_rate"], 2) == 0.07
-    assert round(data["total_amount"], 2) == 107.00
+    assert round(data["total_amount"], 2) == 100.00  # Netto gespeichert
+
+    # Optionale Logikprüfung (nicht in DB, nur konzeptionell)
+    brutto_berechnet = data["total_amount"] * (1 + data["tax_rate"])
+    assert round(brutto_berechnet, 2) == 107.00
+
+def test_happy_gross_amount(base_profile, customer):
+    """Bruttobetrag wird gespeichert, Netto wird aus total_amount abgeleitet"""
+    invoice = {
+        "number": "25|503",
+        "date": "2025-10-05",
+        "customer_id": customer["id"],
+        "profile_id": base_profile["id"],
+        "include_tax": True,
+        "is_gross_amount": True,
+        "tax_rate": 0.19,
+        "invoice_items": [
+            {"description": "Haarschnitt", "quantity": 1, "price": 119.0}
+        ],
+        "total_amount": 119.0,  # Bruttobetrag
+    }
+
+    resp = client.post("/invoices/", json=invoice)
+    assert resp.status_code == 201
+    data = resp.json()
+
+    # Gespeicherte Daten
+    assert data["include_tax"] is True
+    assert data["is_gross_amount"] is True
+    assert round(data["tax_rate"], 2) == 0.19
+    assert round(data["total_amount"], 2) == 119.00  # Brutto gespeichert
+
+    # Logisch abgeleitete Werte (nicht in DB, nur konzeptionell)
+    netto = data["total_amount"] / (1 + data["tax_rate"])
+    steuer = data["total_amount"] - netto
+
+    assert round(netto, 2) == 100.00
+    assert round(steuer, 2) == 19.00
+
 
 
 def test_happy_rounding_and_sum_consistency(base_profile, customer):
@@ -205,3 +243,46 @@ def test_happy_rounding_and_sum_consistency(base_profile, customer):
 
     subtotal = sum(i["quantity"] * i["price"] for i in invoice["invoice_items"])
     assert abs(subtotal - data["total_amount"]) < 0.05
+
+def test_happy_net_amount_with_tax_rate_zero(taxfree_profile, customer):
+    """Nettobetrag + 0% MwSt = Gesamtbetrag (steuerfrei)"""
+    invoice = {
+        "number": "25|987",
+        "date": "2025-10-05",
+        "customer_id": customer["id"],
+        "profile_id": taxfree_profile["id"],
+        "include_tax": False,
+        "is_gross_amount": False,
+        "tax_rate": 0.0,  
+        "invoice_items": [{"description": "Steuerfrei", "quantity": 1, "price": 100.0}],
+        "total_amount": 100.0,
+    }
+
+    resp = client.post("/invoices/", json=invoice)
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["include_tax"] is False
+    assert round(data["tax_rate"], 2) == 0.0
+
+def test_happy_taxfree_invoice_with_is_gross_amount_flag(taxfree_profile, customer):
+    """is_gross_amount kann beliebig sein, wenn include_tax False"""
+    invoice = {
+        "number": "25|985",
+        "date": "2025-10-05",
+        "customer_id": customer["id"],
+        "profile_id": taxfree_profile["id"],
+        "include_tax": False,
+        "is_gross_amount": False,  # erlaubt, da keine Steuerpflicht
+        "tax_rate": 0.0,
+        "invoice_items": [{"description": "Steuerfrei", "quantity": 1, "price": 100.0}],
+        "total_amount": 100.0,
+    }
+
+    resp = client.post("/invoices/", json=invoice)
+    assert resp.status_code == 201
+    data = resp.json()
+
+    assert data["include_tax"] is False
+    assert data["is_gross_amount"] is False
+    assert data["tax_rate"] == 0.0
+
