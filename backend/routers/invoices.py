@@ -36,7 +36,33 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
             invoice.tax_rate = profile.default_tax_rate
     else:
         invoice.tax_rate = 0.0
-    
+
+    # 1. Summenprüfung vor DB-Aktion
+    calculated_total = round(sum(item.quantity * item.price for item in invoice.invoice_items), 2)
+    tolerance = 0.01
+    difference = round(calculated_total - invoice.total_amount, 2)
+
+    if difference >= tolerance:
+        raise HTTPException(
+            status_code=422,
+            detail=[{
+                "loc": ["body", "total_amount"],
+                "msg": "Sum of invoice items exceeds total_amount by more than 0.01.",
+                "type": "value_error",
+            }],
+        )
+
+    if -difference >= tolerance:
+        raise HTTPException(
+            status_code=422,
+            detail=[{
+                "loc": ["body", "total_amount"],
+                "msg": "Sum of invoice items is less than total_amount by more than 0.01.",
+                "type": "value_error",
+            }],
+        )
+
+
     # Invoice + Items in einer Transaktion anlegen
     db_invoice = Invoice(
         number=invoice.number,
