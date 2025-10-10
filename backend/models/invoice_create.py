@@ -24,6 +24,14 @@ class InvoiceCreate(SQLModel):
 
     @model_validator(mode="after")
     def validate_invoice(self):
+        if self.is_gross_amount and not self.include_tax:
+            raise ValueError("is_gross_amount can only be True if include_tax is True.")
+
+        if self.is_gross_amount and self.tax_rate is None:
+            raise ValueError("tax_rate must be provided if is_gross_amount is True.")
+
+        if not self.invoice_items or len(self.invoice_items) == 0:
+            raise ValueError("Invoice must have at least one item.")
         if self.total_amount < 0:
             raise ValueError("total_amount must be non-negative.")
 
@@ -35,14 +43,5 @@ class InvoiceCreate(SQLModel):
                 raise ValueError("tax_rate must be provided if include_tax is True.")
             if self.tax_rate <= 0 or self.tax_rate > 1:
                 raise ValueError("tax_rate must be between 0 and 1.")
-            
-        if self.is_gross_amount and not self.include_tax:
-            raise ValueError("is_gross_amount can only be True if include_tax is True.")
-
-        if self.is_gross_amount and self.tax_rate is None:
-            raise ValueError("tax_rate must be provided if is_gross_amount is True.")
-
-        if not self.invoice_items or len(self.invoice_items) == 0:
-            raise ValueError("Invoice must have at least one item.")
 
         return self
