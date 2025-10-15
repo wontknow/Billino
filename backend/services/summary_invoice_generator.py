@@ -10,12 +10,13 @@ from models import (
     SummaryInvoice,
     SummaryInvoiceCreate,
     SummaryInvoiceLink,
+    SummaryInvoiceRead
 )
 
 
 def create_summary_invoice(
     session: Session, summary: SummaryInvoiceCreate
-) -> SummaryInvoice:
+) -> SummaryInvoiceRead:
     """
     Create a summary invoice for the given profile and list of invoice IDs.
     """
@@ -95,6 +96,9 @@ def create_summary_invoice(
     session.add(summary_invoice)
     session.flush()
 
+    # Get the invoice IDs BEFORE committing (while objects are still attached)
+    invoice_ids = [invoice.id for invoice in invoices]
+
     # Link invoices to summary invoice
     for invoice in invoices:
         link = SummaryInvoiceLink(
@@ -103,6 +107,23 @@ def create_summary_invoice(
         session.add(link)
 
     session.commit()
-    session.refresh(summary_invoice)
 
-    return summary_invoice
+    #get the summary invoice again to ensure it's up to date
+    summary_invoice = session.get(SummaryInvoice, summary_invoice.id)
+    if not summary_invoice:
+        raise ValueError("Failed to retrieve the created summary invoice")
+    
+    
+    # Create the response object directly from the summary_invoice object
+    summary_invoice_response = SummaryInvoiceRead(
+        id=summary_invoice.id,
+        range_text=summary_invoice.range_text,
+        date=summary_invoice.date,
+        profile_id=summary_invoice.profile_id,
+        total_net=summary_invoice.total_net,
+        total_tax=summary_invoice.total_tax,
+        total_gross=summary_invoice.total_gross,
+        invoice_ids=invoice_ids,
+    )
+
+    return summary_invoice_response
