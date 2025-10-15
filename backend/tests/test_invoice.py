@@ -143,7 +143,7 @@ def test_create_invoice_with_wrong_profile():
     # 3. Create invoice
     invoice_response = client.post("/invoices/", json=invoice)
     assert invoice_response.status_code == 400
-    assert invoice_response.json() == {"detail": "Profile does not exist."}
+    assert invoice_response.json()["detail"][0]["msg"] == "Profile does not exist."
 
 
 def test_create_invoice_with_wrong_customer():
@@ -159,7 +159,7 @@ def test_create_invoice_with_wrong_customer():
     # 3. Create invoice
     invoice_response = client.post("/invoices/", json=invoice)
     assert invoice_response.status_code == 400
-    assert invoice_response.json() == {"detail": "Customer does not exist."}
+    assert invoice_response.json()["detail"][0]["msg"] == "Customer does not exist."
 
 
 def test_get_invoice():
@@ -208,7 +208,8 @@ def test_get_invoice():
 def test_get_invoice_with_invalid_id():
     response = client.get("/invoices/9999")
     assert response.status_code == 404
-    assert response.json() == {"detail": "Invoice not found."}
+    # resp msg
+    assert response.json()["detail"][0]["msg"] == "Invoice not found."
 
 
 def test_get_invoice_list():
@@ -243,10 +244,10 @@ def test_delete_invoice():
     # 5. Verify deletion
     get_response = client.get(f"/invoices/{invoice_id}")
     assert get_response.status_code == 404
-    assert get_response.json() == {"detail": "Invoice not found."}
+    assert get_response.json()["detail"][0]["msg"] == "Invoice not found."
 
 
 def test_delete_invoice_with_invalid_id():
     response = client.delete("/invoices/9999")
     assert response.status_code == 404
-    assert response.json() == {"detail": "Invoice not found."}
+    assert response.json()["detail"][0]["msg"] == "Invoice not found."
