@@ -7,7 +7,6 @@ from database import get_session, init_db
 from main import app
 from models import Customer, Invoice, Profile, SummaryInvoice, SummaryInvoiceLink
 
-client = TestClient(app)
 
 
 @pytest.fixture(scope="session")
@@ -32,21 +31,34 @@ def engine():
 @pytest.fixture
 def session(engine):
     """Test session for each test."""
-    with Session(engine) as s:
-        yield s
+    # Create a connection and start a transaction
+    connection = engine.connect()
+    transaction = connection.begin()
+    
+    # Create session bound to the transaction
+    session = Session(bind=connection)
+    
+    yield session
+    
+    # Cleanup
+    session.close()
+    transaction.rollback()
+    connection.close()
 
 
 @pytest.fixture
 def client(session):
-    """Test client with dependency override."""
+    """Test client with dependency override using the same session."""
 
     def get_test_session():
         return session
 
     app.dependency_overrides[get_session] = get_test_session
-    client = TestClient(app)
-    yield client
-    app.dependency_overrides.clear()
+    try:
+        client = TestClient(app)
+        yield client
+    finally:
+        app.dependency_overrides.clear()
 
 
 @pytest.fixture
@@ -111,11 +123,30 @@ def sample_data(session):
     session.add_all([inv1, inv2, inv3])
     session.commit()
 
+    ## add one sample summary invoice for read tests
+    summary = SummaryInvoice(
+        range_text="25 | 0001 - 25 | 0002",
+        date="2025-10-05",
+        profile_id=profile.id,
+        total_net=200.0,
+        total_tax=38.0,
+        total_gross=238.0,
+    )
+    session.add(summary)
+    session.commit()
+    # Link invoices to summary
+    invoice_ids = [inv1.id, inv2.id]
+    for invoice_id in invoice_ids:
+        link = SummaryInvoiceLink(summary_invoice_id=summary.id, invoice_id=invoice_id)
+        session.add(link)
+    session.commit()
+
     return {
         "profile": profile,
         "profile_no_tax": profile_no_tax,
         "customer": customer,
         "invoices": [inv1, inv2, inv3],
+        "summary": summary,
     }
 
 
@@ -367,6 +398,20 @@ def test_get_summary_invoices_list_by_profile(client, sample_data):
 # HAPPY PATH TESTS - READ SUMMARY INVOICE (SINGLE)
 # =============================================================================
 
+def test_get_summary_invoice_by_id_pre_data(client, sample_data):
+    """Test getting single summary invoice by ID with pre-existing data."""
+    data = sample_data
+    summary_id = data["summary"].id
+
+    response = client.get(f"/summary-invoices/{summary_id}")
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["id"] == summary_id
+    assert result["profile_id"] == data["profile"].id
+    assert result["range_text"] == "25 | 0001 - 25 | 0002"
+    assert "invoice_ids" in result
+    assert len(result["invoice_ids"]) == 2
 
 def test_get_summary_invoice_by_id_success(client, sample_data):
     """Test getting single summary invoice by ID."""
