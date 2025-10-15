@@ -130,13 +130,16 @@ def test_foreign_key_enforced(session: Session):
         session.commit()
     session.rollback()
 
+
 # summary_invoice tests
+
 
 def test_summary_invoice_tables_exist_in_metadata():
     # Prüft, ob die Tabellen-Namen in den SQLModel-Metadaten registriert sind
     tables = SQLModel.metadata.tables
     assert "summary_invoice" in tables
     assert "summary_invoice_link" in tables
+
 
 def test_insert_summary_invoice_with_links(session: Session):
     """
@@ -147,9 +150,9 @@ def test_insert_summary_invoice_with_links(session: Session):
     - Alles committen und wieder auslesen
     """
     # Lazy-Import, damit Tests schon vor Implementierung geladen werden
+    from models.invoice import Invoice
     from models.profile import Profile
     from models.summary_invoice import SummaryInvoice, SummaryInvoiceLink
-    from models.invoice import Invoice
 
     prof = Profile(
         name="Salon Sunshine",
@@ -222,11 +225,14 @@ def test_insert_summary_invoice_with_links(session: Session):
     assert loaded_summ_inv.profile_id == prof.id
 
     links = session.exec(
-        select(SummaryInvoiceLink).where(SummaryInvoiceLink.summary_invoice_id == summ_inv.id)
+        select(SummaryInvoiceLink).where(
+            SummaryInvoiceLink.summary_invoice_id == summ_inv.id
+        )
     ).all()
     assert len(links) == 2
     assert links[0].invoice_id == inv.id
     assert links[1].invoice_id == inv2.id
+
 
 def test_summary_invoice_foreign_key_enforced(session: Session):
     """

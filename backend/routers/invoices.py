@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
-from services import create_summary_invoice
 
 from database import get_session
 from models import (
@@ -11,9 +10,10 @@ from models import (
     InvoiceItemRead,
     InvoiceRead,
     Profile,
+    SummaryInvoiceCreate,
     SummaryInvoiceRead,
-    SummaryInvoiceCreate
 )
+from services import create_summary_invoice
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
@@ -25,9 +25,27 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
     customer = session.get(Customer, invoice.customer_id)
     # Profile und Customer validieren
     if not profile:
-        raise HTTPException(status_code=400, detail=[ { "loc": ["body", "profile_id"], "msg": "Profile does not exist.", "type": "value_error"} ])
+        raise HTTPException(
+            status_code=400,
+            detail=[
+                {
+                    "loc": ["body", "profile_id"],
+                    "msg": "Profile does not exist.",
+                    "type": "value_error",
+                }
+            ],
+        )
     if not customer:
-        raise HTTPException(status_code=400, detail=[ { "loc": ["body", "customer_id"], "msg": "Customer does not exist.", "type": "value_error"} ])
+        raise HTTPException(
+            status_code=400,
+            detail=[
+                {
+                    "loc": ["body", "customer_id"],
+                    "msg": "Customer does not exist.",
+                    "type": "value_error",
+                }
+            ],
+        )
 
     # Vererbe Steuersatz vom Profil, wenn nicht explizit angegeben
     if invoice.include_tax is None:
@@ -159,8 +177,16 @@ def read_invoices(session: Session = Depends(get_session)):
 def read_invoice(invoice_id: int, session: Session = Depends(get_session)):
     invoice = session.get(Invoice, invoice_id)
     if not invoice:
-        raise HTTPException(status_code=404, detail = [ { "loc": ["path", "invoice_id"], "msg": "Invoice not found.", "type": "value_error"} ]
-                            )
+        raise HTTPException(
+            status_code=404,
+            detail=[
+                {
+                    "loc": ["path", "invoice_id"],
+                    "msg": "Invoice not found.",
+                    "type": "value_error",
+                }
+            ],
+        )
     items = session.exec(
         select(InvoiceItem).where(InvoiceItem.invoice_id == invoice.id)
     ).all()
@@ -189,7 +215,16 @@ def read_invoice(invoice_id: int, session: Session = Depends(get_session)):
 def delete_invoice(invoice_id: int, session: Session = Depends(get_session)):
     invoice = session.get(Invoice, invoice_id)
     if not invoice:
-        raise HTTPException(status_code=404, detail= [ { "loc": ["path", "invoice_id"], "msg": "Invoice not found.", "type": "value_error"} ])
+        raise HTTPException(
+            status_code=404,
+            detail=[
+                {
+                    "loc": ["path", "invoice_id"],
+                    "msg": "Invoice not found.",
+                    "type": "value_error",
+                }
+            ],
+        )
     # Zuerst die zugehörigen Items löschen
     items = session.exec(
         select(InvoiceItem).where(InvoiceItem.invoice_id == invoice.id)
@@ -200,4 +235,3 @@ def delete_invoice(invoice_id: int, session: Session = Depends(get_session)):
     session.delete(invoice)
     session.commit()
     return
-

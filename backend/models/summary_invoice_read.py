@@ -1,9 +1,11 @@
 from typing import List, Optional
+
 from sqlmodel import SQLModel
 
 
 class SummaryInvoiceRead(SQLModel):
     """Ausgabemodell für GET /summary-invoices"""
+
     id: int
     range_text: str
     date: str

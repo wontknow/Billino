@@ -5,6 +5,6 @@ from .invoice_item import InvoiceItem  # noqa: F401
 from .invoice_read import InvoiceItemRead, InvoiceRead  # noqa: F401
 from .profile import Profile  # noqa: F401
 from .summary_invoice import SummaryInvoice  # noqa: F401
+from .summary_invoice import SummaryInvoiceLink  # noqa: F401
 from .summary_invoice_create import SummaryInvoiceCreate  # noqa: F401
 from .summary_invoice_read import SummaryInvoiceRead  # noqa: F401
-from .summary_invoice import SummaryInvoiceLink  # noqa: F401

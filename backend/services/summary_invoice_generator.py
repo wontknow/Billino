@@ -1,10 +1,21 @@
-from sqlalchemy import select
-from models import Profile, Invoice, SummaryInvoiceCreate, SummaryInvoice, SummaryInvoiceLink
-from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 from typing import List
 
-def create_summary_invoice(session: Session, summary: SummaryInvoiceCreate) -> SummaryInvoice:
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from models import (
+    Invoice,
+    Profile,
+    SummaryInvoice,
+    SummaryInvoiceCreate,
+    SummaryInvoiceLink,
+)
+
+
+def create_summary_invoice(
+    session: Session, summary: SummaryInvoiceCreate
+) -> SummaryInvoice:
     """
     Create a summary invoice for the given profile and list of invoice IDs.
     """
@@ -21,7 +32,7 @@ def create_summary_invoice(session: Session, summary: SummaryInvoiceCreate) -> S
         invoice = session.get(Invoice, invoice_id)
         if invoice and invoice.profile_id == profile_id:
             invoices.append(invoice)
-    
+
     if not invoices:
         raise ValueError("No valid invoices found for the given IDs")
 
@@ -74,12 +85,12 @@ def create_summary_invoice(session: Session, summary: SummaryInvoiceCreate) -> S
 
     # Create summary invoice
     summary_invoice = SummaryInvoice(
-        range_text  = range,
-        profile_id  = profile_id,
-        date        = datetime.now(timezone.utc).isoformat(), # Aktuelles Systemdate nehmen
-        total_net   = total_net,
-        total_tax   = total_tax,
-        total_gross = total_gross,
+        range_text=range,
+        profile_id=profile_id,
+        date=datetime.now(timezone.utc).isoformat(),  # Aktuelles Systemdate nehmen
+        total_net=total_net,
+        total_tax=total_tax,
+        total_gross=total_gross,
     )
     session.add(summary_invoice)
     session.flush()
@@ -87,12 +98,11 @@ def create_summary_invoice(session: Session, summary: SummaryInvoiceCreate) -> S
     # Link invoices to summary invoice
     for invoice in invoices:
         link = SummaryInvoiceLink(
-            summary_invoice_id=summary_invoice.id,
-            invoice_id=invoice.id
+            summary_invoice_id=summary_invoice.id, invoice_id=invoice.id
         )
         session.add(link)
 
     session.commit()
     session.refresh(summary_invoice)
-    
+
     return summary_invoice

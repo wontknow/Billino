@@ -1,5 +1,7 @@
-from sqlmodel import SQLModel, Field, Relationship
-from typing import Optional, List
+from typing import List, Optional
+
+from sqlmodel import Field, Relationship, SQLModel
+
 
 class SummaryInvoice(SQLModel, table=True):
     __tablename__ = "summary_invoice"
@@ -11,7 +13,9 @@ class SummaryInvoice(SQLModel, table=True):
     total_tax: float
     total_gross: float
 
-    invoices: List["SummaryInvoiceLink"] = Relationship(back_populates="summary_invoice")
+    invoices: List["SummaryInvoiceLink"] = Relationship(
+        back_populates="summary_invoice"
+    )
 
 
 class SummaryInvoiceLink(SQLModel, table=True):
@@ -20,4 +24,6 @@ class SummaryInvoiceLink(SQLModel, table=True):
     summary_invoice_id: int = Field(foreign_key="summary_invoice.id")
     invoice_id: int = Field(foreign_key="invoice.id")
 
-    summary_invoice: Optional["SummaryInvoice"] = Relationship(back_populates="invoices")
+    summary_invoice: Optional["SummaryInvoice"] = Relationship(
+        back_populates="invoices"
+    )
