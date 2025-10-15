@@ -10,7 +10,7 @@ from models import (
     SummaryInvoice,
     SummaryInvoiceCreate,
     SummaryInvoiceLink,
-    SummaryInvoiceRead
+    SummaryInvoiceRead,
 )
 
 
@@ -108,12 +108,11 @@ def create_summary_invoice(
 
     session.commit()
 
-    #get the summary invoice again to ensure it's up to date
+    # get the summary invoice again to ensure it's up to date
     summary_invoice = session.get(SummaryInvoice, summary_invoice.id)
     if not summary_invoice:
         raise ValueError("Failed to retrieve the created summary invoice")
-    
-    
+
     # Create the response object directly from the summary_invoice object
     summary_invoice_response = SummaryInvoiceRead(
         id=summary_invoice.id,

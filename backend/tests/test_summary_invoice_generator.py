@@ -404,7 +404,10 @@ def test_create_summary_invoice_empty_invoice_list(session: Session):
     session.commit()
 
     from pydantic import ValidationError
-    with pytest.raises(ValidationError, match="At least one invoice ID must be provided"):
+
+    with pytest.raises(
+        ValidationError, match="At least one invoice ID must be provided"
+    ):
         create_summary_invoice(
             session, summary=SummaryInvoiceCreate(profile_id=profile.id, invoice_ids=[])
         )
