@@ -403,7 +403,8 @@ def test_create_summary_invoice_empty_invoice_list(session: Session):
     session.add(profile)
     session.commit()
 
-    with pytest.raises(ValueError, match="No valid invoices found"):
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError, match="At least one invoice ID must be provided"):
         create_summary_invoice(
             session, summary=SummaryInvoiceCreate(profile_id=profile.id, invoice_ids=[])
         )
