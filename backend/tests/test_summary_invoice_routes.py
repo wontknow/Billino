@@ -8,7 +8,6 @@ from main import app
 from models import Customer, Invoice, Profile, SummaryInvoice, SummaryInvoiceLink
 
 
-
 @pytest.fixture(scope="session")
 def engine():
     """Test engine with in-memory SQLite database."""
@@ -34,12 +33,12 @@ def session(engine):
     # Create a connection and start a transaction
     connection = engine.connect()
     transaction = connection.begin()
-    
+
     # Create session bound to the transaction
     session = Session(bind=connection)
-    
+
     yield session
-    
+
     # Cleanup
     session.close()
     transaction.rollback()
@@ -123,30 +122,11 @@ def sample_data(session):
     session.add_all([inv1, inv2, inv3])
     session.commit()
 
-    ## add one sample summary invoice for read tests
-    summary = SummaryInvoice(
-        range_text="25 | 0001 - 25 | 0002",
-        date="2025-10-05",
-        profile_id=profile.id,
-        total_net=200.0,
-        total_tax=38.0,
-        total_gross=238.0,
-    )
-    session.add(summary)
-    session.commit()
-    # Link invoices to summary
-    invoice_ids = [inv1.id, inv2.id]
-    for invoice_id in invoice_ids:
-        link = SummaryInvoiceLink(summary_invoice_id=summary.id, invoice_id=invoice_id)
-        session.add(link)
-    session.commit()
-
     return {
         "profile": profile,
         "profile_no_tax": profile_no_tax,
         "customer": customer,
         "invoices": [inv1, inv2, inv3],
-        "summary": summary,
     }
 
 
@@ -234,10 +214,13 @@ def test_create_summary_invoice_empty_invoice_list(client, sample_data):
 
     response = client.post("/summary-invoices", json=payload)
 
-    assert response.status_code == 400
+    assert response.status_code == 422
     error = response.json()
     assert "detail" in error
-    assert any("No valid invoices found" in str(detail) for detail in error["detail"])
+    assert any(
+        "At least one invoice ID must be provided." in str(detail)
+        for detail in error["detail"]
+    )
 
 
 def test_create_summary_invoice_nonexistent_invoices(client, sample_data):
@@ -386,7 +369,7 @@ def test_get_summary_invoices_list_by_profile(client, sample_data):
     client.post("/summary-invoices", json=payload2)
 
     # Filter by profile_id
-    response = client.get(f"/invoices/summary?profile_id={data['profile'].id}")
+    response = client.get(f"/summary-invoices/by-profile/{data['profile'].id}")
 
     assert response.status_code == 200
     result = response.json()
@@ -398,20 +381,6 @@ def test_get_summary_invoices_list_by_profile(client, sample_data):
 # HAPPY PATH TESTS - READ SUMMARY INVOICE (SINGLE)
 # =============================================================================
 
-def test_get_summary_invoice_by_id_pre_data(client, sample_data):
-    """Test getting single summary invoice by ID with pre-existing data."""
-    data = sample_data
-    summary_id = data["summary"].id
-
-    response = client.get(f"/summary-invoices/{summary_id}")
-
-    assert response.status_code == 200
-    result = response.json()
-    assert result["id"] == summary_id
-    assert result["profile_id"] == data["profile"].id
-    assert result["range_text"] == "25 | 0001 - 25 | 0002"
-    assert "invoice_ids" in result
-    assert len(result["invoice_ids"]) == 2
 
 def test_get_summary_invoice_by_id_success(client, sample_data):
     """Test getting single summary invoice by ID."""
@@ -426,7 +395,7 @@ def test_get_summary_invoice_by_id_success(client, sample_data):
     summary_id = create_response.json()["id"]
 
     # Get the summary invoice
-    response = client.get(f"/invoices/summary/{summary_id}")
+    response = client.get(f"/summary-invoices/{summary_id}")
 
     assert response.status_code == 200
     result = response.json()
@@ -448,7 +417,7 @@ def test_get_summary_invoice_with_linked_invoices(client, sample_data):
     create_response = client.post("/summary-invoices", json=payload)
     summary_id = create_response.json()["id"]
 
-    response = client.get(f"/invoices/summary/{summary_id}")
+    response = client.get(f"/summary-invoices/{summary_id}")
 
     assert response.status_code == 200
     result = response.json()
@@ -466,7 +435,7 @@ def test_get_summary_invoice_with_linked_invoices(client, sample_data):
 
 def test_get_summary_invoice_not_found(client):
     """Test getting non-existent summary invoice."""
-    response = client.get("/invoices/summary/9999")
+    response = client.get("/summary-invoices/9999")
 
     assert response.status_code == 404
     error = response.json()
@@ -476,7 +445,7 @@ def test_get_summary_invoice_not_found(client):
 
 def test_get_summary_invoice_invalid_id(client):
     """Test getting summary invoice with invalid ID format."""
-    response = client.get("/invoices/summary/not_an_integer")
+    response = client.get("/summary-invoices/not_an_integer")
 
     assert response.status_code == 422  # Validation error
     error = response.json()
@@ -501,13 +470,13 @@ def test_delete_summary_invoice_success(client, sample_data):
     summary_id = create_response.json()["id"]
 
     # Delete the summary invoice
-    response = client.delete(f"/invoices/summary/{summary_id}")
+    response = client.delete(f"/summary-invoices/{summary_id}")
 
     assert response.status_code == 204
     assert response.content == b""
 
     # Verify it's deleted
-    get_response = client.get(f"/invoices/summary/{summary_id}")
+    get_response = client.get(f"/summary-invoices/{summary_id}")
     assert get_response.status_code == 404
 
 
@@ -534,7 +503,7 @@ def test_delete_summary_invoice_cascade_links(client, sample_data, session):
     assert len(links_before) == 2
 
     # Delete the summary invoice
-    response = client.delete(f"/invoices/summary/{summary_id}")
+    response = client.delete(f"/summary-invoices/{summary_id}")
     assert response.status_code == 204
 
     # Verify links are also deleted
@@ -561,7 +530,7 @@ def test_delete_summary_invoice_preserves_original_invoices(
     summary_id = create_response.json()["id"]
 
     # Delete the summary invoice
-    response = client.delete(f"/invoices/summary/{summary_id}")
+    response = client.delete(f"/summary-invoices/{summary_id}")
     assert response.status_code == 204
 
     # Verify original invoices still exist
@@ -578,7 +547,7 @@ def test_delete_summary_invoice_preserves_original_invoices(
 
 def test_delete_summary_invoice_not_found(client):
     """Test deleting non-existent summary invoice."""
-    response = client.delete("/invoices/summary/9999")
+    response = client.delete("/summary-invoices/9999")
 
     assert response.status_code == 404
     error = response.json()
@@ -588,7 +557,7 @@ def test_delete_summary_invoice_not_found(client):
 
 def test_delete_summary_invoice_invalid_id(client):
     """Test deleting summary invoice with invalid ID format."""
-    response = client.delete("/invoices/summary/not_an_integer")
+    response = client.delete("/summary-invoices/not_an_integer")
 
     assert response.status_code == 422  # Validation error
     error = response.json()
@@ -608,11 +577,11 @@ def test_delete_summary_invoice_already_deleted(client, sample_data):
     summary_id = create_response.json()["id"]
 
     # Delete it once
-    response1 = client.delete(f"/invoices/summary/{summary_id}")
+    response1 = client.delete(f"/summary-invoices/{summary_id}")
     assert response1.status_code == 204
 
     # Try to delete again
-    response2 = client.delete(f"/invoices/summary/{summary_id}")
+    response2 = client.delete(f"/summary-invoices/{summary_id}")
     assert response2.status_code == 404
 
 
@@ -635,7 +604,7 @@ def test_full_crud_workflow(client, sample_data):
     summary_id = create_response.json()["id"]
 
     # 2. Read single summary invoice
-    get_response = client.get(f"/invoices/summary/{summary_id}")
+    get_response = client.get(f"/summary-invoices/{summary_id}")
     assert get_response.status_code == 200
     assert get_response.json()["id"] == summary_id
 
@@ -645,11 +614,11 @@ def test_full_crud_workflow(client, sample_data):
     assert len(list_response.json()) == 1
 
     # 4. Delete summary invoice
-    delete_response = client.delete(f"/invoices/summary/{summary_id}")
+    delete_response = client.delete(f"/summary-invoices/{summary_id}")
     assert delete_response.status_code == 204
 
     # 5. Verify deletion
-    get_after_delete = client.get(f"/invoices/summary/{summary_id}")
+    get_after_delete = client.get(f"/summary-invoices/{summary_id}")
     assert get_after_delete.status_code == 404
 
     list_after_delete = client.get("/summary-invoices")
@@ -684,6 +653,6 @@ def test_concurrent_operations(client, sample_data):
 
     # Verify individual access
     for summary_id in created_ids:
-        response = client.get(f"/invoices/summary/{summary_id}")
+        response = client.get(f"/summary-invoices/{summary_id}")
         assert response.status_code == 200
         assert response.json()["id"] == summary_id
