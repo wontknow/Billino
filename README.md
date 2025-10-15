@@ -34,17 +34,29 @@ Ein **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trennung – entwicke
 
 ---
 
-## ✨ Features (geplant)
-- Kundenverwaltung (Stammkunden speichern, Autocomplete im Formular)
-- Profile (verschiedene Absender, z. B. Friseursalon, Altersheim XY)
-- Rechnungen erstellen:
+## ✨ Features
+
+### ✅ Implementiert
+- **Kundenverwaltung**: CRUD API für Stammkunden (Name, Adresse, Stadt)
+- **Profile**: Absender-Profile mit flexiblen Steuereinstellungen
+  - 19% MwSt (Standard), 7% MwSt (ermäßigt), 0% MwSt (§19 UStG)
+  - Automatische Vererbung oder individuelle Überschreibung pro Rechnung
+- **Rechnungserstellung**: Vollständige API mit erweiterten Funktionen
   - Automatische Rechnungsnummer (`YY|laufendeNummer`)
-  - Datumsauswahl
-  - PDF-Erstellung (A4 Standard)
-  - PDF Layouts: A4 & 4×A6 auf A4
-  - Optional: E-Rechnung (XRechnung / ZUGFeRD)
-- Export: CSV/Excel & Monats-/Jahres-Sammelrechnungen
-- Offline-First: SQLite als Datenbasis
+  - Flexible Steuerkonfiguration (Brutto/Netto-Eingabe)
+  - Mehrere Rechnungspositionen pro Rechnung
+  - Validierung und Summenprüfung
+- **Sammelrechnungen**: Monats-/Jahres-Abrechnungen mit Steuerberechnung
+  - Automatische Aggregation von Einzelrechnungen
+  - Separate Steuerausweise nach Steuersätzen
+- **Database**: SQLite mit Foreign Key-Constraints und Relationen
+- **API**: RESTful FastAPI mit OpenAPI/Swagger-Dokumentation
+
+### 🚧 Geplant
+- PDF-Erstellung (A4 Standard)
+- PDF Layouts: A4 & 4×A6 auf A4
+- E-Rechnung (XRechnung / ZUGFeRD)
+- Frontend (Next.js + shadcn/ui)
 - Desktop-App: Tauri v2 bündelt Backend + Frontend + DB in **eine ausführbare Datei**
 
 ---
@@ -60,10 +72,18 @@ Ein **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trennung – entwicke
 ## 📂 Ordnerstruktur
 
 ```
-backend/    # FastAPI, SQLite, PDF/E-Rechnung
-frontend/   # Next.js + shadcn/ui
-src-tauri/  # Tauri App-Shell, Sidecar-Konfig
-.github/    # CI/CD, Issue-Templates, PR-Template
+backend/          # FastAPI, SQLite, Services
+├── models/       # SQLModel Datenmodelle
+├── routers/      # API Endpoints (customers, profiles, invoices, summary_invoices)
+├── services/     # Business Logic (summary_invoice_generator)
+├── tests/        # Unit- & Integrationstests
+├── database.py   # DB-Setup & Session-Management
+├── main.py       # FastAPI App-Entry
+└── requirements.txt
+
+frontend/         # Next.js + shadcn/ui (geplant)
+src-tauri/        # Tauri App-Shell, Sidecar-Konfig
+.github/          # CI/CD, Issue-Templates, PR-Template
 README.md
 ```
 
@@ -74,11 +94,23 @@ README.md
 ### Backend (FastAPI)
 ```bash
 cd backend
-python -m venv .venv && source .venv/bin/activate
-pip install -r .\requirements.txt
+python -m venv .venv
+
+# Windows
+.\.venv\Scripts\activate
+# Linux/Mac
+source .venv/bin/activate
+
+pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
-Swagger-UI: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+**API-Endpunkte**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- `/health` - System-Status
+- `/customers/` - Kundenverwaltung
+- `/profiles/` - Profile mit Steuereinstellungen
+- `/invoices/` - Rechnungserstellung und -verwaltung
+- `/summary-invoices/` - Sammelrechnungen
 
 ---
 
@@ -106,11 +138,22 @@ cargo tauri dev
 - Framework: [pytest](https://docs.pytest.org/) + [httpx](https://www.python-httpx.org/) für API-Tests
 - Coverage mit [pytest-cov](https://pytest-cov.readthedocs.io/)
 - Tests liegen in `backend/tests/`
+- **Umfassende Testabdeckung**:
+  - CRUD-Operationen für alle Entitäten
+  - Steuerberechnung (Brutto/Netto, verschiedene Steuersätze)
+  - Validierung und Fehlerbehandlung
+  - Session-Management und Transaktionen
+  - Sammelrechnungs-Logik
 
-Beispiel:
+**Aktuelle Test-Suite**:
 ```bash
 cd backend
-pytest --cov=.
+pytest tests/test_customers.py      # Kundenverwaltung
+pytest tests/test_profiles.py       # Profile mit Steuereinstellungen
+pytest tests/test_invoices.py       # Rechnungs-CRUD
+pytest tests/test_invoice_tax_*.py  # Steuerlogik & Edge Cases
+pytest tests/test_summary_*.py      # Sammelrechnungen
+pytest --cov=. --cov-report=html    # Coverage-Report
 ```
 
 ### Frontend
@@ -175,22 +218,52 @@ jobs:
 
 ## 📑 Projektphasen (Roadmap)
 
-- [x] Phase 0 – Repo-Bootstrap (Ordner, CI/CD, Readme, Templates)
-- [x] Phase 1 – Backend-Skeleton (FastAPI Healthcheck)
-- [x] Phase 2 – DB-Anbindung (SQLite via SQLModel)
-- [x] Phase 3 – Models + CRUD (Kunden, Profile)
-- [x] Phase 4 – Invoice-Core (Rechnung, Nummernlogik)
-- [ ] Phase 5 – PDF-Renderer (A4)
-- [ ] Phase 6 – PDF-Renderer (A6x4)
-- [ ] Phase 7 – Frontend Bootstrap (Next.js + shadcn/ui)
-- [ ] Phase 8 – Invoice-Form (Autocomplete, Submit)
-- [ ] Phase 9 – CORS + Env-Konfig
-- [ ] Phase 10 – Next Static Export
-- [ ] Phase 11 – E-Invoice Foundations (XRechnung/ZUGFeRD)
-- [ ] Phase 12 – Prototype E-Invoice
-- [ ] Phase 13 – Tauri Shell
-- [ ] Phase 14 – Backend Sidecar
-- [ ] Phase 15 – Release & Docs
+- [x] **Phase 0** – Repo-Bootstrap (Ordner, CI/CD, Readme, Templates)
+- [x] **Phase 1** – Backend-Skeleton (FastAPI Healthcheck)
+- [x] **Phase 2** – DB-Anbindung (SQLite via SQLModel)
+- [x] **Phase 3** – Models + CRUD (Kunden, Profile)
+- [x] **Phase 4** – Invoice-Core (Rechnung, Nummernlogik, Steuerberechnung)
+- [x] **Phase 4.5** – Summary Invoices (Sammelrechnungen mit Service-Layer)
+- [ ] **Phase 5** – PDF-Renderer (A4)
+- [ ] **Phase 6** – PDF-Renderer (A6x4)
+- [ ] **Phase 7** – Frontend Bootstrap (Next.js + shadcn/ui)
+- [ ] **Phase 8** – Invoice-Form (Autocomplete, Submit)
+- [ ] **Phase 9** – CORS + Env-Konfig
+- [ ] **Phase 10** – Next Static Export
+- [ ] **Phase 11** – E-Invoice Foundations (XRechnung/ZUGFeRD)
+- [ ] **Phase 12** – Prototype E-Invoice
+- [ ] **Phase 13** – Tauri Shell
+- [ ] **Phase 14** – Backend Sidecar
+- [ ] **Phase 15** – Release & Docs
+
+---
+
+## 🔧 API-Features & Business Logic
+
+### Steuerberechnung
+Das System unterstützt die deutsche Steuergesetzgebung mit flexibler Konfiguration:
+
+**Steuerarten**:
+- **Kleinunternehmer (§19 UStG)**: 0% MwSt
+- **Standard-MwSt**: 19%
+- **Ermäßigte MwSt**: 7% (z.B. Kunstverkäufe, bestimmte Dienstleistungen)
+
+**Eingabemodi**:
+- **Brutto-Eingabe**: Betrag inkl. MwSt → Netto wird automatisch berechnet
+- **Netto-Eingabe**: Betrag excl. MwSt → Brutto wird für PDF/Display berechnet
+
+### Validierung & Konsistenz
+- **Summenprüfung**: Einzelpositionen vs. Gesamtbetrag (Toleranz: ±1 Cent)
+- **Foreign Key-Validierung**: Profile und Kunden müssen existieren
+- **Steuer-Konsistenz**: Automatische Vererbung oder explizite Überschreibung
+- **Datenintegrität**: SQLite mit Constraints und Transaktionen
+
+### Sammelrechnungen (Summary Invoices)
+Automatische Aggregation von Einzelrechnungen für:
+- Monatliche/jährliche Abrechnungen
+- Separate Steuerausweise nach Steuersätzen
+- Korrekte Netto/Brutto/Steuer-Berechnungen
+- Service-Layer mit komplexer Geschäftslogik
 
 ---
 
@@ -206,12 +279,7 @@ jobs:
 
 ---
 
-## 🗄️ Datenbankschema (Stand: Profile & Invoices)
-
-Das Backend nutzt **SQLite** mit [SQLModel](https://sqlmodel.tiangolo.com/).  
-Aktuell sind die folgenden Tabellen und Relationen definiert:
-
-## 🗄️ Datenbankschema (Stand: Profile & Invoices)
+## 🗄️ Datenbankschema
 
 Das Backend nutzt **SQLite** mit [SQLModel](https://sqlmodel.tiangolo.com/).  
 Aktuell sind die folgenden Tabellen und Relationen definiert:
@@ -221,6 +289,9 @@ erDiagram
     CUSTOMER ||--o{ INVOICE : "hat"
     PROFILE  ||--o{ INVOICE : "erstellt"
     INVOICE  ||--o{ INVOICE_ITEM : "enthält"
+    PROFILE  ||--o{ SUMMARY_INVOICE : "fasst_zusammen"
+    SUMMARY_INVOICE ||--o{ SUMMARY_INVOICE_LINK : "verlinkt"
+    INVOICE ||--o{ SUMMARY_INVOICE_LINK : "ist_in"
 
     CUSTOMER {
         int id PK
@@ -246,9 +317,9 @@ erDiagram
         string date
         int customer_id FK
         int profile_id FK
-        bool include_tax "Übernimmt Standard aus Profile"
-        float tax_rate "z.B. 0.19 oder 0.07"
-        bool is_gross_amount "True = Betrag inkl. MwSt"
+        bool include_tax "Übernimmt Standard aus Profile oder individuell"
+        float tax_rate "z.B. 0.19 oder 0.07 oder 0.0"
+        bool is_gross_amount "True = Betrag inkl. MwSt, False = Netto"
         float total_amount "Gesamtbetrag (netto oder brutto je nach Flag)"
     }
 
@@ -258,15 +329,41 @@ erDiagram
         int quantity
         string description
         float price "Einzelpreis (netto oder brutto, je nach Invoice)"
+        float tax_rate "nullable, per Item überschreibbar"
     }
 
-  ```
-  ### Beschreibung 
+    SUMMARY_INVOICE {
+        int id PK
+        string range_text "z.B. 'Oktober 2025'"
+        string date "Erstellungsdatum"
+        int profile_id FK
+        float total_net "Summe Netto aller Rechnungen"
+        float total_tax "Summe Steuer aller Rechnungen"
+        float total_gross "Summe Brutto aller Rechnungen"
+    }
 
-  - Customer: Stammdaten der Kunden (1:n zu Invoices)
-  - Profile: Absender-Profile, z. B. verschiedene Geschäftseinheiten (1:n zu Invoices)
-  - Invoice: Rechnung mit eindeutiger Nummer, Datum und Verknüpfung zu Customer und Profile
-  - InvoiceItem: Positionen einer Rechnung (z. B. Dienstleistungen, Produkte)
+    SUMMARY_INVOICE_LINK {
+        int id PK
+        int summary_invoice_id FK
+        int invoice_id FK
+    }
+```
+
+### Beschreibung 
+
+- **Customer**: Stammdaten der Kunden (1:n zu Invoices)
+- **Profile**: Absender-Profile mit Steuereinstellungen (1:n zu Invoices & Summary Invoices)
+- **Invoice**: Einzelrechnungen mit flexibler Steuerbehandlung (Brutto/Netto-Eingabe)
+- **InvoiceItem**: Positionen einer Rechnung mit individuellen Steuersätzen
+- **SummaryInvoice**: Sammelrechnungen für Monats-/Jahres-Abrechnungen
+- **SummaryInvoiceLink**: n:m-Beziehung zwischen Summary Invoice und einzelnen Rechnungen
+
+### Steuerlogik
+- **§19 UStG (Kleinunternehmer)**: `include_tax=false`, `tax_rate=0.0`
+- **Standard-MwSt**: `include_tax=true`, `tax_rate=0.19`
+- **Ermäßigte MwSt**: `include_tax=true`, `tax_rate=0.07`
+- **Brutto-Eingabe**: `is_gross_amount=true` → Netto wird berechnet
+- **Netto-Eingabe**: `is_gross_amount=false` → Brutto wird berechnet
 
 ---
 
