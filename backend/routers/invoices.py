@@ -201,13 +201,3 @@ def delete_invoice(invoice_id: int, session: Session = Depends(get_session)):
     session.commit()
     return
 
-
-### Summary Invoices
-# Create, Read (list), Read (single), Delete
-
-@router.post("/summary", response_model=SummaryInvoiceRead, status_code=201)
-def create_summary(summary: SummaryInvoiceCreate, session: Session = Depends(get_session)):
-    try:
-        summary_invoice = create_summary_invoice(summary, session)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail= [ { "loc": ["body"], "msg": str(e), "type": "value_error"} ])
