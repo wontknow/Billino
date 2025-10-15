@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from database import init_db
-from routers import customers, health, invoices, profiles
+from routers import customers, health, invoices, profiles, summary_invoices
 
 
 @asynccontextmanager
@@ -27,3 +27,4 @@ app.include_router(health.router)
 app.include_router(customers.router)
 app.include_router(profiles.router)
 app.include_router(invoices.router)
+app.include_router(summary_invoices.router)
