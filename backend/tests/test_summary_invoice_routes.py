@@ -7,6 +7,8 @@ from database import get_session, init_db
 from main import app
 from models import Customer, Invoice, Profile, SummaryInvoice, SummaryInvoiceLink
 
+client = TestClient(app)
+
 
 @pytest.fixture(scope="session")
 def engine():
@@ -130,7 +132,7 @@ def test_create_summary_invoice_success(client, sample_data):
         "invoice_ids": [data["invoices"][0].id, data["invoices"][1].id],
     }
 
-    response = client.post("/invoices/summary", json=payload)
+    response = client.post("/summary-invoices", json=payload)
 
     assert response.status_code == 201
     result = response.json()
@@ -151,7 +153,7 @@ def test_create_summary_invoice_single_invoice(client, sample_data):
         "invoice_ids": [data["invoices"][0].id],
     }
 
-    response = client.post("/invoices/summary", json=payload)
+    response = client.post("/summary-invoices", json=payload)
 
     assert response.status_code == 201
     result = response.json()
@@ -168,7 +170,7 @@ def test_create_summary_invoice_no_tax(client, sample_data):
         "invoice_ids": [data["invoices"][2].id],
     }
 
-    response = client.post("/invoices/summary", json=payload)
+    response = client.post("/summary-invoices", json=payload)
 
     assert response.status_code == 201
     result = response.json()
@@ -186,7 +188,7 @@ def test_create_summary_invoice_invalid_profile(client, sample_data):
     """Test creation with non-existent profile."""
     payload = {"profile_id": 9999, "invoice_ids": [1, 2]}
 
-    response = client.post("/invoices/summary", json=payload)
+    response = client.post("/summary-invoices", json=payload)
 
     assert response.status_code == 400
     error = response.json()
@@ -199,7 +201,7 @@ def test_create_summary_invoice_empty_invoice_list(client, sample_data):
     data = sample_data
     payload = {"profile_id": data["profile"].id, "invoice_ids": []}
 
-    response = client.post("/invoices/summary", json=payload)
+    response = client.post("/summary-invoices", json=payload)
 
     assert response.status_code == 400
     error = response.json()
@@ -212,7 +214,7 @@ def test_create_summary_invoice_nonexistent_invoices(client, sample_data):
     data = sample_data
     payload = {"profile_id": data["profile"].id, "invoice_ids": [9999, 8888]}
 
-    response = client.post("/invoices/summary", json=payload)
+    response = client.post("/summary-invoices", json=payload)
 
     assert response.status_code == 400
     error = response.json()
@@ -230,7 +232,7 @@ def test_create_summary_invoice_wrong_profile_invoices(client, sample_data):
         ],  # This invoice belongs to profile_no_tax
     }
 
-    response = client.post("/invoices/summary", json=payload)
+    response = client.post("/summary-invoices", json=payload)
 
     assert response.status_code == 400
     error = response.json()
@@ -242,7 +244,7 @@ def test_create_summary_invoice_missing_profile_id(client):
     """Test creation with missing profile_id."""
     payload = {"invoice_ids": [1, 2]}
 
-    response = client.post("/invoices/summary", json=payload)
+    response = client.post("/summary-invoices", json=payload)
 
     assert response.status_code == 422  # Validation error
     error = response.json()
@@ -254,7 +256,7 @@ def test_create_summary_invoice_missing_invoice_ids(client, sample_data):
     data = sample_data
     payload = {"profile_id": data["profile"].id}
 
-    response = client.post("/invoices/summary", json=payload)
+    response = client.post("/summary-invoices", json=payload)
 
     assert response.status_code == 422  # Validation error
     error = response.json()
@@ -265,7 +267,7 @@ def test_create_summary_invoice_invalid_data_types(client):
     """Test creation with invalid data types."""
     payload = {"profile_id": "not_an_integer", "invoice_ids": ["not", "integers"]}
 
-    response = client.post("/invoices/summary", json=payload)
+    response = client.post("/summary-invoices", json=payload)
 
     assert response.status_code == 422  # Validation error
     error = response.json()
@@ -279,7 +281,7 @@ def test_create_summary_invoice_invalid_data_types(client):
 
 def test_get_summary_invoices_list_empty(client):
     """Test getting empty list of summary invoices."""
-    response = client.get("/invoices/summary")
+    response = client.get("/summary-invoices")
 
     assert response.status_code == 200
     result = response.json()
@@ -296,11 +298,11 @@ def test_get_summary_invoices_list_with_data(client, sample_data):
         "profile_id": data["profile"].id,
         "invoice_ids": [data["invoices"][0].id, data["invoices"][1].id],
     }
-    create_response = client.post("/invoices/summary", json=payload)
+    create_response = client.post("/summary-invoices", json=payload)
     assert create_response.status_code == 201
 
     # Then get the list
-    response = client.get("/invoices/summary")
+    response = client.get("/summary-invoices")
 
     assert response.status_code == 200
     result = response.json()
@@ -325,10 +327,10 @@ def test_get_summary_invoices_list_multiple(client, sample_data):
         "invoice_ids": [data["invoices"][2].id],
     }
 
-    client.post("/invoices/summary", json=payload1)
-    client.post("/invoices/summary", json=payload2)
+    client.post("/summary-invoices", json=payload1)
+    client.post("/summary-invoices", json=payload2)
 
-    response = client.get("/invoices/summary")
+    response = client.get("/summary-invoices")
 
     assert response.status_code == 200
     result = response.json()
@@ -349,8 +351,8 @@ def test_get_summary_invoices_list_by_profile(client, sample_data):
         "invoice_ids": [data["invoices"][2].id],
     }
 
-    client.post("/invoices/summary", json=payload1)
-    client.post("/invoices/summary", json=payload2)
+    client.post("/summary-invoices", json=payload1)
+    client.post("/summary-invoices", json=payload2)
 
     # Filter by profile_id
     response = client.get(f"/invoices/summary?profile_id={data['profile'].id}")
@@ -375,7 +377,7 @@ def test_get_summary_invoice_by_id_success(client, sample_data):
         "profile_id": data["profile"].id,
         "invoice_ids": [data["invoices"][0].id, data["invoices"][1].id],
     }
-    create_response = client.post("/invoices/summary", json=payload)
+    create_response = client.post("/summary-invoices", json=payload)
     summary_id = create_response.json()["id"]
 
     # Get the summary invoice
@@ -398,7 +400,7 @@ def test_get_summary_invoice_with_linked_invoices(client, sample_data):
         "profile_id": data["profile"].id,
         "invoice_ids": [data["invoices"][0].id, data["invoices"][1].id],
     }
-    create_response = client.post("/invoices/summary", json=payload)
+    create_response = client.post("/summary-invoices", json=payload)
     summary_id = create_response.json()["id"]
 
     response = client.get(f"/invoices/summary/{summary_id}")
@@ -450,7 +452,7 @@ def test_delete_summary_invoice_success(client, sample_data):
         "profile_id": data["profile"].id,
         "invoice_ids": [data["invoices"][0].id, data["invoices"][1].id],
     }
-    create_response = client.post("/invoices/summary", json=payload)
+    create_response = client.post("/summary-invoices", json=payload)
     summary_id = create_response.json()["id"]
 
     # Delete the summary invoice
@@ -473,7 +475,7 @@ def test_delete_summary_invoice_cascade_links(client, sample_data, session):
         "profile_id": data["profile"].id,
         "invoice_ids": [data["invoices"][0].id, data["invoices"][1].id],
     }
-    create_response = client.post("/invoices/summary", json=payload)
+    create_response = client.post("/summary-invoices", json=payload)
     summary_id = create_response.json()["id"]
 
     # Verify links exist
@@ -510,7 +512,7 @@ def test_delete_summary_invoice_preserves_original_invoices(
         "profile_id": data["profile"].id,
         "invoice_ids": [data["invoices"][0].id, data["invoices"][1].id],
     }
-    create_response = client.post("/invoices/summary", json=payload)
+    create_response = client.post("/summary-invoices", json=payload)
     summary_id = create_response.json()["id"]
 
     # Delete the summary invoice
@@ -557,7 +559,7 @@ def test_delete_summary_invoice_already_deleted(client, sample_data):
         "profile_id": data["profile"].id,
         "invoice_ids": [data["invoices"][0].id],
     }
-    create_response = client.post("/invoices/summary", json=payload)
+    create_response = client.post("/summary-invoices", json=payload)
     summary_id = create_response.json()["id"]
 
     # Delete it once
@@ -583,7 +585,7 @@ def test_full_crud_workflow(client, sample_data):
         "profile_id": data["profile"].id,
         "invoice_ids": [data["invoices"][0].id, data["invoices"][1].id],
     }
-    create_response = client.post("/invoices/summary", json=payload)
+    create_response = client.post("/summary-invoices", json=payload)
     assert create_response.status_code == 201
     summary_id = create_response.json()["id"]
 
@@ -593,7 +595,7 @@ def test_full_crud_workflow(client, sample_data):
     assert get_response.json()["id"] == summary_id
 
     # 3. Read list of summary invoices
-    list_response = client.get("/invoices/summary")
+    list_response = client.get("/summary-invoices")
     assert list_response.status_code == 200
     assert len(list_response.json()) == 1
 
@@ -605,7 +607,7 @@ def test_full_crud_workflow(client, sample_data):
     get_after_delete = client.get(f"/invoices/summary/{summary_id}")
     assert get_after_delete.status_code == 404
 
-    list_after_delete = client.get("/invoices/summary")
+    list_after_delete = client.get("/summary-invoices")
     assert list_after_delete.status_code == 200
     assert len(list_after_delete.json()) == 0
 
@@ -626,12 +628,12 @@ def test_concurrent_operations(client, sample_data):
 
     created_ids = []
     for payload in payloads:
-        response = client.post("/invoices/summary", json=payload)
+        response = client.post("/summary-invoices", json=payload)
         assert response.status_code == 201
         created_ids.append(response.json()["id"])
 
     # Verify all exist
-    list_response = client.get("/invoices/summary")
+    list_response = client.get("/summary-invoices")
     assert list_response.status_code == 200
     assert len(list_response.json()) == 3
 
