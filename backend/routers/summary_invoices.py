@@ -5,7 +5,12 @@ from sqlalchemy.orm import Session
 from sqlmodel import select
 
 from database import get_session
-from models import SummaryInvoice, SummaryInvoiceCreate, SummaryInvoiceRead, SummaryInvoiceLink
+from models import (
+    SummaryInvoice,
+    SummaryInvoiceCreate,
+    SummaryInvoiceLink,
+    SummaryInvoiceRead,
+)
 from services import create_summary_invoice
 
 router = APIRouter(prefix="/summary-invoices", tags=["summary_invoices"])
@@ -44,20 +49,56 @@ def list_summaries(session: Session = Depends(get_session)):
     for summary in summaries:
         # Get invoice IDs from links
         links = session.exec(
-            select(SummaryInvoiceLink).where(SummaryInvoiceLink.summary_invoice_id == summary.id)
+            select(SummaryInvoiceLink).where(
+                SummaryInvoiceLink.summary_invoice_id == summary.id
+            )
         ).all()
         invoice_ids = [link.invoice_id for link in links]
-        
-        summary_invoices.append(SummaryInvoiceRead(
-            id=summary.id,
-            range_text=summary.range_text,
-            date=summary.date,
-            profile_id=summary.profile_id,
-            total_net=summary.total_net,
-            total_tax=summary.total_tax,
-            total_gross=summary.total_gross,
-            invoice_ids=invoice_ids
-        ))
+
+        summary_invoices.append(
+            SummaryInvoiceRead(
+                id=summary.id,
+                range_text=summary.range_text,
+                date=summary.date,
+                profile_id=summary.profile_id,
+                total_net=summary.total_net,
+                total_tax=summary.total_tax,
+                total_gross=summary.total_gross,
+                invoice_ids=invoice_ids,
+            )
+        )
+    return summary_invoices
+
+
+# get summaries by profile_id
+@router.get("/by-profile/{profile_id}", response_model=list[SummaryInvoiceRead])
+def list_summaries_by_profile(profile_id: int, session: Session = Depends(get_session)):
+    summaries = session.exec(
+        select(SummaryInvoice).where(SummaryInvoice.profile_id == profile_id)
+    ).all()
+    # Create list of SummaryInvoiceRead with invoice_ids from links
+    summary_invoices = []
+    for summary in summaries:
+        # Get invoice IDs from links
+        links = session.exec(
+            select(SummaryInvoiceLink).where(
+                SummaryInvoiceLink.summary_invoice_id == summary.id
+            )
+        ).all()
+        invoice_ids = [link.invoice_id for link in links]
+
+        summary_invoices.append(
+            SummaryInvoiceRead(
+                id=summary.id,
+                range_text=summary.range_text,
+                date=summary.date,
+                profile_id=summary.profile_id,
+                total_net=summary.total_net,
+                total_tax=summary.total_tax,
+                total_gross=summary.total_gross,
+                invoice_ids=invoice_ids,
+            )
+        )
     return summary_invoices
 
 
@@ -75,13 +116,15 @@ def read_summary(summary_id: int, session: Session = Depends(get_session)):
                 }
             ],
         )
-    
+
     # Get invoice IDs from links
     links = session.exec(
-        select(SummaryInvoiceLink).where(SummaryInvoiceLink.summary_invoice_id == summary.id)
+        select(SummaryInvoiceLink).where(
+            SummaryInvoiceLink.summary_invoice_id == summary.id
+        )
     ).all()
     invoice_ids = [link.invoice_id for link in links]
-    
+
     summary_invoice = SummaryInvoiceRead(
         id=summary.id,
         range_text=summary.range_text,
@@ -90,7 +133,7 @@ def read_summary(summary_id: int, session: Session = Depends(get_session)):
         total_net=summary.total_net,
         total_tax=summary.total_tax,
         total_gross=summary.total_gross,
-        invoice_ids=invoice_ids
+        invoice_ids=invoice_ids,
     )
     return summary_invoice
 
@@ -109,6 +152,14 @@ def delete_summary(summary_id: int, session: Session = Depends(get_session)):
                 }
             ],
         )
+    # Manually delete all SummaryInvoiceLink rows for this summary invoice
+    links = session.exec(
+        select(SummaryInvoiceLink).where(
+            SummaryInvoiceLink.summary_invoice_id == summary_id
+        )
+    ).all()
+    for link in links:
+        session.delete(link)
     session.delete(summary)
     session.commit()
     return
