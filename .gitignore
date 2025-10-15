@@ -5,6 +5,7 @@ out
 
 # Python
 __pycache__/
+.pytest_cache/
 *.pyc
 *.pyo
 .venv/
