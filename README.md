@@ -42,7 +42,10 @@ Ein **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trennung – entwicke
   - 19% MwSt (Standard), 7% MwSt (ermäßigt), 0% MwSt (§19 UStG)
   - Automatische Vererbung oder individuelle Überschreibung pro Rechnung
 - **Rechnungserstellung**: Vollständige API mit erweiterten Funktionen
-  - Automatische Rechnungsnummer (`YY|laufendeNummer`)
+  - **Automatische Rechnungsnummern**: `YY | NNN` Format (z.B. "25 | 001")
+  - **§14 UStG konform**: Fortlaufende, lückenlose Nummerierung über alle Profile
+  - **Frontend-freundlich**: Nummer-Preview ohne DB-Änderung
+  - **Format-Validierung**: Regex-basierte Eingabe-Überprüfung
   - Flexible Steuerkonfiguration (Brutto/Netto-Eingabe)
   - Mehrere Rechnungspositionen pro Rechnung
   - Validierung und Summenprüfung
@@ -75,7 +78,7 @@ Ein **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trennung – entwicke
 backend/          # FastAPI, SQLite, Services
 ├── models/       # SQLModel Datenmodelle
 ├── routers/      # API Endpoints (customers, profiles, invoices, summary_invoices)
-├── services/     # Business Logic (summary_invoice_generator)
+├── services/     # Business Logic (invoice_number_generator, summary_invoice_generator)
 ├── tests/        # Unit- & Integrationstests
 ├── database.py   # DB-Setup & Session-Management
 ├── main.py       # FastAPI App-Entry
@@ -110,6 +113,8 @@ uvicorn main:app --reload --port 8000
 - `/customers/` - Kundenverwaltung
 - `/profiles/` - Profile mit Steuereinstellungen
 - `/invoices/` - Rechnungserstellung und -verwaltung
+  - `GET /invoices/number-preview` - Vorschau der nächsten Rechnungsnummer
+  - `POST /invoices/` - Neue Rechnung (Nummer wird automatisch generiert)
 - `/summary-invoices/` - Sammelrechnungen
 
 ---
@@ -140,6 +145,7 @@ cargo tauri dev
 - Tests liegen in `backend/tests/`
 - **Umfassende Testabdeckung**:
   - CRUD-Operationen für alle Entitäten
+  - **Rechnungsnummern-Generierung**: Format-Validierung, Sequenziell, Global
   - Steuerberechnung (Brutto/Netto, verschiedene Steuersätze)
   - Validierung und Fehlerbehandlung
   - Session-Management und Transaktionen
@@ -148,12 +154,13 @@ cargo tauri dev
 **Aktuelle Test-Suite**:
 ```bash
 cd backend
-pytest tests/test_customers.py      # Kundenverwaltung
-pytest tests/test_profiles.py       # Profile mit Steuereinstellungen
-pytest tests/test_invoices.py       # Rechnungs-CRUD
-pytest tests/test_invoice_tax_*.py  # Steuerlogik & Edge Cases
-pytest tests/test_summary_*.py      # Sammelrechnungen
-pytest --cov=. --cov-report=html    # Coverage-Report
+pytest tests/test_customers.py               # Kundenverwaltung
+pytest tests/test_profiles.py                # Profile mit Steuereinstellungen
+pytest tests/test_invoices.py                # Rechnungs-CRUD
+pytest tests/test_invoice_number_*.py        # Automatische Nummern-Generierung
+pytest tests/test_invoice_tax_*.py           # Steuerlogik & Edge Cases
+pytest tests/test_summary_*.py               # Sammelrechnungen
+pytest --cov=. --cov-report=html             # Coverage-Report
 ```
 
 ### Frontend
@@ -223,6 +230,7 @@ jobs:
 - [x] **Phase 2** – DB-Anbindung (SQLite via SQLModel)
 - [x] **Phase 3** – Models + CRUD (Kunden, Profile)
 - [x] **Phase 4** – Invoice-Core (Rechnung, Nummernlogik, Steuerberechnung)
+- [x] **Phase 4.1** – Auto-Rechnungsnummern (§14 UStG konforme Generierung)
 - [x] **Phase 4.5** – Summary Invoices (Sammelrechnungen mit Service-Layer)
 - [ ] **Phase 5** – PDF-Renderer (A4)
 - [ ] **Phase 6** – PDF-Renderer (A6x4)
@@ -239,6 +247,29 @@ jobs:
 ---
 
 ## 🔧 API-Features & Business Logic
+
+### Automatische Rechnungsnummern (§14 UStG konform)
+**Rechtliche Compliance für Deutschland:**
+- **Fortlaufend & lückenlos**: Globale Nummerierung über alle Profile hinweg
+- **Format**: "YY | NNN" (z.B. "25 | 001", "25 | 002", ...)
+- **Validierung**: Regex-basierte Format-Überprüfung bei manueller Eingabe
+- **Frontend-Integration**: Preview-API für bessere Benutzererfahrung
+
+**API-Endpunkte:**
+```http
+GET /invoices/number-preview
+→ {"preview_number": "25 | 047"}
+
+POST /invoices/ 
+{
+  "date": "2025-10-20",
+  "profile_id": 1,
+  "customer_id": 1,
+  "total_amount": 100.0,
+  "invoice_items": [...]
+}
+→ {"number": "25 | 047", ...}  # Auto-generiert
+```
 
 ### Steuerberechnung
 Das System unterstützt die deutsche Steuergesetzgebung mit flexibler Konfiguration:
@@ -313,7 +344,7 @@ erDiagram
 
     INVOICE {
         int id PK
-        string number
+        string number "Format: YY | NNN (auto-generiert, §14 UStG konform)"
         string date
         int customer_id FK
         int profile_id FK
@@ -353,10 +384,16 @@ erDiagram
 
 - **Customer**: Stammdaten der Kunden (1:n zu Invoices)
 - **Profile**: Absender-Profile mit Steuereinstellungen (1:n zu Invoices & Summary Invoices)
-- **Invoice**: Einzelrechnungen mit flexibler Steuerbehandlung (Brutto/Netto-Eingabe)
+- **Invoice**: Einzelrechnungen mit automatischer Nummerierung & flexibler Steuerbehandlung
 - **InvoiceItem**: Positionen einer Rechnung mit individuellen Steuersätzen
 - **SummaryInvoice**: Sammelrechnungen für Monats-/Jahres-Abrechnungen
 - **SummaryInvoiceLink**: n:m-Beziehung zwischen Summary Invoice und einzelnen Rechnungen
+
+### Rechnungsnummern-Logik (§14 UStG)
+- **Format**: "YY | NNN" (z.B. "25 | 001", "25 | 002")
+- **Globale Sequenz**: Fortlaufend über alle Profile hinweg
+- **Automatisch**: Backend generiert, Frontend braucht keine Logik
+- **Validierung**: Regex-Überprüfung bei manueller Eingabe
 
 ### Steuerlogik
 - **§19 UStG (Kleinunternehmer)**: `include_tax=false`, `tax_rate=0.0`
