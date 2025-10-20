@@ -22,3 +22,5 @@ target/
 # Builds
 dist/
 invoices/
+
+.htmlcov/
