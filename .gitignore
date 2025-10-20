@@ -24,3 +24,6 @@ dist/
 invoices/
 
 .htmlcov/
+
+# PDF Test files and outputs
+backend/services/*.pdf
