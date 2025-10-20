@@ -14,6 +14,7 @@ class InvoiceItemCreate(SQLModel):
 
 class InvoiceCreateWithNumber(SQLModel):
     """Invoice creation model WITH manual number (for backward compatibility)"""
+
     number: str
     date: str
     customer_id: int
@@ -58,6 +59,7 @@ class InvoiceCreateWithNumber(SQLModel):
 
 class InvoiceCreate(SQLModel):
     """Invoice creation model WITHOUT number (auto-generated)"""
+
     date: str
     customer_id: int
     profile_id: int

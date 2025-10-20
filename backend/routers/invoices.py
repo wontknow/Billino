@@ -13,7 +13,11 @@ from models import (
     SummaryInvoiceCreate,
     SummaryInvoiceRead,
 )
-from services import create_summary_invoice, generate_next_invoice_number, get_preview_invoice_number
+from services import (
+    create_summary_invoice,
+    generate_next_invoice_number,
+    get_preview_invoice_number,
+)
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
@@ -23,7 +27,7 @@ def get_invoice_number_preview(session: Session = Depends(get_session)):
     """
     Get a preview of what the next invoice number would be globally.
     Useful for frontend to show users what number their invoice will get.
-    
+
     Note: Numbers are sequential across all profiles (German tax law compliance).
     """
     next_number = get_preview_invoice_number(session)

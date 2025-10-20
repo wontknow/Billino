@@ -41,6 +41,7 @@ def test_create_invoice():
     # Number should be auto-generated in correct format
     assert "number" in invoice_data
     from services.invoice_number_generator import validate_invoice_number_format
+
     assert validate_invoice_number_format(invoice_data["number"]) is True
     assert invoice_data["profile_id"] == profile_id
     assert invoice_data["customer_id"] == customer_id
@@ -187,8 +188,9 @@ def test_get_invoice():
     invoice_data = get_response.json()
 
     assert invoice_data["id"] == invoice_id
-    # Number should be auto-generated in correct format 
+    # Number should be auto-generated in correct format
     from services.invoice_number_generator import validate_invoice_number_format
+
     assert validate_invoice_number_format(invoice_data["number"]) is True
     assert invoice_data["profile_id"] == profile_id
     assert invoice_data["customer_id"] == customer_id
