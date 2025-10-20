@@ -11,7 +11,6 @@ TEST_PROFILE = {
 }
 TEST_CUSTOMER = {"name": "Invoice Customer"}
 TEST_INVOICE = {
-    "number": "25|113",
     "date": "2025-09-10",
     "profile_id": None,
     "customer_id": None,
@@ -39,7 +38,11 @@ def test_create_invoice():
     assert invoice_response.status_code == 201
     invoice_data = invoice_response.json()
 
-    assert invoice_data["number"] == invoice["number"]
+    # Number should be auto-generated in correct format
+    assert "number" in invoice_data
+    from services.invoice_number_generator import validate_invoice_number_format
+
+    assert validate_invoice_number_format(invoice_data["number"]) is True
     assert invoice_data["profile_id"] == profile_id
     assert invoice_data["customer_id"] == customer_id
     assert invoice_data["total_amount"] == invoice["total_amount"]
@@ -68,7 +71,6 @@ def test_create_invoice_with_tax_fields():
     customer_id = customer_response.json()["id"]
 
     invoice_data = {
-        "number": "25|999",
         "date": "2025-09-01",
         "customer_id": customer_id,
         "profile_id": profile_id,
@@ -143,7 +145,7 @@ def test_create_invoice_with_wrong_profile():
     # 3. Create invoice
     invoice_response = client.post("/invoices/", json=invoice)
     assert invoice_response.status_code == 400
-    assert invoice_response.json() == {"detail": "Profile does not exist."}
+    assert invoice_response.json()["detail"][0]["msg"] == "Profile does not exist."
 
 
 def test_create_invoice_with_wrong_customer():
@@ -159,7 +161,7 @@ def test_create_invoice_with_wrong_customer():
     # 3. Create invoice
     invoice_response = client.post("/invoices/", json=invoice)
     assert invoice_response.status_code == 400
-    assert invoice_response.json() == {"detail": "Customer does not exist."}
+    assert invoice_response.json()["detail"][0]["msg"] == "Customer does not exist."
 
 
 def test_get_invoice():
@@ -186,7 +188,10 @@ def test_get_invoice():
     invoice_data = get_response.json()
 
     assert invoice_data["id"] == invoice_id
-    assert invoice_data["number"] == invoice["number"]
+    # Number should be auto-generated in correct format
+    from services.invoice_number_generator import validate_invoice_number_format
+
+    assert validate_invoice_number_format(invoice_data["number"]) is True
     assert invoice_data["profile_id"] == profile_id
     assert invoice_data["customer_id"] == customer_id
     assert invoice_data["total_amount"] == invoice["total_amount"]
@@ -208,7 +213,8 @@ def test_get_invoice():
 def test_get_invoice_with_invalid_id():
     response = client.get("/invoices/9999")
     assert response.status_code == 404
-    assert response.json() == {"detail": "Invoice not found."}
+    # resp msg
+    assert response.json()["detail"][0]["msg"] == "Invoice not found."
 
 
 def test_get_invoice_list():
@@ -243,10 +249,10 @@ def test_delete_invoice():
     # 5. Verify deletion
     get_response = client.get(f"/invoices/{invoice_id}")
     assert get_response.status_code == 404
-    assert get_response.json() == {"detail": "Invoice not found."}
+    assert get_response.json()["detail"][0]["msg"] == "Invoice not found."
 
 
 def test_delete_invoice_with_invalid_id():
     response = client.delete("/invoices/9999")
     assert response.status_code == 404
-    assert response.json() == {"detail": "Invoice not found."}
+    assert response.json()["detail"][0]["msg"] == "Invoice not found."

@@ -10,9 +10,28 @@ from models import (
     InvoiceItemRead,
     InvoiceRead,
     Profile,
+    SummaryInvoiceCreate,
+    SummaryInvoiceRead,
+)
+from services import (
+    create_summary_invoice,
+    generate_next_invoice_number,
+    get_preview_invoice_number,
 )
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
+
+
+@router.get("/number-preview")
+def get_invoice_number_preview(session: Session = Depends(get_session)):
+    """
+    Get a preview of what the next invoice number would be globally.
+    Useful for frontend to show users what number their invoice will get.
+
+    Note: Numbers are sequential across all profiles (German tax law compliance).
+    """
+    next_number = get_preview_invoice_number(session)
+    return {"preview_number": next_number}
 
 
 @router.post("/", response_model=InvoiceRead, status_code=201)
@@ -22,9 +41,30 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
     customer = session.get(Customer, invoice.customer_id)
     # Profile und Customer validieren
     if not profile:
-        raise HTTPException(status_code=400, detail="Profile does not exist.")
+        raise HTTPException(
+            status_code=400,
+            detail=[
+                {
+                    "loc": ["body", "profile_id"],
+                    "msg": "Profile does not exist.",
+                    "type": "value_error",
+                }
+            ],
+        )
     if not customer:
-        raise HTTPException(status_code=400, detail="Customer does not exist.")
+        raise HTTPException(
+            status_code=400,
+            detail=[
+                {
+                    "loc": ["body", "customer_id"],
+                    "msg": "Customer does not exist.",
+                    "type": "value_error",
+                }
+            ],
+        )
+
+    # Generate next invoice number automatically (globally, not per profile)
+    invoice_number = generate_next_invoice_number(session)
 
     # Vererbe Steuersatz vom Profil, wenn nicht explizit angegeben
     if invoice.include_tax is None:
@@ -69,7 +109,7 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
 
     # Invoice + Items in einer Transaktion anlegen
     db_invoice = Invoice(
-        number=invoice.number,
+        number=invoice_number,  # Use generated number
         date=invoice.date,
         customer_id=invoice.customer_id,
         profile_id=invoice.profile_id,
@@ -156,7 +196,16 @@ def read_invoices(session: Session = Depends(get_session)):
 def read_invoice(invoice_id: int, session: Session = Depends(get_session)):
     invoice = session.get(Invoice, invoice_id)
     if not invoice:
-        raise HTTPException(status_code=404, detail="Invoice not found.")
+        raise HTTPException(
+            status_code=404,
+            detail=[
+                {
+                    "loc": ["path", "invoice_id"],
+                    "msg": "Invoice not found.",
+                    "type": "value_error",
+                }
+            ],
+        )
     items = session.exec(
         select(InvoiceItem).where(InvoiceItem.invoice_id == invoice.id)
     ).all()
@@ -185,7 +234,16 @@ def read_invoice(invoice_id: int, session: Session = Depends(get_session)):
 def delete_invoice(invoice_id: int, session: Session = Depends(get_session)):
     invoice = session.get(Invoice, invoice_id)
     if not invoice:
-        raise HTTPException(status_code=404, detail="Invoice not found.")
+        raise HTTPException(
+            status_code=404,
+            detail=[
+                {
+                    "loc": ["path", "invoice_id"],
+                    "msg": "Invoice not found.",
+                    "type": "value_error",
+                }
+            ],
+        )
     # Zuerst die zugehörigen Items löschen
     items = session.exec(
         select(InvoiceItem).where(InvoiceItem.invoice_id == invoice.id)
