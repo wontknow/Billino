@@ -2,6 +2,9 @@ from typing import List, Optional
 from dataclasses import dataclass
 from datetime import date
 
+# Import existing models
+from models import Customer, Profile, InvoiceRead, InvoiceItemRead, SummaryInvoiceRead
+
 
 @dataclass
 class PDFInvoiceData:

@@ -1,26 +1,51 @@
 # PDF Services - Test Generation
 
-Diese Datei ermöglicht es, verschiedene PDF-Typen mit Mock-Daten zu testen und zu visualisieren.
+Diese Dateien ermöglichen es, verschiedene PDF-Typen mit Mock-Daten zu testen und zu visualisieren.
 
-## Verwendung
+## Verfügbare Test-Scripts
 
+### 1. `test_pdf_generation.py` - Basis-Version
 ```bash
 # Aus dem backend-Verzeichnis ausführen
 cd backend
 python services/test_pdf_generation.py
 ```
 
+### 2. `test_pdf_generation_models.py` - Modell-basierte Version ⭐ **EMPFOHLEN**
+```bash
+# Aus dem backend-Verzeichnis ausführen
+cd backend
+python services/test_pdf_generation_models.py
+```
+
+**Warum die Modell-Version nutzen?**
+- Nutzt die vorhandenen Pydantic-Modelle (`InvoiceRead`, `Customer`, `Profile`)
+- Bessere Integration mit API-Endpunkten und Datenbank
+- Demonstriert korrekte Verwendung der PDF-Services
+- Näher an der echten Implementierung
+
 ## Generierte PDF-Dateien
 
-Das Script erstellt folgende Test-PDFs:
+### Basis-Version (`test_pdf_generation.py`)
+- `test_einzelrechnung.pdf` - Standard-Rechnung mit Steuer
+- `test_sammelrechnung.pdf` - Sammelrechnung mit 2 Rechnungen  
+- `test_rechnung_ohne_steuer.pdf` - §19 UStG ohne Steuer
+- `test_minimale_rechnung.pdf` - Minimal-Version
 
-### 1. `test_einzelrechnung.pdf`
-- **Standard-Einzelrechnung** mit Mehrwertsteuer
-- Enthält 2 Rechnungsposten
+### Modell-Version (`test_pdf_generation_models.py`) ⭐
+- `test_einzelrechnung_models.pdf` - Standard-Rechnung mit Models
+- `test_sammelrechnung_models.pdf` - Sammelrechnung mit Models
+- `test_rechnung_ohne_steuer_models.pdf` - §19 UStG mit Models
+
+## Detailbeschreibung der PDF-Typen
+
+### 1. **Standard-Einzelrechnung**
+- Enthält 2 Rechnungsposten (Haarschnitt + Haarpflege)
 - Vollständige Adressdaten, Bankverbindung und Steuernummer
 - Demonstriert normalen Geschäftsfall mit 19% MwSt.
+- Korrekte Netto/Brutto-Berechnung
 
-### 2. `test_sammelrechnung.pdf`
+### 2. **Sammelrechnung**
 - **Sammelrechnung** für mehrere Einzelrechnungen
 - Aggregiert 2 Rechnungen (25 | 001 - 25 | 002)
 - Zeigt Gesamtbeträge und enthaltene Rechnungsnummern
@@ -54,15 +79,17 @@ Das Script erstellt folgende Test-PDFs:
 - ReportLab-basierte PDF-Generierung
 - Strukturierte Tabellen für Rechnungsposten
 - Responsive Adressformatierung
+- **Korrigierte Formatierung** für Gesamtbeträge
 
 ✅ **Robuste Datenbehandlung**
 - Optionale Felder (Bankdaten, Steuernummer)
 - Flexible Adressformatierung
 - Sichere Datumskonvertierung
+- **Model-basierte Datenaufbereitung**
 
 ## Datei-Management
 
-- **Test-Script**: `test_pdf_generation.py`
+- **Test-Scripts**: Beide Versionen verfügbar (in .gitignore)
 - **PDF-Ausgaben**: `*.pdf` (in .gitignore)
 - **Automatische Bereinigung**: Bei jedem Lauf werden PDFs überschrieben
 

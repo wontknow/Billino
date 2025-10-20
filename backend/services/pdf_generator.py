@@ -134,20 +134,20 @@ class PDFGenerator:
             totals_data = [
                 ["Nettobetrag:", f"{data.total_net:.2f} €"],
                 [f"Umsatzsteuer ({data.tax_rate*100:.0f}%):", f"{data.total_tax:.2f} €"],
-                ["<b>Gesamtbetrag:</b>", f"<b>{data.total_gross:.2f} €</b>"]
+                ["Gesamtbetrag:", f"{data.total_gross:.2f} €"]
             ]
         else:
             # §19 UStG case - no tax
             totals_data = [
-                ["<b>Gesamtbetrag:</b>", f"<b>{data.total_gross:.2f} €</b>"],
+                ["Gesamtbetrag:", f"{data.total_gross:.2f} €"],
                 ["", "Gemäß §19 UStG wird keine Umsatzsteuer erhoben."]
             ]
         
         totals_table = Table(totals_data, colWidths=[10*cm, 6*cm])
         totals_table.setStyle(TableStyle([
             ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-            ('LINEABOVE', (0, -1), (-1, -1), 1, colors.black),
+            ('FONTNAME', (0, -1), (1, -1), 'Helvetica-Bold'),
+            ('LINEABOVE', (0, -1), (1, -1), 1, colors.black),
         ]))
         story.append(totals_table)
         
@@ -232,20 +232,20 @@ class PDFGenerator:
             totals_data = [
                 ["Nettobetrag:", f"{data.total_net:.2f} €"],
                 ["Umsatzsteuer:", f"{data.total_tax:.2f} €"],
-                ["<b>Gesamtbetrag:</b>", f"<b>{data.total_gross:.2f} €</b>"]
+                ["Gesamtbetrag:", f"{data.total_gross:.2f} €"]
             ]
         else:
             # §19 UStG case - no tax
             totals_data = [
-                ["<b>Gesamtbetrag:</b>", f"<b>{data.total_gross:.2f} €</b>"],
+                ["Gesamtbetrag:", f"{data.total_gross:.2f} €"],
                 ["", "Gemäß §19 UStG wird keine Umsatzsteuer erhoben."]
             ]
         
         totals_table = Table(totals_data, colWidths=[10*cm, 6*cm])
         totals_table.setStyle(TableStyle([
             ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-            ('LINEABOVE', (0, -1), (-1, -1), 1, colors.black),
+            ('FONTNAME', (0, -1), (1, -1), 'Helvetica-Bold'),
+            ('LINEABOVE', (0, -1), (1, -1), 1, colors.black),
         ]))
         story.append(totals_table)
         

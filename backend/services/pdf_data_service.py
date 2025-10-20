@@ -1,8 +1,8 @@
-from typing import Optional
+from typing import Optional, List
 from sqlmodel import Session, select
 from datetime import datetime, date
 
-from models import Invoice, Profile, Customer, SummaryInvoice, SummaryInvoiceLink
+from models import Invoice, Profile, Customer, SummaryInvoice, SummaryInvoiceLink, InvoiceRead, InvoiceItemRead, SummaryInvoiceRead
 from .pdf_data_structures import PDFInvoiceData, PDFSummaryInvoiceData
 
 
@@ -16,6 +16,115 @@ class PDFDataService:
     
     def __init__(self, session: Session):
         self.session = session
+    
+    def get_invoice_pdf_data_from_model(self, invoice: InvoiceRead, profile: Profile, customer: Customer) -> PDFInvoiceData:
+        """
+        Create PDF data directly from model objects.
+        
+        Args:
+            invoice: InvoiceRead model object
+            profile: Profile model object  
+            customer: Customer model object
+            
+        Returns:
+            PDFInvoiceData object ready for PDF generation
+        """
+        # Convert string date to date object
+        if isinstance(invoice.date, str):
+            # Handle both date formats: "YYYY-MM-DD" and ISO format with time
+            if "T" in invoice.date:
+                invoice_date = datetime.fromisoformat(invoice.date.replace('Z', '+00:00')).date()
+            else:
+                invoice_date = datetime.strptime(invoice.date, "%Y-%m-%d").date()
+        else:
+            invoice_date = invoice.date
+
+        # Prepare sender address
+        sender_address = self._format_address(profile.address, profile.city)
+        
+        # Prepare customer address
+        customer_address = self._format_address(customer.address, customer.city, customer.name)
+        
+        # Calculate amounts based on invoice settings
+        total_net, total_tax, total_gross = self._calculate_amounts(
+            invoice.total_amount,
+            invoice.tax_rate or profile.default_tax_rate,
+            invoice.is_gross_amount,
+            invoice.include_tax if invoice.include_tax is not None else profile.include_tax
+        )
+        
+        # Prepare items data
+        items_data = []
+        for item in invoice.invoice_items:
+            items_data.append({
+                "description": item.description,
+                "quantity": item.quantity,
+                "price": item.price
+            })
+        
+        return PDFInvoiceData(
+            invoice_number=invoice.number,
+            date=invoice_date,
+            sender_name=profile.name,
+            sender_address=sender_address,
+            customer_name=customer.name,
+            customer_address=customer_address,
+            total_net=total_net,
+            total_tax=total_tax,
+            total_gross=total_gross,
+            tax_rate=invoice.tax_rate or profile.default_tax_rate,
+            items=items_data,
+            sender_bank_data=profile.bank_data,
+            sender_tax_number=profile.tax_number
+        )
+    
+    def get_summary_invoice_pdf_data_from_model(
+        self, 
+        summary_invoice: SummaryInvoiceRead, 
+        profile: Profile, 
+        customer: Customer,
+        invoice_numbers: List[str]
+    ) -> PDFSummaryInvoiceData:
+        """
+        Create PDF data directly from model objects.
+        
+        Args:
+            summary_invoice: SummaryInvoiceRead model object
+            profile: Profile model object
+            customer: Customer model object
+            invoice_numbers: List of invoice numbers included in summary
+            
+        Returns:
+            PDFSummaryInvoiceData object ready for PDF generation
+        """
+        # Convert string date to date object
+        if isinstance(summary_invoice.date, str):
+            # Handle both date formats: "YYYY-MM-DD" and ISO format with time
+            if "T" in summary_invoice.date:
+                summary_date = datetime.fromisoformat(summary_invoice.date.replace('Z', '+00:00')).date()
+            else:
+                summary_date = datetime.strptime(summary_invoice.date, "%Y-%m-%d").date()
+        else:
+            summary_date = summary_invoice.date
+
+        # Prepare addresses
+        sender_address = self._format_address(profile.address, profile.city)
+        customer_address = self._format_address(customer.address, customer.city, customer.name)
+        
+        return PDFSummaryInvoiceData(
+            range_text=summary_invoice.range_text,
+            date=summary_date,
+            sender_name=profile.name,
+            sender_address=sender_address,
+            customer_name=customer.name,
+            customer_address=customer_address,
+            total_net=summary_invoice.total_net,
+            total_tax=summary_invoice.total_tax,
+            total_gross=summary_invoice.total_gross,
+            invoice_numbers=invoice_numbers,
+            sender_bank_data=profile.bank_data,
+            sender_tax_number=profile.tax_number
+        )
     
     def get_invoice_pdf_data(self, invoice_id: int) -> PDFInvoiceData:
         """

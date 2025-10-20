@@ -26,4 +26,6 @@ invoices/
 .htmlcov/
 
 # PDF Test files and outputs
+backend/services/test_pdf_generation.py
+backend/services/test_pdf_generation_models.py
 backend/services/*.pdf
