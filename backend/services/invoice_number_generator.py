@@ -6,7 +6,7 @@ from sqlmodel import Session, func, select
 from models import Invoice
 
 
-def generate_next_invoice_number(session: Session, profile_id: int = None) -> str:
+def generate_next_invoice_number(session: Session) -> str:
     """
     Generate the next invoice number globally (not per profile).
     Format: "YY | NNN" where YY is current year and NNN is sequential number.
@@ -16,7 +16,6 @@ def generate_next_invoice_number(session: Session, profile_id: int = None) -> st
 
     Args:
         session: Database session
-        profile_id: Not used anymore, kept for backward compatibility
 
     Returns:
         Next invoice number in format "YY | NNN"
@@ -58,14 +57,13 @@ def generate_next_invoice_number(session: Session, profile_id: int = None) -> st
     return f"{year_suffix} | {next_number:03d}"
 
 
-def get_preview_invoice_number(session: Session, profile_id: int = None) -> str:
+def get_preview_invoice_number(session: Session) -> str:
     """
     Get a preview of what the next invoice number would be without creating an invoice.
     Numbers are generated globally, not per profile (German tax law compliance).
 
     Args:
         session: Database session
-        profile_id: Not used anymore, kept for backward compatibility
 
     Returns:
         Preview invoice number in format "YY | NNN"
