@@ -13,9 +13,21 @@ from models import (
     SummaryInvoiceCreate,
     SummaryInvoiceRead,
 )
-from services import create_summary_invoice
+from services import create_summary_invoice, generate_next_invoice_number, get_preview_invoice_number
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
+
+
+@router.get("/number-preview")
+def get_invoice_number_preview(session: Session = Depends(get_session)):
+    """
+    Get a preview of what the next invoice number would be globally.
+    Useful for frontend to show users what number their invoice will get.
+    
+    Note: Numbers are sequential across all profiles (German tax law compliance).
+    """
+    next_number = get_preview_invoice_number(session)
+    return {"preview_number": next_number}
 
 
 @router.post("/", response_model=InvoiceRead, status_code=201)
@@ -46,6 +58,9 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
                 }
             ],
         )
+
+    # Generate next invoice number automatically (globally, not per profile)
+    invoice_number = generate_next_invoice_number(session)
 
     # Vererbe Steuersatz vom Profil, wenn nicht explizit angegeben
     if invoice.include_tax is None:
@@ -90,7 +105,7 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
 
     # Invoice + Items in einer Transaktion anlegen
     db_invoice = Invoice(
-        number=invoice.number,
+        number=invoice_number,  # Use generated number
         date=invoice.date,
         customer_id=invoice.customer_id,
         profile_id=invoice.profile_id,
