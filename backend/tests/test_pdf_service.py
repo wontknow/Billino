@@ -31,7 +31,7 @@ def engine():
     return engine
 
 
-@pytest.fixture(scope="session")  
+@pytest.fixture(scope="session")
 def client(engine):
     def override_get_session():
         with Session(engine) as session:
@@ -161,7 +161,9 @@ class TestPDFDataService:
 
         # Check basic structure
         assert isinstance(pdf_data, PDFInvoiceData)
-        assert pdf_data.invoice_number.startswith("25 |")  # Invoice number is auto-generated
+        assert pdf_data.invoice_number.startswith(
+            "25 |"
+        )  # Invoice number is auto-generated
         assert pdf_data.date == date(2025, 10, 20)
 
         # Check profile data - use flexible checks since tests may interfere
@@ -190,7 +192,7 @@ class TestPDFDataService:
     def test_get_invoice_pdf_data_not_found(self, client, session):
         """Test invoice not found error"""
         pdf_data_service = PDFDataService(session)
-        
+
         with pytest.raises(ValueError, match="Invoice not found"):
             pdf_data_service.get_invoice_pdf_data(999999)
 
@@ -319,7 +321,9 @@ class TestPDFDataService:
         # Check basic structure
         assert isinstance(pdf_data, PDFSummaryInvoiceData)
         # Summary invoice generates range_text based on invoice numbers, not the input
-        assert " - " in pdf_data.range_text  # Should contain invoice range like "25 | 001 - 25 | 002"
+        assert (
+            " - " in pdf_data.range_text
+        )  # Should contain invoice range like "25 | 001 - 25 | 002"
         assert isinstance(pdf_data.date, date)  # Should be a date object
 
         # Check profile data - flexible checks since tests may interfere
@@ -339,7 +343,9 @@ class TestPDFDataService:
         )
 
         # Check that invoice numbers are included - flexible count
-        assert len(pdf_data.invoice_numbers) >= 1  # At least one invoice should be included
+        assert (
+            len(pdf_data.invoice_numbers) >= 1
+        )  # At least one invoice should be included
 
 
 # ---------------------------------------------------------------------------
