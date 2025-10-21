@@ -9,7 +9,7 @@ class StoredPDFBase(SQLModel):
 
     type: str  # "invoice" or "summary_invoice"
     content: str  # Base64 encoded PDF content
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(default_factory=lambda: datetime.now())
     invoice_id: Optional[int] = Field(default=None, foreign_key="invoice.id")
     summary_invoice_id: Optional[int] = Field(
         default=None, foreign_key="summary_invoice.id"
