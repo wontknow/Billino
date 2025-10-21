@@ -22,7 +22,7 @@ from services.pdf_generator import PDFGenerator
 
 def create_sample_invoice_pdf():
     """Generate a sample individual invoice with mock data."""
-    
+
     # Mock data for individual invoice
     invoice_data = PDFInvoiceData(
         invoice_number="DEMO-001",
@@ -53,13 +53,15 @@ def create_sample_invoice_pdf():
     with open(output_path, "wb") as f:
         f.write(pdf_bytes)
 
-    print(f"✅ Individual invoice created: {os.path.basename(output_path)} ({len(pdf_bytes):,} bytes)")
+    print(
+        f"✅ Individual invoice created: {os.path.basename(output_path)} ({len(pdf_bytes):,} bytes)"
+    )
     return output_path
 
 
 def create_sample_summary_invoice_pdf():
     """Generate a sample summary invoice with mock data."""
-    
+
     # Mock data for summary invoice
     summary_data = PDFSummaryInvoiceData(
         range_text="DEMO-001 - DEMO-002",
@@ -86,7 +88,9 @@ def create_sample_summary_invoice_pdf():
     with open(output_path, "wb") as f:
         f.write(pdf_bytes)
 
-    print(f"✅ Summary invoice created: {os.path.basename(output_path)} ({len(pdf_bytes):,} bytes)")
+    print(
+        f"✅ Summary invoice created: {os.path.basename(output_path)} ({len(pdf_bytes):,} bytes)"
+    )
     return output_path
 
 
@@ -96,16 +100,16 @@ def main():
     print("======================")
     print("Generating sample PDFs with professional design...")
     print()
-    
+
     try:
         # Generate individual invoice
         print("📄 Creating individual invoice...")
         create_sample_invoice_pdf()
-        
+
         # Generate summary invoice
         print("📊 Creating summary invoice...")
         create_sample_summary_invoice_pdf()
-        
+
         print()
         print("🎉 Demo PDFs generated successfully!")
         print()
@@ -118,10 +122,11 @@ def main():
         print("  ✓ Professional typography")
         print("  ✓ Modern layout design")
         print("  ✓ Structured table formatting")
-        
+
     except Exception as e:
         print(f"❌ Error generating demo PDFs: {e}")
         import traceback
+
         traceback.print_exc()
 
 
