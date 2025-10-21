@@ -6,8 +6,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from main import app
 from database import get_session
+from main import app
 from services.pdf_data_service import (
     PDFDataService,
     PDFInvoiceData,
@@ -135,7 +135,7 @@ class TestPDFDataService:
         # Refresh session to see newly created data
         db_session.commit()
         db_session.refresh
-        
+
         pdf_data_service = PDFDataService(db_session)
         pdf_data = pdf_data_service.get_invoice_pdf_data(invoice["id"])
 
@@ -175,7 +175,7 @@ class TestPDFDataService:
     def test_get_invoice_pdf_data_not_found(self, db_session):
         """Test invoice not found error"""
         pdf_data_service = PDFDataService(db_session)
-        
+
         with pytest.raises(ValueError, match="Invoice not found"):
             pdf_data_service.get_invoice_pdf_data(999999)
 
@@ -218,7 +218,7 @@ class TestPDFDataService:
 
         # Refresh session to see newly created data
         db_session.commit()
-        
+
         pdf_data_service = PDFDataService(db_session)
         pdf_data = pdf_data_service.get_invoice_pdf_data(invoice["id"])
 
@@ -227,9 +227,7 @@ class TestPDFDataService:
         if invoice["include_tax"]:
             # If tax is included, net + tax should equal gross
             assert (
-                abs(
-                    (pdf_data.total_net + pdf_data.total_tax) - pdf_data.total_gross
-                )
+                abs((pdf_data.total_net + pdf_data.total_tax) - pdf_data.total_gross)
                 < 0.01
             )
             # Tax should be positive when tax is included
@@ -301,7 +299,7 @@ class TestPDFDataService:
 
         # Refresh session to see newly created data
         db_session.commit()
-        
+
         pdf_data_service = PDFDataService(db_session)
         pdf_data = pdf_data_service.get_summary_invoice_pdf_data(
             summary_invoice["id"], pdf_customer_id
@@ -328,8 +326,7 @@ class TestPDFDataService:
         assert pdf_data.total_tax >= 0  # Tax amount should be non-negative
         # Basic relationship: net + tax = gross (approximately)
         assert (
-            abs((pdf_data.total_net + pdf_data.total_tax) - pdf_data.total_gross)
-            < 0.01
+            abs((pdf_data.total_net + pdf_data.total_tax) - pdf_data.total_gross) < 0.01
         )
 
         # Check that invoice numbers are included - flexible count
@@ -443,7 +440,7 @@ class TestPDFServiceEdgeCases:
 
         # Refresh session to see newly created data
         db_session.commit()
-        
+
         pdf_data_service = PDFDataService(db_session)
         pdf_data = pdf_data_service.get_invoice_pdf_data(invoice["id"])
 
@@ -489,7 +486,7 @@ class TestPDFServiceEdgeCases:
 
         # Refresh session to see newly created data
         db_session.commit()
-        
+
         pdf_data_service = PDFDataService(db_session)
         pdf_data = pdf_data_service.get_invoice_pdf_data(invoice["id"])
 
