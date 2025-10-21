@@ -10,6 +10,7 @@ from models.stored_pdf import StoredPDF, StoredPDFCreate, StoredPDFRead
 from models.summary_invoice import SummaryInvoice
 from services.pdf_data_service import PDFDataService
 from services.pdf_generator import PDFGenerator
+from services.pdf_a6_generator import PDFA6Generator
 
 router = APIRouter(prefix="/pdfs", tags=["PDFs"])
 
@@ -121,6 +122,67 @@ def create_summary_invoice_pdf(
 
         return stored_pdf
 
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post(
+    "/a6-invoices",
+    response_model=StoredPDFRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_a6_invoices_pdf(
+    invoice_ids: List[int], 
+    session: Session = Depends(get_session)
+):
+    """Create and store A6-formatted PDF with multiple invoices on A4 pages"""
+    if not invoice_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="At least one invoice ID is required"
+        )
+    
+    # Check if all invoices exist
+    invoices = []
+    for invoice_id in invoice_ids:
+        invoice = session.get(Invoice, invoice_id)
+        if not invoice:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, 
+                detail=f"Invoice with ID {invoice_id} not found"
+            )
+        invoices.append(invoice)
+    
+    # Generate PDF data for all invoices
+    pdf_data_service = PDFDataService(session)
+    pdf_a6_generator = PDFA6Generator()
+    
+    try:
+        # Get PDF data for each invoice
+        invoice_pdf_data_list = []
+        for invoice_id in invoice_ids:
+            pdf_data = pdf_data_service.get_invoice_pdf_data(invoice_id)
+            invoice_pdf_data_list.append(pdf_data)
+        
+        # Generate A6 layout PDF
+        pdf_bytes = pdf_a6_generator.generate_a6_invoices_pdf(invoice_pdf_data_list)
+        
+        # Encode as base64
+        pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
+        
+        # Store in database with type "a6_invoices"
+        stored_pdf = StoredPDF(
+            type="a6_invoices",
+            content=pdf_base64,
+            # Note: We don't set invoice_id or summary_invoice_id for multi-invoice PDFs
+            # Could add a separate field for this if needed
+        )
+        session.add(stored_pdf)
+        session.commit()
+        session.refresh(stored_pdf)
+        
+        return stored_pdf
+        
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
