@@ -4,8 +4,10 @@ from unittest.mock import Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlmodel import Session
 
 from main import app
+from database import get_session
 from services.pdf_data_service import (
     PDFDataService,
     PDFInvoiceData,
@@ -46,6 +48,12 @@ def sample_customer():
 
 
 @pytest.fixture
+def db_session():
+    """Get a database session for testing"""
+    return next(get_session())
+
+
+@pytest.fixture
 def sample_invoice(sample_profile, sample_customer):
     """Sample invoice with items for testing"""
     resp_profile = client.post("/profiles/", json=sample_profile)
@@ -80,7 +88,7 @@ def sample_invoice(sample_profile, sample_customer):
 class TestPDFDataService:
     """Test the PDF Data Preparation Service"""
 
-    def test_get_invoice_pdf_data_success(self):
+    def test_get_invoice_pdf_data_success(self, db_session):
         """Test successful retrieval of invoice PDF data"""
         # Create unique profile and customer for this test
         profile_resp = client.post(
@@ -124,63 +132,54 @@ class TestPDFDataService:
         invoice_resp = client.post("/invoices/", json=invoice_data)
         invoice = invoice_resp.json()
 
-        from database import get_session
+        # Refresh session to see newly created data
+        db_session.commit()
+        db_session.refresh
+        
+        pdf_data_service = PDFDataService(db_session)
+        pdf_data = pdf_data_service.get_invoice_pdf_data(invoice["id"])
 
-        session = next(get_session())
-        try:
-            pdf_data_service = PDFDataService(session)
-            pdf_data = pdf_data_service.get_invoice_pdf_data(invoice["id"])
+        # Check basic structure
+        assert isinstance(pdf_data, PDFInvoiceData)
+        assert pdf_data.invoice_number.startswith(
+            "25 |"
+        )  # Invoice number is auto-generated
+        assert pdf_data.date == date(
+            2025, 10, 20
+        )  # Convert expected date to date object
 
-            # Check basic structure
-            assert isinstance(pdf_data, PDFInvoiceData)
-            assert pdf_data.invoice_number.startswith(
-                "25 |"
-            )  # Invoice number is auto-generated
-            assert pdf_data.date == date(
-                2025, 10, 20
-            )  # Convert expected date to date object
+        # Check profile data - use flexible checks since tests may interfere
+        assert len(pdf_data.sender_name) > 0  # Profile name exists
+        assert len(pdf_data.sender_address) > 0  # Address exists
+        # Bank data may or may not exist depending on test isolation
+        if pdf_data.sender_bank_data:
+            assert "IBAN:" in pdf_data.sender_bank_data
+        # Tax number may vary depending on test isolation
 
-            # Check profile data - use flexible checks since tests may interfere
-            assert len(pdf_data.sender_name) > 0  # Profile name exists
-            assert len(pdf_data.sender_address) > 0  # Address exists
-            # Bank data may or may not exist depending on test isolation
-            if pdf_data.sender_bank_data:
-                assert "IBAN:" in pdf_data.sender_bank_data
-            # Tax number may vary depending on test isolation
+        # Check customer data - use flexible checks since tests may interfere
+        assert len(pdf_data.customer_name) > 0  # Customer name exists
+        assert len(pdf_data.customer_address) > 0  # Address exists
 
-            # Check customer data - use flexible checks since tests may interfere
-            assert len(pdf_data.customer_name) > 0  # Customer name exists
-            assert len(pdf_data.customer_address) > 0  # Address exists
+        # Check amounts (should calculate net from gross)
+        assert pdf_data.total_gross == 119.00
+        assert abs(pdf_data.total_net - 100.00) < 0.01  # 119 / 1.19 ≈ 100
+        assert abs(pdf_data.total_tax - 19.00) < 0.01  # 119 - 100 = 19
 
-            # Check amounts (should calculate net from gross)
-            assert pdf_data.total_gross == 119.00
-            assert abs(pdf_data.total_net - 100.00) < 0.01  # 119 / 1.19 ≈ 100
-            assert abs(pdf_data.total_tax - 19.00) < 0.01  # 119 - 100 = 19
+        # Check items - use flexible checks
+        assert len(pdf_data.items) == 1
+        item = pdf_data.items[0]
+        assert len(item["description"]) > 0  # Description exists
+        assert item["quantity"] == 1
+        assert item["price"] > 0  # Price is positive
 
-            # Check items - use flexible checks
-            assert len(pdf_data.items) == 1
-            item = pdf_data.items[0]
-            assert len(item["description"]) > 0  # Description exists
-            assert item["quantity"] == 1
-            assert item["price"] > 0  # Price is positive
-
-        finally:
-            session.close()
-
-    def test_get_invoice_pdf_data_not_found(self):
+    def test_get_invoice_pdf_data_not_found(self, db_session):
         """Test invoice not found error"""
-        from database import get_session
+        pdf_data_service = PDFDataService(db_session)
+        
+        with pytest.raises(ValueError, match="Invoice not found"):
+            pdf_data_service.get_invoice_pdf_data(999999)
 
-        session = next(get_session())
-        try:
-            pdf_data_service = PDFDataService(session)
-
-            with pytest.raises(ValueError, match="Invoice not found"):
-                pdf_data_service.get_invoice_pdf_data(99999)
-        finally:
-            session.close()
-
-    def test_get_invoice_pdf_data_calculates_net_amount(self):
+    def test_get_invoice_pdf_data_calculates_net_amount(self, db_session):
         """Test that net amount is calculated correctly for gross amounts"""
         # Create a profile and customer with unique names
         profile_resp = client.post(
@@ -217,34 +216,30 @@ class TestPDFDataService:
         invoice_resp = client.post("/invoices/", json=invoice_data)
         invoice = invoice_resp.json()
 
-        from database import get_session
+        # Refresh session to see newly created data
+        db_session.commit()
+        
+        pdf_data_service = PDFDataService(db_session)
+        pdf_data = pdf_data_service.get_invoice_pdf_data(invoice["id"])
 
-        session = next(get_session())
-        try:
-            pdf_data_service = PDFDataService(session)
-            pdf_data = pdf_data_service.get_invoice_pdf_data(invoice["id"])
-
-            # Should calculate gross from net correctly
-            # Test that calculations are consistent regardless of specific values
-            if invoice["include_tax"]:
-                # If tax is included, net + tax should equal gross
-                assert (
-                    abs(
-                        (pdf_data.total_net + pdf_data.total_tax) - pdf_data.total_gross
-                    )
-                    < 0.01
+        # Should calculate gross from net correctly
+        # Test that calculations are consistent regardless of specific values
+        if invoice["include_tax"]:
+            # If tax is included, net + tax should equal gross
+            assert (
+                abs(
+                    (pdf_data.total_net + pdf_data.total_tax) - pdf_data.total_gross
                 )
-                # Tax should be positive when tax is included
-                assert pdf_data.total_tax >= 0
-            else:
-                # If no tax, net should equal gross and tax should be 0
-                assert abs(pdf_data.total_net - pdf_data.total_gross) < 0.01
-                assert pdf_data.total_tax == 0.0
+                < 0.01
+            )
+            # Tax should be positive when tax is included
+            assert pdf_data.total_tax >= 0
+        else:
+            # If no tax, net should equal gross and tax should be 0
+            assert abs(pdf_data.total_net - pdf_data.total_gross) < 0.01
+            assert pdf_data.total_tax == 0.0
 
-        finally:
-            session.close()
-
-    def test_get_summary_invoice_pdf_data_success(self):
+    def test_get_summary_invoice_pdf_data_success(self, db_session):
         """Test successful retrieval of summary invoice PDF data"""
         # Create profile and customer with unique names
         profile_resp = client.post(
@@ -304,47 +299,43 @@ class TestPDFDataService:
         )
         pdf_customer_id = pdf_customer_resp.json()["id"]
 
-        from database import get_session
+        # Refresh session to see newly created data
+        db_session.commit()
+        
+        pdf_data_service = PDFDataService(db_session)
+        pdf_data = pdf_data_service.get_summary_invoice_pdf_data(
+            summary_invoice["id"], pdf_customer_id
+        )
 
-        session = next(get_session())
-        try:
-            pdf_data_service = PDFDataService(session)
-            pdf_data = pdf_data_service.get_summary_invoice_pdf_data(
-                summary_invoice["id"], pdf_customer_id
-            )
+        # Check basic structure
+        assert isinstance(pdf_data, PDFSummaryInvoiceData)
+        # Summary invoice generates range_text based on invoice numbers, not the input
+        assert (
+            " - " in pdf_data.range_text
+        )  # Should contain invoice range like "25 | 001 - 25 | 002"
+        assert isinstance(pdf_data.date, date)  # Should be a date object
 
-            # Check basic structure
-            assert isinstance(pdf_data, PDFSummaryInvoiceData)
-            # Summary invoice generates range_text based on invoice numbers, not the input
-            assert (
-                " - " in pdf_data.range_text
-            )  # Should contain invoice range like "25 | 001 - 25 | 002"
-            assert isinstance(pdf_data.date, date)  # Should be a date object
+        # Check profile data - flexible checks since tests may interfere
+        assert len(pdf_data.sender_name) > 0  # Profile name exists
 
-            # Check profile data - flexible checks since tests may interfere
-            assert len(pdf_data.sender_name) > 0  # Profile name exists
+        # Check that PDF customer is used (may be affected by test isolation)
+        assert len(pdf_data.customer_name) > 0  # Customer name exists
+        assert len(pdf_data.customer_address) > 0  # Address exists
 
-            # Check that PDF customer is used (may be affected by test isolation)
-            assert len(pdf_data.customer_name) > 0  # Customer name exists
-            assert len(pdf_data.customer_address) > 0  # Address exists
+        # Check aggregated amounts - flexible since tests may use different data
+        assert pdf_data.total_net > 0  # Net amount should be positive
+        assert pdf_data.total_gross > 0  # Gross amount should be positive
+        assert pdf_data.total_tax >= 0  # Tax amount should be non-negative
+        # Basic relationship: net + tax = gross (approximately)
+        assert (
+            abs((pdf_data.total_net + pdf_data.total_tax) - pdf_data.total_gross)
+            < 0.01
+        )
 
-            # Check aggregated amounts - flexible since tests may use different data
-            assert pdf_data.total_net > 0  # Net amount should be positive
-            assert pdf_data.total_gross > 0  # Gross amount should be positive
-            assert pdf_data.total_tax >= 0  # Tax amount should be non-negative
-            # Basic relationship: net + tax = gross (approximately)
-            assert (
-                abs((pdf_data.total_net + pdf_data.total_tax) - pdf_data.total_gross)
-                < 0.01
-            )
-
-            # Check that invoice numbers are included - flexible count
-            assert (
-                len(pdf_data.invoice_numbers) >= 1
-            )  # At least one invoice should be included
-
-        finally:
-            session.close()
+        # Check that invoice numbers are included - flexible count
+        assert (
+            len(pdf_data.invoice_numbers) >= 1
+        )  # At least one invoice should be included
 
 
 # ---------------------------------------------------------------------------
@@ -421,7 +412,7 @@ class TestPDFGenerator:
 class TestPDFServiceEdgeCases:
     """Test edge cases and error handling"""
 
-    def test_invoice_without_bank_data(self):
+    def test_invoice_without_bank_data(self, db_session):
         """Test invoice PDF generation when profile has no bank data"""
         # Create profile without bank data
         profile_resp = client.post(
@@ -450,26 +441,22 @@ class TestPDFServiceEdgeCases:
         invoice_resp = client.post("/invoices/", json=invoice_data)
         invoice = invoice_resp.json()
 
-        from database import get_session
+        # Refresh session to see newly created data
+        db_session.commit()
+        
+        pdf_data_service = PDFDataService(db_session)
+        pdf_data = pdf_data_service.get_invoice_pdf_data(invoice["id"])
 
-        session = next(get_session())
-        try:
-            pdf_data_service = PDFDataService(session)
-            pdf_data = pdf_data_service.get_invoice_pdf_data(invoice["id"])
+        # Should handle missing bank data gracefully
+        assert pdf_data.sender_bank_data is None
 
-            # Should handle missing bank data gracefully
-            assert pdf_data.sender_bank_data is None
+        # PDF generation should still work
+        generator = PDFGenerator()
+        pdf_bytes = generator.generate_invoice_pdf(pdf_data)
+        assert isinstance(pdf_bytes, bytes)
+        assert len(pdf_bytes) > 0
 
-            # PDF generation should still work
-            generator = PDFGenerator()
-            pdf_bytes = generator.generate_invoice_pdf(pdf_data)
-            assert isinstance(pdf_bytes, bytes)
-            assert len(pdf_bytes) > 0
-
-        finally:
-            session.close()
-
-    def test_customer_without_address(self):
+    def test_customer_without_address(self, db_session):
         """Test PDF generation when customer has no address"""
         profile_resp = client.post(
             "/profiles/",
@@ -500,21 +487,17 @@ class TestPDFServiceEdgeCases:
         invoice_resp = client.post("/invoices/", json=invoice_data)
         invoice = invoice_resp.json()
 
-        from database import get_session
+        # Refresh session to see newly created data
+        db_session.commit()
+        
+        pdf_data_service = PDFDataService(db_session)
+        pdf_data = pdf_data_service.get_invoice_pdf_data(invoice["id"])
 
-        session = next(get_session())
-        try:
-            pdf_data_service = PDFDataService(session)
-            pdf_data = pdf_data_service.get_invoice_pdf_data(invoice["id"])
+        # Should handle missing customer address gracefully
+        assert len(pdf_data.customer_name) > 0  # Customer name exists
+        # Address should be empty or just the name
 
-            # Should handle missing customer address gracefully
-            assert len(pdf_data.customer_name) > 0  # Customer name exists
-            # Address should be empty or just the name
-
-            # PDF generation should still work
-            generator = PDFGenerator()
-            pdf_bytes = generator.generate_invoice_pdf(pdf_data)
-            assert isinstance(pdf_bytes, bytes)
-
-        finally:
-            session.close()
+        # PDF generation should still work
+        generator = PDFGenerator()
+        pdf_bytes = generator.generate_invoice_pdf(pdf_data)
+        assert isinstance(pdf_bytes, bytes)
