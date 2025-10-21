@@ -1,5 +1,5 @@
 import io
-from typing import List, BinaryIO
+from typing import BinaryIO, List
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
@@ -7,17 +7,17 @@ from reportlab.lib.pagesizes import A4, A6
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm, mm
 from reportlab.platypus import (
+    BaseDocTemplate,
+    Frame,
+    FrameBreak,
     HRFlowable,
+    PageBreak,
+    PageTemplate,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
     Table,
     TableStyle,
-    PageBreak,
-    FrameBreak,
-    Frame,
-    PageTemplate,
-    BaseDocTemplate,
 )
 
 from .pdf_data_structures import PDFInvoiceData
@@ -26,7 +26,7 @@ from .pdf_data_structures import PDFInvoiceData
 class PDFA6Generator:
     """
     Service for generating A6-formatted invoices on A4 pages.
-    
+
     This service takes a list of individual invoices and arranges them
     in a 2x2 grid on A4 pages, with each invoice scaled to A6 format.
     Includes crop marks for easy cutting.
@@ -37,37 +37,43 @@ class PDFA6Generator:
         # A6 dimensions for scaling
         self.a6_width = A6[0]  # 105 mm
         self.a6_height = A6[1]  # 148 mm
-        
+
         # A4 layout: 2x2 grid with calculated margins for centering
         self.a4_width = A4[0]
         self.a4_height = A4[1]
-        
+
         # Calculate margins to center the 2x2 grid on A4
         total_content_width = 2 * self.a6_width
         total_content_height = 2 * self.a6_height
-        
+
         margin_x = (self.a4_width - total_content_width) / 2
         margin_y = (self.a4_height - total_content_height) / 2
-        
+
         self.page_margin_x = margin_x
         self.page_margin_y = margin_y
         self.crop_mark_length = 5 * mm
         self.crop_mark_offset = 2 * mm
-        
+
         # Calculate positions for 2x2 grid
         self.invoice_width = self.a6_width
         self.invoice_height = self.a6_height
-        
+
         # Grid positions (x, y from bottom-left) - corrected for proper centering
         self.positions = [
             # Bottom row
             (self.page_margin_x, self.page_margin_y),  # Bottom-left
-            (self.page_margin_x + self.invoice_width, self.page_margin_y),  # Bottom-right
-            # Top row  
+            (
+                self.page_margin_x + self.invoice_width,
+                self.page_margin_y,
+            ),  # Bottom-right
+            # Top row
             (self.page_margin_x, self.page_margin_y + self.invoice_height),  # Top-left
-            (self.page_margin_x + self.invoice_width, self.page_margin_y + self.invoice_height),  # Top-right
+            (
+                self.page_margin_x + self.invoice_width,
+                self.page_margin_y + self.invoice_height,
+            ),  # Top-right
         ]
-        
+
         # Define elegant color palette (smaller scale)
         self.colors = {
             "primary": colors.Color(0.2, 0.2, 0.2),  # Dark charcoal
@@ -213,7 +219,7 @@ class PDFA6Generator:
 
         # Compact invoice metadata
         story.append(Paragraph("<b>Details</b>", self.styles["A6SectionHeader"]))
-        
+
         meta_data = [["Datum:", data.date.strftime("%d.%m.%Y")]]
         if data.sender_tax_number:
             meta_data.append(["Steuer-Nr.:", data.sender_tax_number])
@@ -246,15 +252,17 @@ class PDFA6Generator:
                 total = item["quantity"] * item["price"]
                 items_data.append(
                     [
-                        item["description"][:25] + "..." if len(item["description"]) > 25 else item["description"],
+                        (
+                            item["description"][:25] + "..."
+                            if len(item["description"]) > 25
+                            else item["description"]
+                        ),
                         str(item["quantity"]),
                         f"{total:.2f} €",
                     ]
                 )
 
-            items_table = Table(
-                items_data, colWidths=[5 * cm, 1 * cm, 2 * cm]
-            )
+            items_table = Table(items_data, colWidths=[5 * cm, 1 * cm, 2 * cm])
             items_table.setStyle(
                 TableStyle(
                     [
@@ -313,10 +321,31 @@ class PDFA6Generator:
                     ("TEXTCOLOR", (1, 0), (1, -1), self.colors["text"]),
                     ("ALIGN", (1, 0), (1, -1), "RIGHT"),
                     # Total row emphasis (last row or second-to-last if tax)
-                    ("FONTNAME", (0, -2 if data.total_tax > 0 else -1), (-1, -2 if data.total_tax > 0 else -1), "Helvetica-Bold"),
-                    ("FONTSIZE", (0, -2 if data.total_tax > 0 else -1), (-1, -2 if data.total_tax > 0 else -1), 8),
-                    ("TEXTCOLOR", (0, -2 if data.total_tax > 0 else -1), (-1, -2 if data.total_tax > 0 else -1), self.colors["primary"]),
-                    ("LINEABOVE", (0, -2 if data.total_tax > 0 else -1), (-1, -2 if data.total_tax > 0 else -1), 0.5, self.colors["primary"]),
+                    (
+                        "FONTNAME",
+                        (0, -2 if data.total_tax > 0 else -1),
+                        (-1, -2 if data.total_tax > 0 else -1),
+                        "Helvetica-Bold",
+                    ),
+                    (
+                        "FONTSIZE",
+                        (0, -2 if data.total_tax > 0 else -1),
+                        (-1, -2 if data.total_tax > 0 else -1),
+                        8,
+                    ),
+                    (
+                        "TEXTCOLOR",
+                        (0, -2 if data.total_tax > 0 else -1),
+                        (-1, -2 if data.total_tax > 0 else -1),
+                        self.colors["primary"],
+                    ),
+                    (
+                        "LINEABOVE",
+                        (0, -2 if data.total_tax > 0 else -1),
+                        (-1, -2 if data.total_tax > 0 else -1),
+                        0.5,
+                        self.colors["primary"],
+                    ),
                     # General padding
                     ("LEFTPADDING", (0, 0), (-1, -1), 0),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 0),
@@ -330,11 +359,13 @@ class PDFA6Generator:
         # Compact bank data
         if data.sender_bank_data:
             story.append(Spacer(1, 3 * mm))
-            story.append(
-                Paragraph("<b>Zahlung</b>", self.styles["A6SectionHeader"])
-            )
+            story.append(Paragraph("<b>Zahlung</b>", self.styles["A6SectionHeader"]))
             # Truncate bank data for A6 format
-            bank_data = data.sender_bank_data[:100] + "..." if len(data.sender_bank_data) > 100 else data.sender_bank_data
+            bank_data = (
+                data.sender_bank_data[:100] + "..."
+                if len(data.sender_bank_data) > 100
+                else data.sender_bank_data
+            )
             story.append(Paragraph(bank_data, self.styles["A6InfoText"]))
 
         return story
@@ -350,32 +381,38 @@ class PDFA6Generator:
         y_positions = [
             self.page_margin_y,  # Bottom
             self.page_margin_y + self.invoice_height,  # Middle
-            self.page_margin_y + 2 * self.invoice_height  # Top
+            self.page_margin_y + 2 * self.invoice_height,  # Top
         ]
-        
+
         for y_pos in y_positions:
             canvas.line(
-                x_center - self.crop_mark_length/2, y_pos,
-                x_center + self.crop_mark_length/2, y_pos
+                x_center - self.crop_mark_length / 2,
+                y_pos,
+                x_center + self.crop_mark_length / 2,
+                y_pos,
             )
-        
-        # Horizontal cut line (between top and bottom rows)  
+
+        # Horizontal cut line (between top and bottom rows)
         y_center = self.page_margin_y + self.invoice_height
         x_positions = [
             self.page_margin_x,  # Left
             self.page_margin_x + self.invoice_width,  # Middle
-            self.page_margin_x + 2 * self.invoice_width  # Right
+            self.page_margin_x + 2 * self.invoice_width,  # Right
         ]
-        
+
         for x_pos in x_positions:
             canvas.line(
-                x_pos, y_center - self.crop_mark_length/2,
-                x_pos, y_center + self.crop_mark_length/2
+                x_pos,
+                y_center - self.crop_mark_length / 2,
+                x_pos,
+                y_center + self.crop_mark_length / 2,
             )
 
         canvas.restoreState()
 
-    def generate_a6_invoices_pdf(self, invoice_data_list: List[PDFInvoiceData]) -> bytes:
+    def generate_a6_invoices_pdf(
+        self, invoice_data_list: List[PDFInvoiceData]
+    ) -> bytes:
         """
         Generate PDF with multiple A6 invoices arranged on A4 pages.
 
@@ -399,29 +436,32 @@ class PDFA6Generator:
         frames = []
         for i, (x, y) in enumerate(self.positions):
             frame = Frame(
-                x, y, self.invoice_width, self.invoice_height,
-                leftPadding=3*mm, rightPadding=3*mm, 
-                topPadding=3*mm, bottomPadding=3*mm,
-                id=f'invoice_{i}'
+                x,
+                y,
+                self.invoice_width,
+                self.invoice_height,
+                leftPadding=3 * mm,
+                rightPadding=3 * mm,
+                topPadding=3 * mm,
+                bottomPadding=3 * mm,
+                id=f"invoice_{i}",
             )
             frames.append(frame)
 
         # Create page template with crop marks
         page_template = PageTemplate(
-            id='a6_layout', 
-            frames=frames, 
-            onPage=self._draw_crop_marks
+            id="a6_layout", frames=frames, onPage=self._draw_crop_marks
         )
         doc.addPageTemplates([page_template])
 
         # Build story with all invoices
         story = []
-        
+
         for i, invoice_data in enumerate(invoice_data_list):
             # Add invoice story
             invoice_story = self._create_single_invoice_story(invoice_data)
             story.extend(invoice_story)
-            
+
             # Add FrameBreak to move to next frame, except for the last invoice
             if i < len(invoice_data_list) - 1:
                 # Every 4th invoice starts a new page
@@ -434,7 +474,9 @@ class PDFA6Generator:
         remaining_positions = (4 - (len(invoice_data_list) % 4)) % 4
         for _ in range(remaining_positions):
             story.append(Spacer(1, 1))  # Minimal empty content
-            if _ < remaining_positions - 1:  # Don't add FrameBreak after the last position
+            if (
+                _ < remaining_positions - 1
+            ):  # Don't add FrameBreak after the last position
                 story.append(FrameBreak())
 
         # Build PDF
