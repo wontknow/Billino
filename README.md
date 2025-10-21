@@ -52,12 +52,20 @@ Ein **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trennung – entwicke
 - **Sammelrechnungen**: Monats-/Jahres-Abrechnungen mit Steuerberechnung
   - Automatische Aggregation von Einzelrechnungen
   - Separate Steuerausweise nach Steuersätzen
+- **PDF-Generierung**: Professionelle A4-PDF-Erstellung mit modernem Design
+  - Elegante Farbpalette (Dark Charcoal, Medium/Light Gray)
+  - Moderne Typografie mit hierarchischen Font-Größen
+  - ReportLab-basierte PDF-Engine für Invoice & Summary Invoices
+- **PDF CRUD**: Vollständige API für PDF-Speicherung und -Verwaltung
+  - PDF-Erstellung für Rechnungen und Sammelrechnungen
+  - Base64-Speicherung in SQLite Database
+  - CRUD-Operationen: Erstellen, Abrufen, Listen, Löschen
+  - RESTful API mit strukturierter Fehlerbehandlung
 - **Database**: SQLite mit Foreign Key-Constraints und Relationen
 - **API**: RESTful FastAPI mit OpenAPI/Swagger-Dokumentation
 
 ### 🚧 Geplant
-- PDF-Erstellung (A4 Standard)
-- PDF Layouts: A4 & 4×A6 auf A4
+- PDF Layouts: 4×A6 auf A4
 - E-Rechnung (XRechnung / ZUGFeRD)
 - Frontend (Next.js + shadcn/ui)
 - Desktop-App: Tauri v2 bündelt Backend + Frontend + DB in **eine ausführbare Datei**
@@ -113,9 +121,8 @@ uvicorn main:app --reload --port 8000
 - `/customers/` - Kundenverwaltung
 - `/profiles/` - Profile mit Steuereinstellungen
 - `/invoices/` - Rechnungserstellung und -verwaltung
-  - `GET /invoices/number-preview` - Vorschau der nächsten Rechnungsnummer
-  - `POST /invoices/` - Neue Rechnung (Nummer wird automatisch generiert)
 - `/summary-invoices/` - Sammelrechnungen
+- `/pdfs/` - PDF-Erstellung und -Verwaltung
 
 ---
 
@@ -160,6 +167,7 @@ pytest tests/test_invoices.py                # Rechnungs-CRUD
 pytest tests/test_invoice_number_*.py        # Automatische Nummern-Generierung
 pytest tests/test_invoice_tax_*.py           # Steuerlogik & Edge Cases
 pytest tests/test_summary_*.py               # Sammelrechnungen
+pytest tests/test_pdf_*.py                   # PDF-Generierung & CRUD
 pytest --cov=. --cov-report=html             # Coverage-Report
 ```
 
@@ -232,7 +240,8 @@ jobs:
 - [x] **Phase 4** – Invoice-Core (Rechnung, Nummernlogik, Steuerberechnung)
 - [x] **Phase 4.1** – Auto-Rechnungsnummern (§14 UStG konforme Generierung)
 - [x] **Phase 4.5** – Summary Invoices (Sammelrechnungen mit Service-Layer)
-- [ ] **Phase 5** – PDF-Renderer (A4)
+- [x] **Phase 5** – PDF-Renderer (A4, professionelles Design)
+- [x] **Phase 5.1** – PDF CRUD API (Erstellen, Speichern, Abrufen, Löschen)
 - [ ] **Phase 6** – PDF-Renderer (A6x4)
 - [ ] **Phase 7** – Frontend Bootstrap (Next.js + shadcn/ui)
 - [ ] **Phase 8** – Invoice-Form (Autocomplete, Submit)
@@ -296,6 +305,24 @@ Automatische Aggregation von Einzelrechnungen für:
 - Korrekte Netto/Brutto/Steuer-Berechnungen
 - Service-Layer mit komplexer Geschäftslogik
 
+### PDF-System
+**Professionelle PDF-Generierung** mit moderner Optik:
+- **Elegantes Design**: Dark Charcoal Primary (#2D3748), Medium/Light Gray Akzente
+- **Typografie**: Hierarchische Font-Größen (24pt Titel, 12pt Headers, 10pt Text)
+- **Layout**: Strukturierte Tabellen, HRFlowable-Trennlinien, optimaler Weißraum
+- **ReportLab Engine**: Robuste PDF-Generierung für Invoice & Summary Invoices
+
+**CRUD API für PDF-Management**:
+```http
+POST /pdfs/invoices/123          # PDF erstellen & speichern
+POST /pdfs/summary-invoices/456  # Summary PDF erstellen & speichern
+GET /pdfs/                       # Alle PDFs listen
+GET /pdfs/789                    # Einzelne PDF abrufen (Base64)
+DELETE /pdfs/789                 # PDF löschen
+```
+
+**Storage**: Base64-Encoding in SQLite für einfache Handhabung ohne Dateisystem-Dependencies
+
 ---
 
 ## ✅ Definition of Done (pro Feature)
@@ -323,6 +350,8 @@ erDiagram
     PROFILE  ||--o{ SUMMARY_INVOICE : "fasst_zusammen"
     SUMMARY_INVOICE ||--o{ SUMMARY_INVOICE_LINK : "verlinkt"
     INVOICE ||--o{ SUMMARY_INVOICE_LINK : "ist_in"
+    INVOICE ||--o{ STORED_PDF : "hat_pdf"
+    SUMMARY_INVOICE ||--o{ STORED_PDF : "hat_pdf"
 
     CUSTOMER {
         int id PK
@@ -378,6 +407,15 @@ erDiagram
         int summary_invoice_id FK
         int invoice_id FK
     }
+
+    STORED_PDF {
+        int id PK
+        string type "invoice oder summary_invoice"
+        string content "Base64-kodierter PDF-Inhalt"
+        datetime created_at "Erstellungszeitpunkt"
+        int invoice_id FK "nullable"
+        int summary_invoice_id FK "nullable"
+    }
 ```
 
 ### Beschreibung 
@@ -388,6 +426,7 @@ erDiagram
 - **InvoiceItem**: Positionen einer Rechnung mit individuellen Steuersätzen
 - **SummaryInvoice**: Sammelrechnungen für Monats-/Jahres-Abrechnungen
 - **SummaryInvoiceLink**: n:m-Beziehung zwischen Summary Invoice und einzelnen Rechnungen
+- **StoredPDF**: Base64-gespeicherte PDFs mit Verknüpfung zu Rechnungen
 
 ### Rechnungsnummern-Logik (§14 UStG)
 - **Format**: "YY | NNN" (z.B. "25 | 001", "25 | 002")
