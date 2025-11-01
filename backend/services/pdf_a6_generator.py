@@ -21,6 +21,7 @@ from reportlab.platypus import (
 )
 
 from .pdf_data_structures import PDFInvoiceData
+from .pdf_helpers import create_address_table
 
 
 class PDFA6Generator:
@@ -188,32 +189,15 @@ class PDFA6Generator:
         )
 
         # Compact sender and customer information
-        address_data = [
-            [
-                Paragraph(
-                    f"<b>Rechnungssteller</b><br/><br/>{data.sender_name}<br/>{data.sender_address}",
-                    self.styles["A6Address"],
-                ),
-                Paragraph(
-                    f"<b>Rechnungsempfänger</b><br/><br/>{data.customer_name}{('<br/>' + data.customer_address) if data.customer_address else ''}",
-                    self.styles["A6Address"],
-                ),
-            ]
-        ]
-
-        address_table = Table(
-            address_data, colWidths=[4 * cm, 4 * cm], rowHeights=[18 * mm]
-        )
-        address_table.setStyle(
-            TableStyle(
-                [
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                    ("TOPPADDING", (0, 0), (-1, -1), 0),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3 * mm),
-                ]
-            )
+        address_table = create_address_table(
+            sender_name=data.sender_name,
+            sender_address=data.sender_address,
+            customer_name=data.customer_name,
+            customer_address=data.customer_address,
+            style=self.styles["A6Address"],
+            col_widths=[4 * cm, 4 * cm],
+            row_heights=[18 * mm],
+            bottom_padding=3 * mm,
         )
         story.append(address_table)
 
