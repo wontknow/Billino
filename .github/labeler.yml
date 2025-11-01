@@ -26,12 +26,14 @@ Infra:
   - "**/Cargo.toml"
 
 # --- DOCS ---
+# --- DOCS ---
 Docs:
-  - README.md
-  - **/*.md
-  - docs/**
-  - wiki/**
-  - LICENSE
+  - "README.md"
+  - "**/*.md"
+  - "docs/**"
+  - "wiki/**"
+  - "LICENSE"
+
 
 # --- REFACTOR ---
 Refactor:
