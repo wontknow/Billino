@@ -16,6 +16,7 @@ from reportlab.platypus import (
 )
 
 from .pdf_data_structures import PDFInvoiceData, PDFSummaryInvoiceData
+from .pdf_helpers import create_address_table
 
 
 class PDFGenerator:
@@ -160,32 +161,15 @@ class PDFGenerator:
         )
 
         # Sender and customer information with professional layout
-        address_data = [
-            [
-                Paragraph(
-                    f"<b>Rechnungssteller</b><br/><br/>{data.sender_name}<br/>{data.sender_address}",
-                    self.styles["Address"],
-                ),
-                Paragraph(
-                    f"<b>Rechnungsempfänger</b><br/><br/>{data.customer_name}{('<br/>' + data.customer_address) if data.customer_address else ''}",
-                    self.styles["Address"],
-                ),
-            ]
-        ]
-
-        address_table = Table(
-            address_data, colWidths=[9 * cm, 9 * cm], rowHeights=[35 * mm]
-        )
-        address_table.setStyle(
-            TableStyle(
-                [
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                    ("TOPPADDING", (0, 0), (-1, -1), 0),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8 * mm),
-                ]
-            )
+        address_table = create_address_table(
+            sender_name=data.sender_name,
+            sender_address=data.sender_address,
+            customer_name=data.customer_name,
+            customer_address=data.customer_address,
+            style=self.styles["Address"],
+            col_widths=[9 * cm, 9 * cm],
+            row_heights=[35 * mm],
+            bottom_padding=8 * mm,
         )
         story.append(address_table)
 
@@ -372,32 +356,15 @@ class PDFGenerator:
         )
 
         # Sender and customer information with professional layout
-        address_data = [
-            [
-                Paragraph(
-                    f"<b>Rechnungssteller</b><br/><br/>{data.sender_name}<br/>{data.sender_address}",
-                    self.styles["Address"],
-                ),
-                Paragraph(
-                    f"<b>Rechnungsempfänger</b><br/><br/>{data.customer_name}{('<br/>' + data.customer_address) if data.customer_address else ''}",
-                    self.styles["Address"],
-                ),
-            ]
-        ]
-
-        address_table = Table(
-            address_data, colWidths=[9 * cm, 9 * cm], rowHeights=[35 * mm]
-        )
-        address_table.setStyle(
-            TableStyle(
-                [
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                    ("TOPPADDING", (0, 0), (-1, -1), 0),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8 * mm),
-                ]
-            )
+        address_table = create_address_table(
+            sender_name=data.sender_name,
+            sender_address=data.sender_address,
+            customer_name=data.customer_name,
+            customer_address=data.customer_address,
+            style=self.styles["Address"],
+            col_widths=[9 * cm, 9 * cm],
+            row_heights=[35 * mm],
+            bottom_padding=8 * mm,
         )
         story.append(address_table)
 
