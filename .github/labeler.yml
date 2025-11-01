@@ -1,0 +1,52 @@
+# --- BACKEND ---
+BE:
+  - any:
+      - "backend/**"
+      - "backend/**/*.py"
+      - "backend/tests/**"
+      - "backend/requirements.txt"
+
+# --- FRONTEND ---
+FE:
+  - any:
+      - "frontend/**"
+      - "frontend/**/*.tsx"
+      - "frontend/**/*.ts"
+      - "frontend/package.json"
+      - "frontend/tailwind.config.*"
+      - "frontend/postcss.config.*"
+
+# --- INFRA / CI ---
+Infra:
+  - any:
+      - "src-tauri/**"
+      - "src-tauri/**/*.rs"
+      - "src-tauri/tauri.conf.json"
+      - ".github/**"
+      - ".github/workflows/**"
+      - "**/pyproject.toml"
+      - "**/package-lock.json"
+      - "**/Cargo.toml"
+
+# --- DOCS ---
+Docs:
+  - any:
+      - "README.md"
+      - "**/*.md"
+      - "docs/**"
+      - "wiki/**"
+      - "LICENSE"
+
+# --- REFACTOR ---
+Refactor:
+  - any:
+      - "**/refactor/**"
+      - "**/refactor_*"
+
+# --- TESTS ---
+Tests:
+  - any:
+      - "backend/tests/**"
+      - "frontend/tests/**"
+      - "**/test_*.py"
+      - "**/*.spec.ts"
