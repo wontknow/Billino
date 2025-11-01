@@ -32,7 +32,7 @@ jobs:
           elif [[ "$BRANCH" == refactor/* ]]; then
             gh pr edit ${{ github.event.pull_request.number }} --add-label "refactor"
           elif [[ "$BRANCH" == docs/* ]]; then
-            gh pr edit ${{ github.event.pull_request.number }} --add-label "Docs"
+            gh pr edit ${{ github.event.pull_request.number }} --add-label "docs"
           elif [[ "$BRANCH" == ci/* ]]; then
             gh pr edit ${{ github.event.pull_request.number }} --add-label "Infra"
           elif [[ "$BRANCH" == story/* ]]; then
