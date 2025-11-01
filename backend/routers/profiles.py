@@ -1,7 +1,8 @@
-from database import get_session
 from fastapi import APIRouter, Depends, HTTPException
-from models import Profile
 from sqlmodel import Session, select
+
+from database import get_session
+from models import Profile
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 

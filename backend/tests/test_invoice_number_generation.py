@@ -1,9 +1,12 @@
 import pytest
 from fastapi.testclient import TestClient
+
 from main import app
-from services.invoice_number_generator import (generate_next_invoice_number,
-                                               get_preview_invoice_number,
-                                               validate_invoice_number_format)
+from services.invoice_number_generator import (
+    generate_next_invoice_number,
+    get_preview_invoice_number,
+    validate_invoice_number_format,
+)
 
 client = TestClient(app)
 

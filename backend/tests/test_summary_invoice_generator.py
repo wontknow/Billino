@@ -1,11 +1,11 @@
 import pytest
-from database import init_db
-from models import (Customer, Invoice, Profile, SummaryInvoiceCreate,
-                    SummaryInvoiceLink)
-from services import create_summary_invoice
 from sqlalchemy import event
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, SQLModel, create_engine, select
+
+from database import init_db
+from models import Customer, Invoice, Profile, SummaryInvoiceCreate, SummaryInvoiceLink
+from services import create_summary_invoice
 
 
 @pytest.fixture(scope="session")

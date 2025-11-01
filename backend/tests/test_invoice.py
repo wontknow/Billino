@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+
 from main import app
 
 client = TestClient(app)
@@ -39,8 +40,7 @@ def test_create_invoice():
 
     # Number should be auto-generated in correct format
     assert "number" in invoice_data
-    from services.invoice_number_generator import \
-        validate_invoice_number_format
+    from services.invoice_number_generator import validate_invoice_number_format
 
     assert validate_invoice_number_format(invoice_data["number"]) is True
     assert invoice_data["profile_id"] == profile_id
@@ -189,8 +189,7 @@ def test_get_invoice():
 
     assert invoice_data["id"] == invoice_id
     # Number should be auto-generated in correct format
-    from services.invoice_number_generator import \
-        validate_invoice_number_format
+    from services.invoice_number_generator import validate_invoice_number_format
 
     assert validate_invoice_number_format(invoice_data["number"]) is True
     assert invoice_data["profile_id"] == profile_id

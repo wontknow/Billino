@@ -1,9 +1,18 @@
 from datetime import date, datetime
 from typing import List, Optional
 
-from models import (Customer, Invoice, InvoiceItemRead, InvoiceRead, Profile,
-                    SummaryInvoice, SummaryInvoiceLink, SummaryInvoiceRead)
 from sqlmodel import Session, select
+
+from models import (
+    Customer,
+    Invoice,
+    InvoiceItemRead,
+    InvoiceRead,
+    Profile,
+    SummaryInvoice,
+    SummaryInvoiceLink,
+    SummaryInvoiceRead,
+)
 
 from .pdf_data_structures import PDFInvoiceData, PDFSummaryInvoiceData
 

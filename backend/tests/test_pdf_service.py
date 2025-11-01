@@ -3,14 +3,18 @@ from io import BytesIO
 from unittest.mock import Mock, patch
 
 import pytest
-from database import get_session, init_db
 from fastapi.testclient import TestClient
-from main import app
-from services.pdf_data_service import (PDFDataService, PDFInvoiceData,
-                                       PDFSummaryInvoiceData)
-from services.pdf_generator import PDFGenerator
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
+
+from database import get_session, init_db
+from main import app
+from services.pdf_data_service import (
+    PDFDataService,
+    PDFInvoiceData,
+    PDFSummaryInvoiceData,
+)
+from services.pdf_generator import PDFGenerator
 
 # Einmalige Test-DB im Speicher (mit StaticPool für persistente Verbindung)
 TEST_DB_URL = "sqlite:///:memory:"

@@ -1,10 +1,17 @@
 from datetime import datetime, timezone
 from typing import List
 
-from models import (Invoice, Profile, SummaryInvoice, SummaryInvoiceCreate,
-                    SummaryInvoiceLink, SummaryInvoiceRead)
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+from models import (
+    Invoice,
+    Profile,
+    SummaryInvoice,
+    SummaryInvoiceCreate,
+    SummaryInvoiceLink,
+    SummaryInvoiceRead,
+)
 
 
 def create_summary_invoice(

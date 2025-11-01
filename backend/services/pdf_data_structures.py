@@ -3,8 +3,7 @@ from datetime import date
 from typing import List, Optional
 
 # Import existing models
-from models import (Customer, InvoiceItemRead, InvoiceRead, Profile,
-                    SummaryInvoiceRead)
+from models import Customer, InvoiceItemRead, InvoiceRead, Profile, SummaryInvoiceRead
 
 
 @dataclass

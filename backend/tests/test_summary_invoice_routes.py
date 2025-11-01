@@ -1,11 +1,11 @@
 import pytest
-from database import get_session, init_db
 from fastapi.testclient import TestClient
-from main import app
-from models import (Customer, Invoice, Profile, SummaryInvoice,
-                    SummaryInvoiceLink)
 from sqlalchemy import event
 from sqlmodel import Session, SQLModel, create_engine
+
+from database import get_session, init_db
+from main import app
+from models import Customer, Invoice, Profile, SummaryInvoice, SummaryInvoiceLink
 
 
 @pytest.fixture(scope="session")

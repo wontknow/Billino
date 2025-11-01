@@ -1,12 +1,17 @@
 ### Summary Invoices
 # Create, Read (list), Read (single), Delete
-from database import get_session
 from fastapi import APIRouter, Depends, HTTPException
-from models import (SummaryInvoice, SummaryInvoiceCreate, SummaryInvoiceLink,
-                    SummaryInvoiceRead)
-from services import create_summary_invoice
 from sqlalchemy.orm import Session
 from sqlmodel import select
+
+from database import get_session
+from models import (
+    SummaryInvoice,
+    SummaryInvoiceCreate,
+    SummaryInvoiceLink,
+    SummaryInvoiceRead,
+)
+from services import create_summary_invoice
 
 router = APIRouter(prefix="/summary-invoices", tags=["summary_invoices"])
 
