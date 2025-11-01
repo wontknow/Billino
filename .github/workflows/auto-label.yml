@@ -34,7 +34,7 @@ jobs:
           elif [[ "$BRANCH" == docs/* ]]; then
             gh pr edit ${{ github.event.pull_request.number }} --add-label "docs"
           elif [[ "$BRANCH" == ci/* ]]; then
-            gh pr edit ${{ github.event.pull_request.number }} --add-label "Infra"
+            gh pr edit ${{ github.event.pull_request.number }} --add-label "infra"
           elif [[ "$BRANCH" == story/* ]]; then
             gh pr edit ${{ github.event.pull_request.number }} --add-label "story"
           fi
