@@ -52,12 +52,15 @@ Ein **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trennung – entwicke
 - **Sammelrechnungen**: Monats-/Jahres-Abrechnungen mit Steuerberechnung
   - Automatische Aggregation von Einzelrechnungen
   - Separate Steuerausweise nach Steuersätzen
-- **PDF-Generierung**: Professionelle A4-PDF-Erstellung mit modernem Design
+- **PDF-Generierung**: Professionelle PDF-Erstellung mit modernem Design
+  - **A4-Format**: Einzelrechnungen und Sammelrechnungen
+  - **A6-Format**: 4×A6-Rechnungen auf A4-Seiten (2×2 Grid mit Schnittmarken)
   - Elegante Farbpalette (Dark Charcoal, Medium/Light Gray)
   - Moderne Typografie mit hierarchischen Font-Größen
-  - ReportLab-basierte PDF-Engine für Invoice & Summary Invoices
+  - ReportLab-basierte PDF-Engine für alle Formate
 - **PDF CRUD**: Vollständige API für PDF-Speicherung und -Verwaltung
-  - PDF-Erstellung für Rechnungen und Sammelrechnungen
+  - PDF-Erstellung für Rechnungen und Sammelrechnungen (A4)
+  - PDF-Erstellung für A6-Layouts (4 Rechnungen pro A4-Seite)
   - Base64-Speicherung in SQLite Database
   - CRUD-Operationen: Erstellen, Abrufen, Listen, Löschen
   - RESTful API mit strukturierter Fehlerbehandlung
@@ -65,7 +68,6 @@ Ein **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trennung – entwicke
 - **API**: RESTful FastAPI mit OpenAPI/Swagger-Dokumentation
 
 ### 🚧 Geplant
-- PDF Layouts: 4×A6 auf A4
 - E-Rechnung (XRechnung / ZUGFeRD)
 - Frontend (Next.js + shadcn/ui)
 - Desktop-App: Tauri v2 bündelt Backend + Frontend + DB in **eine ausführbare Datei**
@@ -85,9 +87,16 @@ Ein **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trennung – entwicke
 ```
 backend/          # FastAPI, SQLite, Services
 ├── models/       # SQLModel Datenmodelle
-├── routers/      # API Endpoints (customers, profiles, invoices, summary_invoices)
-├── services/     # Business Logic (invoice_number_generator, summary_invoice_generator)
-├── tests/        # Unit- & Integrationstests
+├── routers/      # API Endpoints (customers, profiles, invoices, summary_invoices, pdfs)
+├── services/     # Business Logic 
+│   ├── invoice_number_generator.py    # Automatische Rechnungsnummern
+│   ├── summary_invoice_generator.py   # Sammelrechnungs-Logic
+│   ├── pdf_generator.py               # A4-PDF-Generierung
+│   ├── pdf_a6_generator.py            # A6-PDF-Generierung (4×A6 auf A4)
+│   ├── pdf_data_service.py            # PDF-Daten-Aufbereitung
+│   └── pdf_data_structures.py         # PDF-Datenstrukturen
+├── scripts/      # Demo & Debug Scripts für PDF-Entwicklung
+├── tests/        # Unit- & Integrationstests (167 Tests, 88% Coverage)
 ├── database.py   # DB-Setup & Session-Management
 ├── main.py       # FastAPI App-Entry
 └── requirements.txt
@@ -157,18 +166,21 @@ cargo tauri dev
   - Validierung und Fehlerbehandlung
   - Session-Management und Transaktionen
   - Sammelrechnungs-Logik
+  - **PDF-Generierung**: A4 & A6-Formate
+  - **Edge Cases**: Fehlerbehandlung, Datenkonsistenz
 
 **Aktuelle Test-Suite**:
 ```bash
 cd backend
-pytest tests/test_customers.py               # Kundenverwaltung
-pytest tests/test_profiles.py                # Profile mit Steuereinstellungen
-pytest tests/test_invoices.py                # Rechnungs-CRUD
-pytest tests/test_invoice_number_*.py        # Automatische Nummern-Generierung
-pytest tests/test_invoice_tax_*.py           # Steuerlogik & Edge Cases
-pytest tests/test_summary_*.py               # Sammelrechnungen
-pytest tests/test_pdf_*.py                   # PDF-Generierung & CRUD
-pytest --cov=. --cov-report=html             # Coverage-Report
+pytest tests/test_customers.py               # Kundenverwaltung (7 Tests)
+pytest tests/test_profiles.py                # Profile mit Steuereinstellungen (7 Tests)
+pytest tests/test_invoices.py                # Rechnungs-CRUD (12 Tests)
+pytest tests/test_invoice_number_*.py        # Automatische Nummern-Generierung (11 Tests)
+pytest tests/test_invoice_tax_*.py           # Steuerlogik & Edge Cases (22 Tests)
+pytest tests/test_invoice_create_validation.py # Validierung Edge Cases (18 Tests)
+pytest tests/test_summary_*.py               # Sammelrechnungen (43 Tests)
+pytest tests/test_pdf_*.py                   # PDF-Generierung & CRUD (37 Tests)
+pytest --cov=. --cov-report=html             # Coverage-Report (88%)
 ```
 
 ### Frontend
@@ -242,7 +254,7 @@ jobs:
 - [x] **Phase 4.5** – Summary Invoices (Sammelrechnungen mit Service-Layer)
 - [x] **Phase 5** – PDF-Renderer (A4, professionelles Design)
 - [x] **Phase 5.1** – PDF CRUD API (Erstellen, Speichern, Abrufen, Löschen)
-- [ ] **Phase 6** – PDF-Renderer (A6x4)
+- [x] **Phase 6** – PDF-Renderer (A6×4 auf A4 mit Schnittmarken)
 - [ ] **Phase 7** – Frontend Bootstrap (Next.js + shadcn/ui)
 - [ ] **Phase 8** – Invoice-Form (Autocomplete, Submit)
 - [ ] **Phase 9** – CORS + Env-Konfig
@@ -255,7 +267,41 @@ jobs:
 
 ---
 
-## 🔧 API-Features & Business Logic
+## � A6-PDF-Feature (Neu)
+
+**Professionelle A6-Rechnungen auf A4-Format**:
+Das System kann mehrere Rechnungen im A6-Format (105×148mm) auf einer A4-Seite (210×297mm) im 2×2-Grid arrangieren. Ideal für:
+- **Kosteneffizienter Druck**: 4 Rechnungen pro A4-Seite
+- **Professionelle Präsentation**: Mit Schnittmarken für sauberes Trennen
+- **Automatische Seitenverwaltung**: Bei mehr als 4 Rechnungen werden weitere A4-Seiten erstellt
+
+### Technische Umsetzung
+- **ReportLab Platypus Framework**: Frame-basiertes Layout-System
+- **Präzise Positionierung**: Mathematisch zentrierte Anordnung mit automatischen Margins
+- **Crop Marks**: Professionelle Schnittmarken in allen vier Ecken jeder A6-Position
+- **Responsive Design**: A6-optimierte Schriftgrößen und kompakte Layouts
+- **Konsistente Typografie**: Angepasste Font-Hierarchie für kleinere Formate
+
+### API-Verwendung
+```http
+POST /pdfs/a6-invoices
+Content-Type: application/json
+
+[1, 2, 3, 4]  # Array von Invoice-IDs (1-n Rechnungen)
+```
+
+**Response**: StoredPDF-Objekt mit Base64-kodiertem PDF-Inhalt
+
+### Layout-Details
+- **A6-Dimensionen**: 105×148mm (ReportLab: 297.6×419.5 points)
+- **A4-Layout**: 2×2 Grid mit automatischer Zentrierung
+- **Margins**: Berechnet als `(A4_width - 2×A6_width) / 2` für perfekte Ausrichtung
+- **Crop Marks**: 6mm Linien außerhalb der A6-Bereiche
+- **Font-Sizes**: A6-optimiert (Titel: 16pt, Header: 10pt, Text: 8pt)
+
+---
+
+## �🔧 API-Features & Business Logic
 
 ### Automatische Rechnungsnummern (§14 UStG konform)
 **Rechtliche Compliance für Deutschland:**
@@ -310,12 +356,20 @@ Automatische Aggregation von Einzelrechnungen für:
 - **Elegantes Design**: Dark Charcoal Primary (#2D3748), Medium/Light Gray Akzente
 - **Typografie**: Hierarchische Font-Größen (24pt Titel, 12pt Headers, 10pt Text)
 - **Layout**: Strukturierte Tabellen, HRFlowable-Trennlinien, optimaler Weißraum
-- **ReportLab Engine**: Robuste PDF-Generierung für Invoice & Summary Invoices
+- **ReportLab Engine**: Robuste PDF-Generierung für alle Formate
+
+**PDF-Formate:**
+- **A4-Format**: Einzelrechnungen und Sammelrechnungen (Standard-Layout)
+- **A6-Format**: 4×A6-Rechnungen auf A4-Seiten im 2×2-Grid mit Schnittmarken
+- **Automatische Seitenumbrüche**: Bei mehr als 4 A6-Rechnungen
+- **Crop Marks**: Professionelle Schnittmarken für A6-Layouts
 
 **CRUD API für PDF-Management**:
 ```http
-POST /pdfs/invoices/123          # PDF erstellen & speichern
-POST /pdfs/summary-invoices/456  # Summary PDF erstellen & speichern
+POST /pdfs/invoices/123          # A4-PDF für Einzelrechnung erstellen & speichern
+POST /pdfs/summary-invoices/456  # A4-PDF für Sammelrechnung erstellen & speichern
+POST /pdfs/a6-invoices           # A6-PDF (4 Rechnungen auf A4) erstellen
+     {"invoice_ids": [1,2,3,4]}  # JSON Body mit Invoice-IDs
 GET /pdfs/                       # Alle PDFs listen
 GET /pdfs/789                    # Einzelne PDF abrufen (Base64)
 DELETE /pdfs/789                 # PDF löschen
@@ -410,11 +464,11 @@ erDiagram
 
     STORED_PDF {
         int id PK
-        string type "invoice oder summary_invoice"
+        string type "invoice, summary_invoice oder a6_invoices"
         string content "Base64-kodierter PDF-Inhalt"
         datetime created_at "Erstellungszeitpunkt"
-        int invoice_id FK "nullable"
-        int summary_invoice_id FK "nullable"
+        int invoice_id FK "nullable (nur für Einzelrechnungen)"
+        int summary_invoice_id FK "nullable (nur für Sammelrechnungen)"
     }
 ```
 
@@ -427,6 +481,9 @@ erDiagram
 - **SummaryInvoice**: Sammelrechnungen für Monats-/Jahres-Abrechnungen
 - **SummaryInvoiceLink**: n:m-Beziehung zwischen Summary Invoice und einzelnen Rechnungen
 - **StoredPDF**: Base64-gespeicherte PDFs mit Verknüpfung zu Rechnungen
+  - Typ "invoice": A4-PDF für Einzelrechnung
+  - Typ "summary_invoice": A4-PDF für Sammelrechnung  
+  - Typ "a6_invoices": A6-PDF (4×A6 auf A4) für mehrere Rechnungen
 
 ### Rechnungsnummern-Logik (§14 UStG)
 - **Format**: "YY | NNN" (z.B. "25 | 001", "25 | 002")
@@ -440,6 +497,28 @@ erDiagram
 - **Ermäßigte MwSt**: `include_tax=true`, `tax_rate=0.07`
 - **Brutto-Eingabe**: `is_gross_amount=true` → Netto wird berechnet
 - **Netto-Eingabe**: `is_gross_amount=false` → Brutto wird berechnet
+
+---
+
+## 📈 Entwicklungsstand (Oktober 2025)
+
+### Aktuelle Metriken
+- **Test-Suite**: 167 Tests mit 88% Code-Coverage
+- **Codebase**: ~3.200 Lines of Code (ohne Scripts)
+- **API-Endpunkte**: 25+ RESTful Endpoints
+- **Features**: Backend-Core vollständig implementiert
+
+### Code-Quality
+- **Umfassende Validierung**: Alle Eingaben werden validiert (Pydantic/SQLModel)
+- **Error Handling**: Strukturierte HTTP-Fehlerantworten
+- **Type Safety**: Vollständig typisiert mit Python Type Hints
+- **Documentation**: Auto-generierte OpenAPI/Swagger-Docs
+- **CI/CD**: Automatisierte Tests bei jedem Commit/PR
+
+### Nächste Schritte
+1. **Frontend Development**: Next.js + shadcn/ui Implementation
+2. **Desktop Integration**: Tauri v2 Shell mit Python Sidecar
+3. **E-Invoice Support**: XRechnung/ZUGFeRD Integration
 
 ---
 

@@ -16,6 +16,7 @@ from reportlab.platypus import (
 )
 
 from .pdf_data_structures import PDFInvoiceData, PDFSummaryInvoiceData
+from .pdf_helpers import create_address_table
 
 
 class PDFGenerator:
@@ -160,32 +161,15 @@ class PDFGenerator:
         )
 
         # Sender and customer information with professional layout
-        address_data = [
-            [
-                Paragraph(
-                    f"<b>Rechnungssteller</b><br/><br/>{data.sender_name}<br/>{data.sender_address}",
-                    self.styles["Address"],
-                ),
-                Paragraph(
-                    f"<b>Rechnungsempfänger</b><br/><br/>{data.customer_address}",
-                    self.styles["Address"],
-                ),
-            ]
-        ]
-
-        address_table = Table(
-            address_data, colWidths=[9 * cm, 9 * cm], rowHeights=[35 * mm]
-        )
-        address_table.setStyle(
-            TableStyle(
-                [
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                    ("TOPPADDING", (0, 0), (-1, -1), 0),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8 * mm),
-                ]
-            )
+        address_table = create_address_table(
+            sender_name=data.sender_name,
+            sender_address=data.sender_address,
+            customer_name=data.customer_name,
+            customer_address=data.customer_address,
+            style=self.styles["Address"],
+            col_widths=[9 * cm, 9 * cm],
+            row_heights=[35 * mm],
+            bottom_padding=8 * mm,
         )
         story.append(address_table)
 
@@ -372,32 +356,15 @@ class PDFGenerator:
         )
 
         # Sender and customer information with professional layout
-        address_data = [
-            [
-                Paragraph(
-                    f"<b>Rechnungssteller</b><br/><br/>{data.sender_name}<br/>{data.sender_address}",
-                    self.styles["Address"],
-                ),
-                Paragraph(
-                    f"<b>Rechnungsempfänger</b><br/><br/>{data.customer_address}",
-                    self.styles["Address"],
-                ),
-            ]
-        ]
-
-        address_table = Table(
-            address_data, colWidths=[9 * cm, 9 * cm], rowHeights=[35 * mm]
-        )
-        address_table.setStyle(
-            TableStyle(
-                [
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                    ("TOPPADDING", (0, 0), (-1, -1), 0),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8 * mm),
-                ]
-            )
+        address_table = create_address_table(
+            sender_name=data.sender_name,
+            sender_address=data.sender_address,
+            customer_name=data.customer_name,
+            customer_address=data.customer_address,
+            style=self.styles["Address"],
+            col_widths=[9 * cm, 9 * cm],
+            row_heights=[35 * mm],
+            bottom_padding=8 * mm,
         )
         story.append(address_table)
 
@@ -427,30 +394,68 @@ class PDFGenerator:
         story.append(meta_table)
         story.append(Spacer(1, 8 * mm))
 
-        # Included invoices with professional styling
-        if data.invoice_numbers:
+        # Included invoices with professional table styling
+        if data.invoice_details:
             story.append(
                 Paragraph("<b>Enthaltene Rechnungen</b>", self.styles["SectionHeader"])
             )
 
-            # Create elegant list of invoices
-            invoice_list_data = []
-            for i, number in enumerate(data.invoice_numbers, 1):
-                invoice_list_data.append([f"{i}.", f"Rechnung {number}"])
+            # Create professional table with header
+            invoice_list_data = [
+                # Header row
+                ["Nr.", "Rechnungsnummer", "Kunde", "Betrag"]
+            ]
 
-            invoice_table = Table(invoice_list_data, colWidths=[1 * cm, 15 * cm])
+            # Data rows
+            for i, detail in enumerate(data.invoice_details, 1):
+                invoice_list_data.append(
+                    [
+                        str(i),
+                        detail["number"],
+                        detail["customer_name"],
+                        f"{detail['amount']:.2f} €",
+                    ]
+                )
+
+            invoice_table = Table(
+                invoice_list_data, colWidths=[1.5 * cm, 4 * cm, 7 * cm, 3.5 * cm]
+            )
             invoice_table.setStyle(
                 TableStyle(
                     [
-                        ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
-                        ("FONTSIZE", (0, 0), (-1, -1), 10),
-                        ("TEXTCOLOR", (0, 0), (0, -1), self.colors["secondary"]),
-                        ("TEXTCOLOR", (1, 0), (1, -1), self.colors["text"]),
-                        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                        ("TOPPADDING", (0, 0), (-1, -1), 1 * mm),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 1 * mm),
-                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        # Header styling
+                        ("BACKGROUND", (0, 0), (-1, 0), self.colors["primary"]),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("FONTSIZE", (0, 0), (-1, 0), 10),
+                        ("ALIGN", (0, 0), (-1, 0), "LEFT"),
+                        (
+                            "ALIGN",
+                            (3, 0),
+                            (3, -1),
+                            "RIGHT",
+                        ),  # Amount column right-aligned
+                        # Data rows styling
+                        ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+                        ("FONTSIZE", (0, 1), (-1, -1), 9),
+                        ("TEXTCOLOR", (0, 1), (-1, -1), self.colors["text"]),
+                        # Grid and borders
+                        ("GRID", (0, 0), (-1, -1), 0.5, self.colors["accent"]),
+                        ("LINEBELOW", (0, 0), (-1, 0), 1.5, self.colors["primary"]),
+                        # Padding
+                        ("LEFTPADDING", (0, 0), (-1, -1), 3 * mm),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 3 * mm),
+                        ("TOPPADDING", (0, 0), (-1, -1), 2 * mm),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 2 * mm),
+                        # Alignment
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                        # Alternating row colors for better readability
+                        (
+                            "ROWBACKGROUNDS",
+                            (0, 1),
+                            (-1, -1),
+                            [colors.white, colors.Color(0.95, 0.95, 0.95)],
+                        ),
                     ]
                 )
             )

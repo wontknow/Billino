@@ -133,10 +133,81 @@ class TestPDFRoutes:
         )
         summary_id = summary_resp.json()["id"]
 
-        # Create PDF for summary invoice
+        # Create PDF for summary invoice (with recipient name)
         pdf_resp = client.post(
-            f"/pdfs/summary-invoices/{summary_id}", json={"customer_id": customer_id}
+            f"/pdfs/summary-invoices/{summary_id}",
+            json={"recipient_name": "Seniorenresidenz Sonnenschein"},
         )
+
+        assert pdf_resp.status_code == 201
+        pdf_data = pdf_resp.json()
+        assert "id" in pdf_data
+        assert pdf_data["summary_invoice_id"] == summary_id
+        assert pdf_data["type"] == "summary_invoice"
+        assert len(pdf_data["content"]) > 0  # Base64 encoded PDF
+
+    def test_create_summary_invoice_pdf_without_recipient(self, client, session):
+        """Test creating PDF for summary invoice without recipient name (fallback to customer names)"""
+        # Create profile and customers first
+        profile_resp = client.post(
+            "/profiles/",
+            json={
+                "name": "Fallback Profile",
+                "address": "Fallback Address",
+                "city": "Fallback City",
+            },
+        )
+        profile_id = profile_resp.json()["id"]
+
+        customer1_resp = client.post("/customers/", json={"name": "Hans Müller"})
+        customer1_id = customer1_resp.json()["id"]
+
+        customer2_resp = client.post("/customers/", json={"name": "Maria Schmidt"})
+        customer2_id = customer2_resp.json()["id"]
+
+        # Create invoices for both customers
+        invoice1_resp = client.post(
+            "/invoices/",
+            json={
+                "date": "2025-10-21",
+                "customer_id": customer1_id,
+                "profile_id": profile_id,
+                "total_amount": 50.00,
+                "invoice_items": [
+                    {"description": "Service 1", "quantity": 1, "price": 50.00}
+                ],
+            },
+        )
+        invoice1_id = invoice1_resp.json()["id"]
+
+        invoice2_resp = client.post(
+            "/invoices/",
+            json={
+                "date": "2025-10-21",
+                "customer_id": customer2_id,
+                "profile_id": profile_id,
+                "total_amount": 75.00,
+                "invoice_items": [
+                    {"description": "Service 2", "quantity": 1, "price": 75.00}
+                ],
+            },
+        )
+        invoice2_id = invoice2_resp.json()["id"]
+
+        # Create summary invoice
+        summary_resp = client.post(
+            "/summary-invoices/",
+            json={
+                "invoice_ids": [invoice1_id, invoice2_id],
+                "profile_id": profile_id,
+                "range_text": "Fallback Test Range",
+                "date": "2025-10-21",
+            },
+        )
+        summary_id = summary_resp.json()["id"]
+
+        # Create PDF for summary invoice WITHOUT recipient_name (should fallback to customer names)
+        pdf_resp = client.post(f"/pdfs/summary-invoices/{summary_id}")
 
         assert pdf_resp.status_code == 201
         pdf_data = pdf_resp.json()
@@ -254,7 +325,9 @@ class TestPDFRoutes:
 
     def test_summary_invoice_not_found_for_pdf_creation(self, client, session):
         """Test creating PDF for non-existent summary invoice returns 404"""
-        resp = client.post("/pdfs/summary-invoices/999999", json={"customer_id": 1})
+        resp = client.post(
+            "/pdfs/summary-invoices/999999", json={"recipient_name": "Test Recipient"}
+        )
         assert resp.status_code == 404
 
     def test_pdf_already_exists(self, client, session):
@@ -352,13 +425,15 @@ class TestPDFRoutes:
 
         # Create PDF for summary invoice first time
         pdf_resp1 = client.post(
-            f"/pdfs/summary-invoices/{summary_id}", json={"customer_id": customer_id}
+            f"/pdfs/summary-invoices/{summary_id}",
+            json={"recipient_name": "Test Recipient"},
         )
         assert pdf_resp1.status_code == 201
 
         # Attempt to create PDF second time
         pdf_resp2 = client.post(
-            f"/pdfs/summary-invoices/{summary_id}", json={"customer_id": customer_id}
+            f"/pdfs/summary-invoices/{summary_id}",
+            json={"recipient_name": "Test Recipient"},
         )
         assert pdf_resp2.status_code == 400
         assert (

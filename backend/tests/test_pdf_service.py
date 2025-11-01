@@ -315,7 +315,7 @@ class TestPDFDataService:
         # Use the provided session to access the data
         pdf_data_service = PDFDataService(session)
         pdf_data = pdf_data_service.get_summary_invoice_pdf_data(
-            summary_invoice["id"], pdf_customer_id
+            summary_invoice["id"], "Altersheim Sonnenschein"
         )
 
         # Check basic structure
@@ -329,9 +329,11 @@ class TestPDFDataService:
         # Check profile data - flexible checks since tests may interfere
         assert len(pdf_data.sender_name) > 0  # Profile name exists
 
-        # Check that PDF customer is used (may be affected by test isolation)
-        assert len(pdf_data.customer_name) > 0  # Customer name exists
-        assert len(pdf_data.customer_address) > 0  # Address exists
+        # Check that recipient name is used correctly
+        assert (
+            pdf_data.customer_name == "Altersheim Sonnenschein"
+        )  # Custom recipient name
+        assert pdf_data.customer_address == ""  # No address for custom recipient
 
         # Check aggregated amounts - flexible since tests may use different data
         assert pdf_data.total_net > 0  # Net amount should be positive
@@ -346,6 +348,92 @@ class TestPDFDataService:
         assert (
             len(pdf_data.invoice_numbers) >= 1
         )  # At least one invoice should be included
+
+    def test_get_summary_invoice_pdf_data_fallback_customer_names(
+        self, client, session
+    ):
+        """Test summary invoice PDF data generation with fallback to customer names (no recipient_name)"""
+        # Create profile and customers with unique names
+        profile_resp = client.post(
+            "/profiles/",
+            json={
+                "name": "Fallback Test Profile Unique",
+                "address": "Fallback Address",
+                "city": "Fallback City",
+                "include_tax": True,
+                "default_tax_rate": 0.19,
+            },
+        )
+        profile_id = profile_resp.json()["id"]
+
+        # Create two different customers
+        customer1_resp = client.post("/customers/", json={"name": "Hans Müller"})
+        customer1_id = customer1_resp.json()["id"]
+
+        customer2_resp = client.post("/customers/", json={"name": "Maria Schmidt"})
+        customer2_id = customer2_resp.json()["id"]
+
+        # Create invoices for both customers
+        invoice1_resp = client.post(
+            "/invoices/",
+            json={
+                "date": "2025-10-20",
+                "customer_id": customer1_id,
+                "profile_id": profile_id,
+                "total_amount": 100.00,
+                "include_tax": True,
+                "tax_rate": 0.19,
+                "is_gross_amount": False,
+                "invoice_items": [
+                    {"description": "Service 1", "quantity": 1, "price": 100.00}
+                ],
+            },
+        )
+        invoice1_id = invoice1_resp.json()["id"]
+
+        invoice2_resp = client.post(
+            "/invoices/",
+            json={
+                "date": "2025-10-20",
+                "customer_id": customer2_id,
+                "profile_id": profile_id,
+                "total_amount": 75.00,
+                "include_tax": True,
+                "tax_rate": 0.19,
+                "is_gross_amount": False,
+                "invoice_items": [
+                    {"description": "Service 2", "quantity": 1, "price": 75.00}
+                ],
+            },
+        )
+        invoice2_id = invoice2_resp.json()["id"]
+
+        # Create summary invoice
+        summary_resp = client.post(
+            "/summary-invoices/",
+            json={
+                "profile_id": profile_id,
+                "invoice_ids": [invoice1_id, invoice2_id],
+                "range_text": "Fallback Test Range",
+                "date": "2025-10-31",
+            },
+        )
+        summary_invoice = summary_resp.json()
+
+        # Test WITHOUT recipient_name (should fallback to customer names)
+        pdf_data_service = PDFDataService(session)
+        pdf_data = pdf_data_service.get_summary_invoice_pdf_data(
+            summary_invoice["id"]  # No recipient_name parameter
+        )
+
+        # Check basic structure
+        assert isinstance(pdf_data, PDFSummaryInvoiceData)
+
+        # Check that customer names are combined (fallback behavior)
+        assert "Hans Müller" in pdf_data.customer_name
+        assert "Maria Schmidt" in pdf_data.customer_name
+        assert ", " in pdf_data.customer_name  # Should be "Hans Müller, Maria Schmidt"
+        assert pdf_data.customer_address == ""  # No address for multiple customers
 
 
 # ---------------------------------------------------------------------------
@@ -399,6 +487,15 @@ class TestPDFGenerator:
             customer_name="Test Customer",
             customer_address="Teststraße 456\n54321 Teststadt",
             invoice_numbers=["25 | 001", "25 | 002", "25 | 003"],
+            invoice_details=[
+                {"number": "25 | 001", "customer_name": "Hans Müller", "amount": 50.00},
+                {
+                    "number": "25 | 002",
+                    "customer_name": "Maria Schmidt",
+                    "amount": 35.42,
+                },
+                {"number": "25 | 003", "customer_name": "Klaus Weber", "amount": 34.58},
+            ],
             total_net=100.84,
             total_tax=19.16,
             total_gross=120.00,
@@ -506,3 +603,207 @@ class TestPDFServiceEdgeCases:
         generator = PDFGenerator()
         pdf_bytes = generator.generate_invoice_pdf(pdf_data)
         assert isinstance(pdf_bytes, bytes)
+
+
+class TestPDFDataServiceEdgeCases:
+    """Test edge cases and error conditions in PDFDataService"""
+
+    def test_get_invoice_pdf_data_invoice_not_found(self, session):
+        """Test error when invoice doesn't exist"""
+        service = PDFDataService(session)
+
+        with pytest.raises(ValueError, match="Invoice not found"):
+            service.get_invoice_pdf_data(99999)
+
+    def test_get_invoice_pdf_data_profile_not_found(self, session, client):
+        """Test error when profile is missing"""
+        # Create customer first
+        customer_resp = client.post("/customers/", json={"name": "Test Customer"})
+        customer_id = customer_resp.json()["id"]
+
+        # Create profile
+        profile_resp = client.post(
+            "/profiles/",
+            json={
+                "name": "Test Profile",
+                "address": "Test Address",
+                "city": "Test City",
+            },
+        )
+        profile_id = profile_resp.json()["id"]
+
+        # Create invoice
+        invoice_resp = client.post(
+            "/invoices/",
+            json={
+                "date": "2025-10-20",
+                "customer_id": customer_id,
+                "profile_id": profile_id,
+                "total_amount": 100.00,
+                "invoice_items": [
+                    {"description": "Service", "quantity": 1, "price": 100.00}
+                ],
+            },
+        )
+        invoice_id = invoice_resp.json()["id"]
+
+        # Delete the profile to simulate missing profile
+        client.delete(f"/profiles/{profile_id}")
+
+        service = PDFDataService(session)
+        with pytest.raises(ValueError, match="Profile not found"):
+            service.get_invoice_pdf_data(invoice_id)
+
+    def test_get_invoice_pdf_data_customer_not_found(self, session, client):
+        """Test error when customer is missing"""
+        # Create profile first
+        profile_resp = client.post(
+            "/profiles/",
+            json={
+                "name": "Test Profile",
+                "address": "Test Address",
+                "city": "Test City",
+            },
+        )
+        profile_id = profile_resp.json()["id"]
+
+        # Create customer
+        customer_resp = client.post("/customers/", json={"name": "Test Customer"})
+        customer_id = customer_resp.json()["id"]
+
+        # Create invoice
+        invoice_resp = client.post(
+            "/invoices/",
+            json={
+                "date": "2025-10-20",
+                "customer_id": customer_id,
+                "profile_id": profile_id,
+                "total_amount": 100.00,
+                "invoice_items": [
+                    {"description": "Service", "quantity": 1, "price": 100.00}
+                ],
+            },
+        )
+        invoice_id = invoice_resp.json()["id"]
+
+        # Delete the customer to simulate missing customer
+        client.delete(f"/customers/{customer_id}")
+
+        service = PDFDataService(session)
+        with pytest.raises(ValueError, match="Customer not found"):
+            service.get_invoice_pdf_data(invoice_id)
+
+    def test_get_invoice_pdf_data_with_iso_date_format(self, session, client):
+        """Test handling of ISO date format with timezone"""
+        # Create customer and profile
+        customer_resp = client.post("/customers/", json={"name": "Test Customer"})
+        customer_id = customer_resp.json()["id"]
+
+        profile_resp = client.post(
+            "/profiles/",
+            json={
+                "name": "Test Profile",
+                "address": "Test Address",
+                "city": "Test City",
+            },
+        )
+        profile_id = profile_resp.json()["id"]
+
+        # Create invoice with ISO date format
+        invoice_resp = client.post(
+            "/invoices/",
+            json={
+                "date": "2025-10-20T10:30:00Z",  # ISO format with timezone
+                "customer_id": customer_id,
+                "profile_id": profile_id,
+                "total_amount": 100.00,
+                "invoice_items": [
+                    {"description": "Service", "quantity": 1, "price": 100.00}
+                ],
+            },
+        )
+        invoice_id = invoice_resp.json()["id"]
+
+        service = PDFDataService(session)
+        pdf_data = service.get_invoice_pdf_data(invoice_id)
+
+        # Date should be properly converted to date object
+        assert pdf_data.date == date(2025, 10, 20)
+
+    def test_get_invoice_pdf_data_with_zero_tax_rate(self, session, client):
+        """Test handling of zero tax rate"""
+        # Create customer and profile
+        customer_resp = client.post("/customers/", json={"name": "Test Customer"})
+        customer_id = customer_resp.json()["id"]
+
+        profile_resp = client.post(
+            "/profiles/",
+            json={
+                "name": "Test Profile",
+                "address": "Test Address",
+                "city": "Test City",
+                "default_tax_rate": 0.0,  # Zero default tax rate
+            },
+        )
+        profile_id = profile_resp.json()["id"]
+
+        # Create invoice with no tax
+        invoice_resp = client.post(
+            "/invoices/",
+            json={
+                "date": "2025-10-20",
+                "customer_id": customer_id,
+                "profile_id": profile_id,
+                "total_amount": 100.00,
+                "tax_rate": None,  # No tax rate specified
+                "invoice_items": [
+                    {"description": "Service", "quantity": 1, "price": 100.00}
+                ],
+            },
+        )
+        invoice_id = invoice_resp.json()["id"]
+
+        service = PDFDataService(session)
+        pdf_data = service.get_invoice_pdf_data(invoice_id)
+
+        # Should handle zero tax rate properly
+        assert pdf_data.tax_rate == 0.0
+        assert pdf_data.total_tax == 0.0
+
+    def test_get_invoice_pdf_data_with_missing_bank_data(self, session, client):
+        """Test handling of missing bank data"""
+        # Create customer and profile without bank data
+        customer_resp = client.post("/customers/", json={"name": "Test Customer"})
+        customer_id = customer_resp.json()["id"]
+
+        profile_resp = client.post(
+            "/profiles/",
+            json={
+                "name": "Test Profile",
+                "address": "Test Address",
+                "city": "Test City",
+                # No bank_data provided
+            },
+        )
+        profile_id = profile_resp.json()["id"]
+
+        # Create invoice
+        invoice_resp = client.post(
+            "/invoices/",
+            json={
+                "date": "2025-10-20",
+                "customer_id": customer_id,
+                "profile_id": profile_id,
+                "total_amount": 100.00,
+                "invoice_items": [
+                    {"description": "Service", "quantity": 1, "price": 100.00}
+                ],
+            },
+        )
+        invoice_id = invoice_resp.json()["id"]
+
+        service = PDFDataService(session)
+        pdf_data = service.get_invoice_pdf_data(invoice_id)
+
+        # Should handle missing bank data gracefully
+        assert pdf_data.sender_bank_data is None or pdf_data.sender_bank_data == ""
