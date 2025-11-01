@@ -36,7 +36,7 @@ jobs:
           elif [[ "$BRANCH" == ci/* ]]; then
             gh pr edit ${{ github.event.pull_request.number }} --add-label "Infra"
           elif [[ "$BRANCH" == story/* ]]; then
-            gh pr edit ${{ github.event.pull_request.number }} --add-label "Story"
+            gh pr edit ${{ github.event.pull_request.number }} --add-label "story"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
