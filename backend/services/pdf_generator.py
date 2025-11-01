@@ -427,33 +427,62 @@ class PDFGenerator:
         story.append(meta_table)
         story.append(Spacer(1, 8 * mm))
 
-        # Included invoices with professional styling
+        # Included invoices with professional table styling
         if data.invoice_details:
             story.append(
                 Paragraph("<b>Enthaltene Rechnungen</b>", self.styles["SectionHeader"])
             )
 
-            # Create elegant list of invoices with customer names
-            invoice_list_data = []
+            # Create professional table with header
+            invoice_list_data = [
+                # Header row
+                ["Nr.", "Rechnungsnummer", "Kunde", "Betrag"]
+            ]
+            
+            # Data rows
             for i, detail in enumerate(data.invoice_details, 1):
                 invoice_list_data.append([
-                    f"{i}.", 
-                    f"Rechnung {detail['number']} - {detail['customer_name']}"
+                    str(i),
+                    detail['number'],
+                    detail['customer_name'],
+                    f"{detail['amount']:.2f} €"
                 ])
 
-            invoice_table = Table(invoice_list_data, colWidths=[1 * cm, 15 * cm])
+            invoice_table = Table(
+                invoice_list_data, 
+                colWidths=[1.5 * cm, 4 * cm, 7 * cm, 3.5 * cm]
+            )
             invoice_table.setStyle(
                 TableStyle(
                     [
-                        ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
-                        ("FONTSIZE", (0, 0), (-1, -1), 10),
-                        ("TEXTCOLOR", (0, 0), (0, -1), self.colors["secondary"]),
-                        ("TEXTCOLOR", (1, 0), (1, -1), self.colors["text"]),
-                        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                        ("TOPPADDING", (0, 0), (-1, -1), 1 * mm),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 1 * mm),
-                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        # Header styling
+                        ("BACKGROUND", (0, 0), (-1, 0), self.colors["primary"]),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("FONTSIZE", (0, 0), (-1, 0), 10),
+                        ("ALIGN", (0, 0), (-1, 0), "LEFT"),
+                        ("ALIGN", (3, 0), (3, -1), "RIGHT"),  # Amount column right-aligned
+                        
+                        # Data rows styling
+                        ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+                        ("FONTSIZE", (0, 1), (-1, -1), 9),
+                        ("TEXTCOLOR", (0, 1), (-1, -1), self.colors["text"]),
+                        
+                        # Grid and borders
+                        ("GRID", (0, 0), (-1, -1), 0.5, self.colors["accent"]),
+                        ("LINEBELOW", (0, 0), (-1, 0), 1.5, self.colors["primary"]),
+                        
+                        # Padding
+                        ("LEFTPADDING", (0, 0), (-1, -1), 3 * mm),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 3 * mm),
+                        ("TOPPADDING", (0, 0), (-1, -1), 2 * mm),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 2 * mm),
+                        
+                        # Alignment
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                        
+                        # Alternating row colors for better readability
+                        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.Color(0.95, 0.95, 0.95)]),
                     ]
                 )
             )

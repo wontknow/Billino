@@ -277,7 +277,7 @@ class PDFDataService:
         links = self.session.exec(links_query).all()
 
         invoice_numbers = []
-        invoice_details = []  # Will contain {"number": str, "customer_name": str}
+        invoice_details = []  # Will contain {"number": str, "customer_name": str, "amount": float}
         customer_names = set()  # Use set to avoid duplicates
         
         for link in links:
@@ -290,7 +290,8 @@ class PDFDataService:
                     customer_names.add(customer.name)
                     invoice_details.append({
                         "number": invoice.number,
-                        "customer_name": customer.name
+                        "customer_name": customer.name,
+                        "amount": invoice.total_amount
                     })
 
         # Determine recipient name and address

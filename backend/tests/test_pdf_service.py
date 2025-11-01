@@ -484,9 +484,9 @@ class TestPDFGenerator:
             customer_address="Teststraße 456\n54321 Teststadt",
             invoice_numbers=["25 | 001", "25 | 002", "25 | 003"],
             invoice_details=[
-                {"number": "25 | 001", "customer_name": "Hans Müller"},
-                {"number": "25 | 002", "customer_name": "Maria Schmidt"},
-                {"number": "25 | 003", "customer_name": "Klaus Weber"}
+                {"number": "25 | 001", "customer_name": "Hans Müller", "amount": 50.00},
+                {"number": "25 | 002", "customer_name": "Maria Schmidt", "amount": 35.42},
+                {"number": "25 | 003", "customer_name": "Klaus Weber", "amount": 34.58}
             ],
             total_net=100.84,
             total_tax=19.16,
