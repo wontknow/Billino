@@ -172,8 +172,8 @@ def create_a6_invoices_pdf(
         stored_pdf = StoredPDF(
             type="a6_invoices",
             content=pdf_base64,
-            # Note: We don't set invoice_id or summary_invoice_id for multi-invoice PDFs
-            # Could add a separate field for this if needed
+            # Note: invoice_id and summary_invoice_id are intentionally set to None for
+            # a6_invoices type PDFs, as these represent a collection of invoices rather than a single entity.
         )
         session.add(stored_pdf)
         session.commit()
