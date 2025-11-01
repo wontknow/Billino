@@ -191,13 +191,14 @@ class PDFA6Generator:
         address_data = [
             [
                 Paragraph(
-                    f"<b>Von</b><br/>{data.sender_name}<br/>{data.sender_address}",
+                    f"<b>Rechnungssteller</b><br/><br/>{data.sender_name}<br/>{data.sender_address}",
                     self.styles["A6Address"],
                 ),
                 Paragraph(
-                    f"<b>An</b><br/>{data.customer_address}",
+                    f"<b>Rechnungsempfänger</b><br/><br/>{data.customer_name}{('<br/>' + data.customer_address) if data.customer_address else ''}",
                     self.styles["A6Address"],
                 ),
+                
             ]
         ]
 

@@ -167,7 +167,7 @@ class PDFGenerator:
                     self.styles["Address"],
                 ),
                 Paragraph(
-                    f"<b>Rechnungsempfänger</b><br/><br/>{data.customer_address}",
+                    f"<b>Rechnungsempfänger</b><br/><br/>{data.customer_name}{('<br/>' + data.customer_address) if data.customer_address else ''}",
                     self.styles["Address"],
                 ),
             ]
@@ -379,7 +379,7 @@ class PDFGenerator:
                     self.styles["Address"],
                 ),
                 Paragraph(
-                    f"<b>Rechnungsempfänger</b><br/><br/>{data.customer_address}",
+                    f"<b>Rechnungsempfänger</b><br/><br/>{data.customer_name}{('<br/>' + data.customer_address) if data.customer_address else ''}",
                     self.styles["Address"],
                 ),
             ]
@@ -428,15 +428,18 @@ class PDFGenerator:
         story.append(Spacer(1, 8 * mm))
 
         # Included invoices with professional styling
-        if data.invoice_numbers:
+        if data.invoice_details:
             story.append(
                 Paragraph("<b>Enthaltene Rechnungen</b>", self.styles["SectionHeader"])
             )
 
-            # Create elegant list of invoices
+            # Create elegant list of invoices with customer names
             invoice_list_data = []
-            for i, number in enumerate(data.invoice_numbers, 1):
-                invoice_list_data.append([f"{i}.", f"Rechnung {number}"])
+            for i, detail in enumerate(data.invoice_details, 1):
+                invoice_list_data.append([
+                    f"{i}.", 
+                    f"Rechnung {detail['number']} - {detail['customer_name']}"
+                ])
 
             invoice_table = Table(invoice_list_data, colWidths=[1 * cm, 15 * cm])
             invoice_table.setStyle(

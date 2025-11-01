@@ -193,7 +193,7 @@ class PDFDataService:
 
         # Prepare customer address
         customer_address = self._format_address(
-            customer.address, customer.city, customer.name
+            customer.address, customer.city
         )
 
         # Calculate amounts based on is_gross_amount flag
@@ -244,52 +244,69 @@ class PDFDataService:
         )
 
     def get_summary_invoice_pdf_data(
-        self, summary_invoice_id: int, customer_id: int
+        self, summary_invoice_id: int, recipient_name: Optional[str] = None
     ) -> PDFSummaryInvoiceData:
         """
         Retrieve and prepare summary invoice data for PDF generation.
 
         Args:
             summary_invoice_id: ID of the summary invoice
-            customer_id: ID of the customer for the PDF (can be different from invoice customers)
+            recipient_name: Optional recipient name (e.g., "Seniorenresidenz Sonnenschein")
+                          If None, will collect all customer names from linked invoices
 
         Returns:
             PDFSummaryInvoiceData object with all necessary information
 
         Raises:
-            ValueError: If summary invoice or customer is not found
+            ValueError: If summary invoice is not found
         """
         # Get summary invoice
         summary_invoice = self.session.get(SummaryInvoice, summary_invoice_id)
         if not summary_invoice:
             raise ValueError("Summary invoice not found")
 
-        # Get profile and customer
+        # Get profile
         profile = self.session.get(Profile, summary_invoice.profile_id)
-        customer = self.session.get(Customer, customer_id)
-
         if not profile:
             raise ValueError("Profile not found")
-        if not customer:
-            raise ValueError("Customer not found")
 
-        # Get linked invoice numbers
+        # Get linked invoices and collect customer info
         links_query = select(SummaryInvoiceLink).where(
             SummaryInvoiceLink.summary_invoice_id == summary_invoice_id
         )
         links = self.session.exec(links_query).all()
 
         invoice_numbers = []
+        invoice_details = []  # Will contain {"number": str, "customer_name": str}
+        customer_names = set()  # Use set to avoid duplicates
+        
         for link in links:
             invoice = self.session.get(Invoice, link.invoice_id)
             if invoice:
                 invoice_numbers.append(invoice.number)
+                # Get customer name for both fallback and details
+                customer = self.session.get(Customer, invoice.customer_id)
+                if customer:
+                    customer_names.add(customer.name)
+                    invoice_details.append({
+                        "number": invoice.number,
+                        "customer_name": customer.name
+                    })
+
+        # Determine recipient name and address
+        if recipient_name:
+            # Use provided recipient name
+            final_customer_name = recipient_name
+            final_customer_address = ""  # No specific address for custom recipient
+        else:
+            # Use all customer names as fallback
+            if not customer_names:
+                raise ValueError("No customer names found for summary invoice and no recipient name provided")
+            final_customer_name = ", ".join(sorted(customer_names))
+            final_customer_address = ""  # Multiple customers, no single address
 
         # Prepare addresses
         sender_address = self._format_address(profile.address, profile.city)
-        customer_address = self._format_address(
-            customer.address, customer.city, customer.name
-        )
 
         # Convert string date to date object
         if isinstance(summary_invoice.date, str):
@@ -310,12 +327,13 @@ class PDFDataService:
             date=summary_date,
             sender_name=profile.name,
             sender_address=sender_address,
-            customer_name=customer.name,
-            customer_address=customer_address,
+            customer_name=final_customer_name,
+            customer_address=final_customer_address,
             total_net=summary_invoice.total_net,
             total_tax=summary_invoice.total_tax,
             total_gross=summary_invoice.total_gross,
             invoice_numbers=invoice_numbers,
+            invoice_details=invoice_details,
             sender_bank_data=profile.bank_data,
             sender_tax_number=profile.tax_number,
         )
