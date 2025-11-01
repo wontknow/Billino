@@ -1,23 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
-
 from database import get_session
-from models import (
-    Customer,
-    Invoice,
-    InvoiceCreate,
-    InvoiceItem,
-    InvoiceItemRead,
-    InvoiceRead,
-    Profile,
-    SummaryInvoiceCreate,
-    SummaryInvoiceRead,
-)
-from services import (
-    create_summary_invoice,
-    generate_next_invoice_number,
-    get_preview_invoice_number,
-)
+from fastapi import APIRouter, Depends, HTTPException
+from models import (Customer, Invoice, InvoiceCreate, InvoiceItem,
+                    InvoiceItemRead, InvoiceRead, Profile,
+                    SummaryInvoiceCreate, SummaryInvoiceRead)
+from services import (create_summary_invoice, generate_next_invoice_number,
+                      get_preview_invoice_number)
+from sqlmodel import Session, select
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 

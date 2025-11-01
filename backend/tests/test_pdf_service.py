@@ -3,18 +3,14 @@ from io import BytesIO
 from unittest.mock import Mock, patch
 
 import pytest
+from database import get_session, init_db
 from fastapi.testclient import TestClient
+from main import app
+from services.pdf_data_service import (PDFDataService, PDFInvoiceData,
+                                       PDFSummaryInvoiceData)
+from services.pdf_generator import PDFGenerator
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
-
-from database import get_session, init_db
-from main import app
-from services.pdf_data_service import (
-    PDFDataService,
-    PDFInvoiceData,
-    PDFSummaryInvoiceData,
-)
-from services.pdf_generator import PDFGenerator
 
 # Einmalige Test-DB im Speicher (mit StaticPool für persistente Verbindung)
 TEST_DB_URL = "sqlite:///:memory:"
@@ -330,7 +326,9 @@ class TestPDFDataService:
         assert len(pdf_data.sender_name) > 0  # Profile name exists
 
         # Check that recipient name is used correctly
-        assert pdf_data.customer_name == "Altersheim Sonnenschein"  # Custom recipient name
+        assert (
+            pdf_data.customer_name == "Altersheim Sonnenschein"
+        )  # Custom recipient name
         assert pdf_data.customer_address == ""  # No address for custom recipient
 
         # Check aggregated amounts - flexible since tests may use different data
@@ -347,7 +345,9 @@ class TestPDFDataService:
             len(pdf_data.invoice_numbers) >= 1
         )  # At least one invoice should be included
 
-    def test_get_summary_invoice_pdf_data_fallback_customer_names(self, client, session):
+    def test_get_summary_invoice_pdf_data_fallback_customer_names(
+        self, client, session
+    ):
         """Test summary invoice PDF data generation with fallback to customer names (no recipient_name)"""
         # Create profile and customers with unique names
         profile_resp = client.post(
@@ -424,7 +424,7 @@ class TestPDFDataService:
 
         # Check basic structure
         assert isinstance(pdf_data, PDFSummaryInvoiceData)
-        
+
         # Check that customer names are combined (fallback behavior)
         assert "Hans Müller" in pdf_data.customer_name
         assert "Maria Schmidt" in pdf_data.customer_name
@@ -485,8 +485,12 @@ class TestPDFGenerator:
             invoice_numbers=["25 | 001", "25 | 002", "25 | 003"],
             invoice_details=[
                 {"number": "25 | 001", "customer_name": "Hans Müller", "amount": 50.00},
-                {"number": "25 | 002", "customer_name": "Maria Schmidt", "amount": 35.42},
-                {"number": "25 | 003", "customer_name": "Klaus Weber", "amount": 34.58}
+                {
+                    "number": "25 | 002",
+                    "customer_name": "Maria Schmidt",
+                    "amount": 35.42,
+                },
+                {"number": "25 | 003", "customer_name": "Klaus Weber", "amount": 34.58},
             ],
             total_net=100.84,
             total_tax=19.16,

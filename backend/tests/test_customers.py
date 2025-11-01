@@ -1,10 +1,9 @@
 import pytest
+from database import get_session, init_db
 from fastapi.testclient import TestClient
+from main import app
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
-
-from database import get_session, init_db
-from main import app
 
 # Einmalige Test-DB im Speicher (mit StaticPool für persistente Verbindung)
 TEST_DB_URL = "sqlite:///:memory:"

@@ -1,16 +1,15 @@
 import base64
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, select
-
 from database import get_session
+from fastapi import APIRouter, Depends, HTTPException, status
 from models.invoice import Invoice
 from models.stored_pdf import StoredPDF, StoredPDFCreate, StoredPDFRead
 from models.summary_invoice import SummaryInvoice
 from services.pdf_a6_generator import PDFA6Generator
 from services.pdf_data_service import PDFDataService
 from services.pdf_generator import PDFGenerator
+from sqlmodel import Session, select
 
 router = APIRouter(prefix="/pdfs", tags=["PDFs"])
 

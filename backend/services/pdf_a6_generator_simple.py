@@ -7,14 +7,8 @@ from reportlab.lib.pagesizes import A4, A6
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm, mm
 from reportlab.pdfgen import canvas
-from reportlab.platypus import (
-    HRFlowable,
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import (HRFlowable, Paragraph, SimpleDocTemplate,
+                                Spacer, Table, TableStyle)
 
 from .pdf_data_structures import PDFInvoiceData
 

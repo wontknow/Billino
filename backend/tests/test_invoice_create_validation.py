@@ -4,13 +4,9 @@ Covers edge cases and validation logic that were missing test coverage.
 """
 
 import pytest
+from models.invoice_create import (InvoiceCreate, InvoiceCreateWithNumber,
+                                   InvoiceItemCreate)
 from pydantic import ValidationError
-
-from models.invoice_create import (
-    InvoiceCreate,
-    InvoiceCreateWithNumber,
-    InvoiceItemCreate,
-)
 
 
 class TestInvoiceCreateValidation:

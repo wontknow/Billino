@@ -1,18 +1,9 @@
 from datetime import date, datetime
 from typing import List, Optional
 
+from models import (Customer, Invoice, InvoiceItemRead, InvoiceRead, Profile,
+                    SummaryInvoice, SummaryInvoiceLink, SummaryInvoiceRead)
 from sqlmodel import Session, select
-
-from models import (
-    Customer,
-    Invoice,
-    InvoiceItemRead,
-    InvoiceRead,
-    Profile,
-    SummaryInvoice,
-    SummaryInvoiceLink,
-    SummaryInvoiceRead,
-)
 
 from .pdf_data_structures import PDFInvoiceData, PDFSummaryInvoiceData
 
@@ -192,9 +183,7 @@ class PDFDataService:
         sender_address = self._format_address(profile.address, profile.city)
 
         # Prepare customer address
-        customer_address = self._format_address(
-            customer.address, customer.city
-        )
+        customer_address = self._format_address(customer.address, customer.city)
 
         # Calculate amounts based on is_gross_amount flag
         total_net, total_tax, total_gross = self._calculate_amounts(
@@ -277,9 +266,11 @@ class PDFDataService:
         links = self.session.exec(links_query).all()
 
         invoice_numbers = []
-        invoice_details = []  # Will contain {"number": str, "customer_name": str, "amount": float}
+        invoice_details = (
+            []
+        )  # Will contain {"number": str, "customer_name": str, "amount": float}
         customer_names = set()  # Use set to avoid duplicates
-        
+
         for link in links:
             invoice = self.session.get(Invoice, link.invoice_id)
             if invoice:
@@ -288,11 +279,13 @@ class PDFDataService:
                 customer = self.session.get(Customer, invoice.customer_id)
                 if customer:
                     customer_names.add(customer.name)
-                    invoice_details.append({
-                        "number": invoice.number,
-                        "customer_name": customer.name,
-                        "amount": invoice.total_amount
-                    })
+                    invoice_details.append(
+                        {
+                            "number": invoice.number,
+                            "customer_name": customer.name,
+                            "amount": invoice.total_amount,
+                        }
+                    )
 
         # Determine recipient name and address
         if recipient_name:
@@ -302,7 +295,9 @@ class PDFDataService:
         else:
             # Use all customer names as fallback
             if not customer_names:
-                raise ValueError("No customer names found for summary invoice and no recipient name provided")
+                raise ValueError(
+                    "No customer names found for summary invoice and no recipient name provided"
+                )
             final_customer_name = ", ".join(sorted(customer_names))
             final_customer_address = ""  # Multiple customers, no single address
 

@@ -6,19 +6,9 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4, A6
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm, mm
-from reportlab.platypus import (
-    BaseDocTemplate,
-    Frame,
-    FrameBreak,
-    HRFlowable,
-    PageBreak,
-    PageTemplate,
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import (BaseDocTemplate, Frame, FrameBreak, HRFlowable,
+                                PageBreak, PageTemplate, Paragraph,
+                                SimpleDocTemplate, Spacer, Table, TableStyle)
 
 from .pdf_data_structures import PDFInvoiceData
 
@@ -198,7 +188,6 @@ class PDFA6Generator:
                     f"<b>Rechnungsempfänger</b><br/><br/>{data.customer_name}{('<br/>' + data.customer_address) if data.customer_address else ''}",
                     self.styles["A6Address"],
                 ),
-                
             ]
         ]
 

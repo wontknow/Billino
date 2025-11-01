@@ -3,7 +3,8 @@ from datetime import date
 from typing import List, Optional
 
 # Import existing models
-from models import Customer, InvoiceItemRead, InvoiceRead, Profile, SummaryInvoiceRead
+from models import (Customer, InvoiceItemRead, InvoiceRead, Profile,
+                    SummaryInvoiceRead)
 
 
 @dataclass
@@ -65,7 +66,9 @@ class PDFSummaryInvoiceData:
 
     # Referenced invoices
     invoice_numbers: List[str]  # List of invoice numbers included in summary
-    invoice_details: List[dict]  # List of {"number": str, "customer_name": str} for detailed display
+    invoice_details: List[
+        dict
+    ]  # List of {"number": str, "customer_name": str} for detailed display
 
     # Optional fields (must come last)
     sender_bank_data: Optional[str] = None

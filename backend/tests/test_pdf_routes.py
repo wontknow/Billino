@@ -1,10 +1,9 @@
 import pytest
+from database import get_session, init_db
 from fastapi.testclient import TestClient
+from main import app
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
-
-from database import get_session, init_db
-from main import app
 
 # Einmalige Test-DB im Speicher (mit StaticPool für persistente Verbindung)
 TEST_DB_URL = "sqlite:///:memory:"
@@ -135,8 +134,8 @@ class TestPDFRoutes:
 
         # Create PDF for summary invoice (with recipient name)
         pdf_resp = client.post(
-            f"/pdfs/summary-invoices/{summary_id}", 
-            json={"recipient_name": "Seniorenresidenz Sonnenschein"}
+            f"/pdfs/summary-invoices/{summary_id}",
+            json={"recipient_name": "Seniorenresidenz Sonnenschein"},
         )
 
         assert pdf_resp.status_code == 201
@@ -153,7 +152,7 @@ class TestPDFRoutes:
             "/profiles/",
             json={
                 "name": "Fallback Profile",
-                "address": "Fallback Address", 
+                "address": "Fallback Address",
                 "city": "Fallback City",
             },
         )
@@ -161,7 +160,7 @@ class TestPDFRoutes:
 
         customer1_resp = client.post("/customers/", json={"name": "Hans Müller"})
         customer1_id = customer1_resp.json()["id"]
-        
+
         customer2_resp = client.post("/customers/", json={"name": "Maria Schmidt"})
         customer2_id = customer2_resp.json()["id"]
 
@@ -208,7 +207,7 @@ class TestPDFRoutes:
 
         # Create PDF for summary invoice WITHOUT recipient_name (should fallback to customer names)
         pdf_resp = client.post(f"/pdfs/summary-invoices/{summary_id}")
-        
+
         assert pdf_resp.status_code == 201
         pdf_data = pdf_resp.json()
         assert "id" in pdf_data
@@ -325,7 +324,9 @@ class TestPDFRoutes:
 
     def test_summary_invoice_not_found_for_pdf_creation(self, client, session):
         """Test creating PDF for non-existent summary invoice returns 404"""
-        resp = client.post("/pdfs/summary-invoices/999999", json={"recipient_name": "Test Recipient"})
+        resp = client.post(
+            "/pdfs/summary-invoices/999999", json={"recipient_name": "Test Recipient"}
+        )
         assert resp.status_code == 404
 
     def test_pdf_already_exists(self, client, session):
@@ -423,13 +424,15 @@ class TestPDFRoutes:
 
         # Create PDF for summary invoice first time
         pdf_resp1 = client.post(
-            f"/pdfs/summary-invoices/{summary_id}", json={"recipient_name": "Test Recipient"}
+            f"/pdfs/summary-invoices/{summary_id}",
+            json={"recipient_name": "Test Recipient"},
         )
         assert pdf_resp1.status_code == 201
 
         # Attempt to create PDF second time
         pdf_resp2 = client.post(
-            f"/pdfs/summary-invoices/{summary_id}", json={"recipient_name": "Test Recipient"}
+            f"/pdfs/summary-invoices/{summary_id}",
+            json={"recipient_name": "Test Recipient"},
         )
         assert pdf_resp2.status_code == 400
         assert (

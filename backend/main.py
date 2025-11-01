@@ -1,10 +1,10 @@
 # backend/main.py
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-
 from database import init_db
-from routers import customers, health, invoices, pdfs, profiles, summary_invoices
+from fastapi import FastAPI
+from routers import (customers, health, invoices, pdfs, profiles,
+                     summary_invoices)
 
 
 @asynccontextmanager

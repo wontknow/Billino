@@ -1,10 +1,9 @@
 # backend/tests/test_invoices_schema.py
 import pytest
+from database import init_db
 from sqlalchemy import event
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, SQLModel, create_engine, select
-
-from database import init_db
 
 
 @pytest.fixture(scope="session")

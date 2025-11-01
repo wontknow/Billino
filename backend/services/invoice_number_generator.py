@@ -1,9 +1,8 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlmodel import Session, func, select
-
 from models import Invoice
+from sqlmodel import Session, func, select
 
 
 def generate_next_invoice_number(session: Session) -> str:

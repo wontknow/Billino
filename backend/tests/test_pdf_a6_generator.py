@@ -3,11 +3,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session
-
 from main import app
 from services.pdf_a6_generator import PDFA6Generator
 from services.pdf_data_structures import PDFInvoiceData
+from sqlmodel import Session
 
 
 class TestPDFA6Generator:

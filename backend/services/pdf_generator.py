@@ -6,14 +6,8 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm, mm
-from reportlab.platypus import (
-    HRFlowable,
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import (HRFlowable, Paragraph, SimpleDocTemplate,
+                                Spacer, Table, TableStyle)
 
 from .pdf_data_structures import PDFInvoiceData, PDFSummaryInvoiceData
 
@@ -438,19 +432,20 @@ class PDFGenerator:
                 # Header row
                 ["Nr.", "Rechnungsnummer", "Kunde", "Betrag"]
             ]
-            
+
             # Data rows
             for i, detail in enumerate(data.invoice_details, 1):
-                invoice_list_data.append([
-                    str(i),
-                    detail['number'],
-                    detail['customer_name'],
-                    f"{detail['amount']:.2f} €"
-                ])
+                invoice_list_data.append(
+                    [
+                        str(i),
+                        detail["number"],
+                        detail["customer_name"],
+                        f"{detail['amount']:.2f} €",
+                    ]
+                )
 
             invoice_table = Table(
-                invoice_list_data, 
-                colWidths=[1.5 * cm, 4 * cm, 7 * cm, 3.5 * cm]
+                invoice_list_data, colWidths=[1.5 * cm, 4 * cm, 7 * cm, 3.5 * cm]
             )
             invoice_table.setStyle(
                 TableStyle(
@@ -461,28 +456,33 @@ class PDFGenerator:
                         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                         ("FONTSIZE", (0, 0), (-1, 0), 10),
                         ("ALIGN", (0, 0), (-1, 0), "LEFT"),
-                        ("ALIGN", (3, 0), (3, -1), "RIGHT"),  # Amount column right-aligned
-                        
+                        (
+                            "ALIGN",
+                            (3, 0),
+                            (3, -1),
+                            "RIGHT",
+                        ),  # Amount column right-aligned
                         # Data rows styling
                         ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
                         ("FONTSIZE", (0, 1), (-1, -1), 9),
                         ("TEXTCOLOR", (0, 1), (-1, -1), self.colors["text"]),
-                        
                         # Grid and borders
                         ("GRID", (0, 0), (-1, -1), 0.5, self.colors["accent"]),
                         ("LINEBELOW", (0, 0), (-1, 0), 1.5, self.colors["primary"]),
-                        
                         # Padding
                         ("LEFTPADDING", (0, 0), (-1, -1), 3 * mm),
                         ("RIGHTPADDING", (0, 0), (-1, -1), 3 * mm),
                         ("TOPPADDING", (0, 0), (-1, -1), 2 * mm),
                         ("BOTTOMPADDING", (0, 0), (-1, -1), 2 * mm),
-                        
                         # Alignment
                         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                        
                         # Alternating row colors for better readability
-                        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.Color(0.95, 0.95, 0.95)]),
+                        (
+                            "ROWBACKGROUNDS",
+                            (0, 1),
+                            (-1, -1),
+                            [colors.white, colors.Color(0.95, 0.95, 0.95)],
+                        ),
                     ]
                 )
             )
