@@ -71,10 +71,10 @@ def create_invoice_pdf(invoice_id: int, session: Session = Depends(get_session))
 )
 def create_summary_invoice_pdf(
     summary_invoice_id: int,
-    customer_data: dict,  # {"customer_id": int}
+    recipient_data: Optional[dict] = None,  # {"recipient_name": str} - optional
     session: Session = Depends(get_session),
 ):
-    """Create and store PDF for a summary invoice"""
+    """Create and store PDF for a summary invoice with optional recipient name"""
     # Check if summary invoice exists
     summary_invoice = session.get(SummaryInvoice, summary_invoice_id)
     if not summary_invoice:
@@ -82,11 +82,10 @@ def create_summary_invoice_pdf(
             status_code=status.HTTP_404_NOT_FOUND, detail="Summary invoice not found"
         )
 
-    customer_id = customer_data.get("customer_id")
-    if not customer_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="customer_id is required"
-        )
+    # Get recipient name or use fallback
+    recipient_name = None
+    if recipient_data:
+        recipient_name = recipient_data.get("recipient_name")
     # Check if PDF already exists
     existing_pdf = session.exec(
         select(StoredPDF).where(StoredPDF.summary_invoice_id == summary_invoice_id)
@@ -103,7 +102,7 @@ def create_summary_invoice_pdf(
 
     try:
         pdf_data = pdf_data_service.get_summary_invoice_pdf_data(
-            summary_invoice_id, customer_id
+            summary_invoice_id, recipient_name
         )
         pdf_bytes = pdf_generator.generate_summary_invoice_pdf(pdf_data)
 

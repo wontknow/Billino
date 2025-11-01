@@ -315,7 +315,7 @@ class TestPDFDataService:
         # Use the provided session to access the data
         pdf_data_service = PDFDataService(session)
         pdf_data = pdf_data_service.get_summary_invoice_pdf_data(
-            summary_invoice["id"], pdf_customer_id
+            summary_invoice["id"], "Altersheim Sonnenschein"
         )
 
         # Check basic structure
@@ -329,9 +329,9 @@ class TestPDFDataService:
         # Check profile data - flexible checks since tests may interfere
         assert len(pdf_data.sender_name) > 0  # Profile name exists
 
-        # Check that PDF customer is used (may be affected by test isolation)
-        assert len(pdf_data.customer_name) > 0  # Customer name exists
-        assert len(pdf_data.customer_address) > 0  # Address exists
+        # Check that recipient name is used correctly
+        assert pdf_data.customer_name == "Altersheim Sonnenschein"  # Custom recipient name
+        assert pdf_data.customer_address == ""  # No address for custom recipient
 
         # Check aggregated amounts - flexible since tests may use different data
         assert pdf_data.total_net > 0  # Net amount should be positive
@@ -346,6 +346,90 @@ class TestPDFDataService:
         assert (
             len(pdf_data.invoice_numbers) >= 1
         )  # At least one invoice should be included
+
+    def test_get_summary_invoice_pdf_data_fallback_customer_names(self, client, session):
+        """Test summary invoice PDF data generation with fallback to customer names (no recipient_name)"""
+        # Create profile and customers with unique names
+        profile_resp = client.post(
+            "/profiles/",
+            json={
+                "name": "Fallback Test Profile Unique",
+                "address": "Fallback Address",
+                "city": "Fallback City",
+                "include_tax": True,
+                "default_tax_rate": 0.19,
+            },
+        )
+        profile_id = profile_resp.json()["id"]
+
+        # Create two different customers
+        customer1_resp = client.post("/customers/", json={"name": "Hans Müller"})
+        customer1_id = customer1_resp.json()["id"]
+
+        customer2_resp = client.post("/customers/", json={"name": "Maria Schmidt"})
+        customer2_id = customer2_resp.json()["id"]
+
+        # Create invoices for both customers
+        invoice1_resp = client.post(
+            "/invoices/",
+            json={
+                "date": "2025-10-20",
+                "customer_id": customer1_id,
+                "profile_id": profile_id,
+                "total_amount": 100.00,
+                "include_tax": True,
+                "tax_rate": 0.19,
+                "is_gross_amount": False,
+                "invoice_items": [
+                    {"description": "Service 1", "quantity": 1, "price": 100.00}
+                ],
+            },
+        )
+        invoice1_id = invoice1_resp.json()["id"]
+
+        invoice2_resp = client.post(
+            "/invoices/",
+            json={
+                "date": "2025-10-20",
+                "customer_id": customer2_id,
+                "profile_id": profile_id,
+                "total_amount": 75.00,
+                "include_tax": True,
+                "tax_rate": 0.19,
+                "is_gross_amount": False,
+                "invoice_items": [
+                    {"description": "Service 2", "quantity": 1, "price": 75.00}
+                ],
+            },
+        )
+        invoice2_id = invoice2_resp.json()["id"]
+
+        # Create summary invoice
+        summary_resp = client.post(
+            "/summary-invoices/",
+            json={
+                "profile_id": profile_id,
+                "invoice_ids": [invoice1_id, invoice2_id],
+                "range_text": "Fallback Test Range",
+                "date": "2025-10-31",
+            },
+        )
+        summary_invoice = summary_resp.json()
+
+        # Test WITHOUT recipient_name (should fallback to customer names)
+        pdf_data_service = PDFDataService(session)
+        pdf_data = pdf_data_service.get_summary_invoice_pdf_data(
+            summary_invoice["id"]  # No recipient_name parameter
+        )
+
+        # Check basic structure
+        assert isinstance(pdf_data, PDFSummaryInvoiceData)
+        
+        # Check that customer names are combined (fallback behavior)
+        assert "Hans Müller" in pdf_data.customer_name
+        assert "Maria Schmidt" in pdf_data.customer_name
+        assert ", " in pdf_data.customer_name  # Should be "Hans Müller, Maria Schmidt"
+        assert pdf_data.customer_address == ""  # No address for multiple customers
 
 
 # ---------------------------------------------------------------------------
@@ -399,6 +483,11 @@ class TestPDFGenerator:
             customer_name="Test Customer",
             customer_address="Teststraße 456\n54321 Teststadt",
             invoice_numbers=["25 | 001", "25 | 002", "25 | 003"],
+            invoice_details=[
+                {"number": "25 | 001", "customer_name": "Hans Müller"},
+                {"number": "25 | 002", "customer_name": "Maria Schmidt"},
+                {"number": "25 | 003", "customer_name": "Klaus Weber"}
+            ],
             total_net=100.84,
             total_tax=19.16,
             total_gross=120.00,
