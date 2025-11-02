@@ -21,7 +21,7 @@ target/
 
 # Builds
 dist/
-invoices/
+invoices.db
 
 .htmlcov/
 
