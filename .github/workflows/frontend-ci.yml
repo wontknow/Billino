@@ -16,13 +16,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Installiere pnpm (BEVOR setup-node den Cache nutzt)
+      # Install pnpm (BEFORE setup-node uses the cache)
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.20.0 # gleiche Version wie lokal
+          version: 10.20.0 # same version as local
 
-      # Node + Cache aktivieren
+      # Activate Node + Cache
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -30,11 +30,11 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
 
-      # Abhängigkeiten installieren
+      # Install dependencies
       - name: Install dependencies
         run: pnpm install
 
-      # TypeScript prüfen
+      # TypeScript check
       - name: Typecheck
         run: pnpm exec tsc --noEmit
 
@@ -46,6 +46,6 @@ jobs:
       - name: Code formatting
         run: pnpm exec prettier --check .
 
-      # Statischer Build (Next.js Export)
+      # Static Build (Next.js Export)
       - name: Build (static export)
         run: pnpm run build
