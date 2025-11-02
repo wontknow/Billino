@@ -29,3 +29,6 @@ invoices.db
 backend/services/test_pdf_generation.py
 backend/services/test_pdf_generation_models.py
 backend/services/*.pdf
+
+# Docs PR drafts (not for version control)
+docs/pr/

@@ -32,11 +32,12 @@ export function CustomersTable({ customers, emptyMessage }: Props) {
             <TableCaption>
               {hasData ? `${customers.length} Kunde(n)` : (emptyMessage ?? "Keine Kunden gefunden")}
             </TableCaption>
-            <TableHeader className="sticky top-0 z-10 bg-background shadow-sm">
+            {/* Use sticky on header cells for better cross-browser support */}
+            <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Adresse</TableHead>
-                <TableHead>Stadt</TableHead>
+                <TableHead className="sticky top-0 z-10 bg-background">Name</TableHead>
+                <TableHead className="sticky top-0 z-10 bg-background">Adresse</TableHead>
+                <TableHead className="sticky top-0 z-10 bg-background">Stadt</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
