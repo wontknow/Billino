@@ -1,7 +1,8 @@
 # ✂️ Invoice Tool für Kleinunternehmer 
 
 <!-- Core badges -->
-[![Build Status](https://github.com/wontknow/Billino/actions/workflows/ci.yml/badge.svg)](https://github.com/wontknow/Billino/actions)
+[![BE Build Status](https://github.com/wontknow/Billino/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/wontknow/Billino/actions)
+[![FE Build Status](https://github.com/wontknow/Billino/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/wontknow/Billino/actions)
 [![Coverage Status](https://img.shields.io/codecov/c/github/wontknow/Billino?logo=codecov)](https://codecov.io/gh/wontknow/Billino)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![GitHub release](https://img.shields.io/github/v/release/wontknow/Billino?logo=github)](https://github.com/wontknow/Billino/releases)
