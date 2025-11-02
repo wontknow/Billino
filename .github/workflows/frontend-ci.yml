@@ -1,0 +1,51 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  frontend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Install pnpm (BEFORE setup-node uses the cache)
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.20.0 # same version as local
+
+      # Activate Node + Cache
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      # Install dependencies
+      - name: Install dependencies
+        run: pnpm install
+
+      # TypeScript check
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit
+
+      # Linting
+      - name: Lint
+        run: pnpm run lint
+      
+      # Code Formatting 
+      - name: Code formatting
+        run: pnpm exec prettier --check .
+
+      # Static Build (Next.js Export)
+      - name: Build (static export)
+        run: pnpm run build
