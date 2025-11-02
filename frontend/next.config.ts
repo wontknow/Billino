@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "export",
-  // optional: falls du “Image” nicht brauchst oder statisch hostest
+  // optional: if you do not need the “Image” component or are hosting images statically
   images: { unoptimized: true },
 };
 
