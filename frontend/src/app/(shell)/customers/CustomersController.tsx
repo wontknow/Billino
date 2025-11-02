@@ -19,7 +19,7 @@ export default async function CustomersController() {
           <>
             <span>Fehler beim Laden - Keine Kunden gefunden</span>
             <br />
-            <span className="text-muted-foreground">Backend nicht erreichbar</span>
+            <span className="text-muted-foreground">failed request</span>
           </>
         }
       />
