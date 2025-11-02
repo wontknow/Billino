@@ -44,7 +44,7 @@ jobs:
       
       #Code Formatting 
       - name: Code formatting
-        run: pnpm run format
+        run: pnpm exec prettier --check .
 
       # Statischer Build (Next.js Export)
       - name: Build (static export)
