@@ -13,8 +13,16 @@ jobs:
         working-directory: frontend
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
+      # Installiere pnpm (BEVOR setup-node den Cache nutzt)
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.20.0 # gleiche Version wie lokal
+
+      # Node + Cache aktivieren
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -22,20 +30,18 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10 # oder 9 – je nachdem, was du lokal nutzt
-
+      # Abhängigkeiten installieren
       - name: Install dependencies
         run: pnpm install
 
+      # TypeScript prüfen
       - name: Typecheck
         run: pnpm exec tsc --noEmit
 
+      # Linting
       - name: Lint
         run: pnpm run lint
 
+      # Statischer Build (Next.js Export)
       - name: Build (static export)
         run: pnpm run build
-
