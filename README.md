@@ -110,6 +110,66 @@ src-tauri/        # Tauri App-Shell, Sidecar-Konfig
 README.md
 ```
 
+### Frontend – Ordnerstruktur (Details)
+
+```
+frontend/
+├── .env.local.example              # Beispiel-ENV (NEXT_PUBLIC_API_URL)
+├── package.json                    # Scripts (dev, build, test, lint, typecheck)
+├── pnpm-lock.yaml
+├── next.config.ts
+├── tsconfig.json
+├── jest.config.cjs                 # Jest + RTL Setup (jsdom)
+├── public/                         # Statische Assets
+│   ├── file.svg / globe.svg / …
+├── src/
+│   ├── app/                        # Next.js App Router
+│   │   ├── (shell)/                # Shell-Layout & Seiten
+│   │   │   ├── layout.tsx
+│   │   │   ├── page.tsx            # Shell-Startseite
+│   │   │   ├── customers/
+│   │   │   │   ├── page.tsx        # Dumb Page → rendert Controller
+│   │   │   │   ├── loading.tsx     # Route-Skeleton
+│   │   │   │   └── CustomersController.tsx  # Server-Komponente (Data-Orchestrierung)
+│   │   │   ├── profiles/
+│   │   │   │   └── page.tsx
+│   │   │   └── invoices/
+│   │   │       └── page.tsx
+│   │   ├── favicon.ico
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   ├── components/                 # App-weite Komponenten
+│   │   ├── header.tsx
+│   │   ├── sidebar.tsx
+│   │   └── ui/                     # shadcn/ui Bausteine (Radix + Tailwind)
+│   │       ├── table.tsx
+│   │       ├── card.tsx
+│   │       ├── button.tsx
+│   │       ├── input.tsx
+│   │       ├── skeleton.tsx
+│   │       └── …
+│   ├── features/                   # Präsentations-Features
+│   │   └── customers/
+│   │       ├── CustomersTable.tsx          # UI (Presentational)
+│   │       └── CustomersTable.test.tsx     # Jest + RTL Tests
+│   ├── services/                   # Datenzugriff (API)
+│   │   └── customers.ts                    # nutzt NEXT_PUBLIC_API_URL
+│   ├── types/                      # Geteilte Typen
+│   │   └── customer.ts
+│   ├── test/                       # Test-Setup
+│   │   ├── setup.ts                        # jest-dom
+│   │   └── styleStub.js                    # CSS-Stub
+│   └── lib/
+│       └── utils.ts
+└── README.md
+```
+
+Architektur-Notiz (SOLID):
+- Service: `src/services/customers.ts` → API-Aufrufe
+- Controller (Server-Komponente): `src/app/(shell)/customers/CustomersController.tsx` → Datenfluss/Fehlerbehandlung
+- Präsentation: `src/features/customers/CustomersTable.tsx` → reine UI (Loading/Empty/Error durch Caption)
+
 ---
 
 ## 🚀 Entwicklung
@@ -161,6 +221,11 @@ pnpm format
 pnpm build
 ```
 Standard-URL: [http://localhost:3000](http://localhost:3000)
+
+Frontend-Routen (Auszug):
+- `/customers` – Kundenliste (Read-Only):
+  - Sticky Header, Scroll nur in der Card (responsive Höhe)
+  - Loading: Skeleton; Empty: „Keine Kunden gefunden“; Error: zweizeiliges Caption (inkl. „Backend nicht erreichbar“)
 
 **Tech Stack Details**:
 - Next.js 16.0.1 (App Router, Static Export konfiguriert)
