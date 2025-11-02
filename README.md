@@ -32,6 +32,8 @@
 
 Ein **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trennung – entwickelt für den Einsatz ohne Cloud, aber mit professioneller Architektur und Möglichkeit zur späteren Erweiterung (Hosting, Multi-User, Cloud-Sync).
 
+**
+
 ---
 
 ## ✨ Features
@@ -68,14 +70,14 @@ Ein **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trennung – entwicke
 - **API**: RESTful FastAPI mit OpenAPI/Swagger-Dokumentation
 
 ### 🚧 Geplant
+- **Frontend-Features**: Invoice-Form, Customer-Management UI, PDF-Viewer
 - E-Rechnung (XRechnung / ZUGFeRD)
-- Frontend (Next.js + shadcn/ui)
 - Desktop-App: Tauri v2 bündelt Backend + Frontend + DB in **eine ausführbare Datei**
 
 ---
 
 ## 🛠 Tech Stack
-- **Frontend**: [Next.js](https://nextjs.org/docs/app) (App Router, Static Export), [shadcn/ui](https://ui.shadcn.com)
+- **Frontend**: [Next.js 16](https://nextjs.org/docs/app) (App Router, Static Export), React 19, [shadcn/ui](https://ui.shadcn.com) (Radix UI + Tailwind), TypeScript (pnpm)
 - **Backend**: [FastAPI](https://fastapi.tiangolo.com), [SQLite](https://sqlite.org), [ReportLab](https://www.reportlab.com/docs/reportlab-userguide.pdf) (PDF)
 - **E-Rechnung**: XRechnung (KoSIT Specs), ZUGFeRD (PDF/A-3 + XML)
 - **Desktop-App**: [Tauri v2](https://v2.tauri.app/) mit Python-Sidecar (via [PyInstaller](https://pyinstaller.org/))
@@ -101,7 +103,7 @@ backend/          # FastAPI, SQLite, Services
 ├── main.py       # FastAPI App-Entry
 └── requirements.txt
 
-frontend/         # Next.js + shadcn/ui (geplant)
+frontend/         # Next.js 16 + React 19 + shadcn/ui + Tailwind v4 (pnpm)
 src-tauri/        # Tauri App-Shell, Sidecar-Konfig
 .github/          # CI/CD, Issue-Templates, PR-Template
 README.md
@@ -138,10 +140,42 @@ uvicorn main:app --reload --port 8000
 ### Frontend (Next.js + shadcn/ui)
 ```bash
 cd frontend
-npm install
-npm run dev
+
+# Installation (mit pnpm - empfohlen)
+pnpm install
+
+# Development Server
+pnpm dev
+
+# TypeScript Type-Checking
+pnpm typecheck
+
+# Linting
+pnpm lint
+
+# Code Formatting
+pnpm format
+
+# Production Build
+pnpm build
 ```
 Standard-URL: [http://localhost:3000](http://localhost:3000)
+
+**Tech Stack Details**:
+- Next.js 16.0.1 (App Router, Static Export konfiguriert)
+- React 19.2.0
+- TypeScript (Strict Mode)
+- Tailwind CSS v4 mit PostCSS
+- shadcn/ui Components (Button, Input, Form, Table, Dialog, Card, etc.)
+  - Basiert auf Radix UI Primitives
+  - New York Style
+- Lucide React Icons
+- ESLint + Prettier
+
+**Installierte shadcn/ui Components**:
+- Form Components: Button, Input, Label, Form, Select, Textarea
+- Layout: Card, Sheet, Dialog
+- Data Display: Table
 
 ---
 
@@ -191,7 +225,7 @@ pytest --cov=. --cov-report=html             # Coverage-Report (88%)
 Beispiel:
 ```bash
 cd frontend
-npm run test
+pnpm test
 ```
 
 ---
@@ -234,8 +268,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm ci
-      - run: npm run test
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: pnpm lint
+      - run: pnpm typecheck
 ```
 
 - Jeder Commit/PR auf `main` triggert die Pipeline  
@@ -255,7 +295,7 @@ jobs:
 - [x] **Phase 5** – PDF-Renderer (A4, professionelles Design)
 - [x] **Phase 5.1** – PDF CRUD API (Erstellen, Speichern, Abrufen, Löschen)
 - [x] **Phase 6** – PDF-Renderer (A6×4 auf A4 mit Schnittmarken)
-- [ ] **Phase 7** – Frontend Bootstrap (Next.js + shadcn/ui)
+- [x] **Phase 7** – Frontend Bootstrap (Next.js 16 + React 19 + shadcn/ui + Tailwind v4)
 - [ ] **Phase 8** – Invoice-Form (Autocomplete, Submit)
 - [ ] **Phase 9** – CORS + Env-Konfig
 - [ ] **Phase 10** – Next Static Export
@@ -381,7 +421,7 @@ DELETE /pdfs/789                 # PDF löschen
 
 ## ✅ Definition of Done (pro Feature)
 - [ ] API-Endpoints funktionieren & Tests grün  
-- [ ] UI-Komponenten nutzbar (shadcn/ui Standards)  
+- [ ] UI-Komponenten nutzbar (shadcn/ui Components)  
 - [ ] CI/CD Pipeline grün (Backend + Frontend Tests)  
 - [ ] README/Docs aktualisiert  
 - [ ] Keine Secrets im Code  
@@ -516,19 +556,28 @@ erDiagram
 - **CI/CD**: Automatisierte Tests bei jedem Commit/PR
 
 ### Nächste Schritte
-1. **Frontend Development**: Next.js + shadcn/ui Implementation
+1. **Frontend Development**: Invoice-Form, Customer-Management UI
 2. **Desktop Integration**: Tauri v2 Shell mit Python Sidecar
 3. **E-Invoice Support**: XRechnung/ZUGFeRD Integration
 
 ---
 
 ## 📚 Referenzen (Docs)
+
+### Backend
 - FastAPI: https://fastapi.tiangolo.com  
 - SQLModel: https://sqlmodel.tiangolo.com  
 - ReportLab Guide: https://www.reportlab.com/docs/reportlab-userguide.pdf  
+
+### Frontend
 - Next.js App Router: https://nextjs.org/docs/app  
 - Next.js Static Export: https://nextjs.org/docs/app/guides/static-exports  
 - shadcn/ui Components: https://ui.shadcn.com  
+- Radix UI Primitives: https://www.radix-ui.com/primitives  
+- Tailwind CSS v4: https://tailwindcss.com/docs  
+- React 19 Docs: https://react.dev  
+
+### Desktop & E-Invoice
 - Tauri v2 Docs: https://v2.tauri.app/  
 - PyInstaller: https://pyinstaller.org/  
 - XRechnung (KoSIT FAQ): https://en.e-rechnung-bund.de/e-invoicing-faq/xrechnung/  
