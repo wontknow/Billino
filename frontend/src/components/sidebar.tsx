@@ -7,8 +7,8 @@ import clsx from "clsx";
 const items = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/customers", label: "Kunden" },
-  { href: "/profiles",  label: "Profile" },
-  { href: "/invoices",  label: "Rechnungen" }
+  { href: "/profiles", label: "Profile" },
+  { href: "/invoices", label: "Rechnungen" },
 ];
 
 export function Sidebar() {
