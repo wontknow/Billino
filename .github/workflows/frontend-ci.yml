@@ -22,6 +22,11 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10 # oder 9 – je nachdem, was du lokal nutzt
+
       - name: Install dependencies
         run: pnpm install
 
@@ -33,3 +38,4 @@ jobs:
 
       - name: Build (static export)
         run: pnpm run build
+
