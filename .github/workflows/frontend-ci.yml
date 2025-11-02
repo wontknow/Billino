@@ -42,7 +42,7 @@ jobs:
       - name: Lint
         run: pnpm run lint
       
-      #Code Formatting 
+      # Code Formatting 
       - name: Code formatting
         run: pnpm exec prettier --check .
 
