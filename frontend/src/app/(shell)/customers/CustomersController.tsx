@@ -11,9 +11,18 @@ export default async function CustomersController() {
   }
 
   if (error) {
-    // Show table headers with no data and an explicit error-flavored empty message
+    // Show table headers with no data and an explicit, multi-line message
     return (
-      <CustomersTable customers={[]} emptyMessage="Fehler beim Laden - Keine Kunden gefunden" />
+      <CustomersTable
+        customers={[]}
+        emptyMessage={
+          <>
+            <span>Fehler beim Laden - Keine Kunden gefunden</span>
+            <br />
+            <span className="text-muted-foreground">Backend nicht erreichbar</span>
+          </>
+        }
+      />
     );
   }
 
