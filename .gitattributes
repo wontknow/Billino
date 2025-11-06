@@ -1,0 +1,21 @@
+# Normalize line endings and mark binaries
+* text=auto
+
+# Enforce LF in code we lint/format
+backend/** text eol=lf
+frontend/src/** text eol=lf
+
+# Shell scripts
+scripts/*.sh text eol=lf
+
+# Treat common binaries as binary (no EOL conversion)
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.svg binary
+*.zip binary
+*.7z  binary
+*.gz  binary
+*.bz2 binary

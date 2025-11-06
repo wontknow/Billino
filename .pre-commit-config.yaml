@@ -1,0 +1,48 @@
+repos:
+  # 1) Kleine globale Hygieneregeln
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        files: ^(backend/.*\.py|frontend/src/.*\.(ts|tsx|js|jsx|json|css|md))$
+      - id: end-of-file-fixer
+        files: ^(backend/.*\.py|frontend/src/.*\.(ts|tsx|js|jsx|json|css|md))$
+      - id: mixed-line-ending
+        files: ^(backend/.*\.py|frontend/src/.*\.(ts|tsx|js|jsx|json|css|md))$
+        args: ['--fix=lf']
+
+  # 2) Backend: Python
+  - repo: https://github.com/PyCQA/isort
+    rev: 7.0.0
+    hooks:
+      - id: isort
+        files: ^backend/.*\.py$
+
+  - repo: https://github.com/psf/black
+    rev: 25.9.0
+    hooks:
+      - id: black
+        files: ^backend/.*\.py$
+        language_version: python3.11
+
+  # 3) Frontend: ESLint + Prettier (Next.js 16 + ESLint 9 + Prettier 3)
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.20.0
+    hooks:
+      - id: eslint
+        files: ^frontend/src/.*\.(ts|tsx|js|jsx)$
+        args: ['--fix','--max-warnings','0','--config','frontend/eslint.config.mjs']
+        additional_dependencies:
+          - eslint@9
+          - eslint-config-next@16.0.1
+          - eslint-config-prettier@10.1.8
+          - typescript@5
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        files: ^frontend/src/.*\.(ts|tsx|js|jsx|json|css|md)$
+        args: ['--write']
+        additional_dependencies:
+          - prettier@3.6.2
