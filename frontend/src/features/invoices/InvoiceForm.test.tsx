@@ -2,22 +2,6 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { InvoiceForm } from "./InvoiceForm";
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 describe("InvoiceForm", () => {
   afterEach(() => {
     jest.clearAllMocks();
