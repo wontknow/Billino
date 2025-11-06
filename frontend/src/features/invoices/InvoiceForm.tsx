@@ -214,7 +214,10 @@ export function InvoiceForm() {
                         max="1"
                         placeholder="0.19"
                         {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          field.onChange(isNaN(val) ? undefined : val);
+                        }}
                         value={field.value ?? ""}
                       />
                     </FormControl>
