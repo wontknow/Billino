@@ -13,13 +13,13 @@ repos:
 
   # 2) Backend: Python
   - repo: https://github.com/PyCQA/isort
-    rev: 7.0.0
+    rev: 5.13.2
     hooks:
       - id: isort
         files: ^backend/.*\.py$
 
   - repo: https://github.com/psf/black
-    rev: 25.9.0
+    rev: 24.10.0
     hooks:
       - id: black
         files: ^backend/.*\.py$
@@ -45,4 +45,4 @@ repos:
         files: ^frontend/src/.*\.(ts|tsx|js|jsx|json|css|md)$
         args: ['--write']
         additional_dependencies:
-          - prettier@3.6.2
+          - prettier@3.3.3
