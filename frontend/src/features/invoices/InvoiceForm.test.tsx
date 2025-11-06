@@ -1,30 +1,24 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { InvoiceForm } from "./InvoiceForm";
-import { CustomersService } from "@/services/customers";
-import { ProfilesService } from "@/services/profiles";
 
-// Mock die Services
-jest.mock("@/services/customers");
-jest.mock("@/services/profiles");
 
-const mockCustomers = [
-  { id: 1, name: "Kunde A", city: "Berlin" },
-  { id: 2, name: "Kunde B", city: "München" },
-];
 
-const mockProfiles = [
-  { id: 1, name: "Profil 1", include_tax: true, default_tax_rate: 19.0 },
-  { id: 2, name: "Profil 2", include_tax: false, default_tax_rate: 0.0 },
-];
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 describe("InvoiceForm", () => {
-  beforeEach(() => {
-    // Setup mocks
-    (CustomersService.list as jest.Mock).mockResolvedValue(mockCustomers);
-    (ProfilesService.list as jest.Mock).mockResolvedValue(mockProfiles);
-  });
-
   afterEach(() => {
     jest.clearAllMocks();
   });
