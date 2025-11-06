@@ -32,3 +32,4 @@ backend/services/*.pdf
 
 # Docs PR drafts (not for version control)
 docs/pr/
+docs/issues/

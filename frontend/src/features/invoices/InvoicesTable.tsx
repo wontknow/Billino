@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import {
   Table,
   TableHeader,
@@ -10,7 +11,8 @@ import {
   TableCell,
   TableCaption,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import type { Invoice } from "@/types/invoice";
 
 interface InvoicesTableProps {
@@ -24,6 +26,11 @@ export const InvoicesTable: React.FC<InvoicesTableProps> = ({ invoices, emptyMes
     <Card className="w-full mx-auto flex flex-col overflow-hidden max-w-screen-lg md:max-w-screen-xl 2xl:max-w-screen-2xl h-[70vh] md:h-[75vh] lg:h-[80vh]">
       <CardHeader>
         <CardTitle>Rechnungen</CardTitle>
+        <CardAction>
+          <Button asChild>
+            <Link href="/invoices/create">Neue Rechnung</Link>
+          </Button>
+        </CardAction>
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden">
         <div className="h-full overflow-auto">
