@@ -37,7 +37,7 @@ export const invoiceFormSchema = z
       return true;
     },
     {
-      message: "Steuersatz muss angegeben werden wenn versteuert",
+      message: "Steuersatz muss angegeben werden, wenn versteuert",
       path: ["tax_rate"],
     }
   );
