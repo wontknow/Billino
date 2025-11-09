@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 
 from database import get_session
@@ -20,6 +20,23 @@ def create_profile(profile: Profile, session: Session = Depends(get_session)):
 @router.get("/", response_model=list[Profile])
 def list_profiles(session: Session = Depends(get_session)):
     return session.exec(select(Profile)).all()
+
+
+@router.get("/search", response_model=list[Profile])
+def search_profiles(
+    q: str = Query(..., min_length=2, description="Search query (min. 2 characters)"),
+    limit: int = Query(10, ge=1, le=50, description="Max results (default=10, max=50)"),
+    session: Session = Depends(get_session),
+):
+    """
+    Search for profiles by name (case-insensitive substring match).
+
+    - **q**: Search query (minimum 2 characters)
+    - **limit**: Maximum number of results (default=10, max=50)
+    """
+    statement = select(Profile).where(Profile.name.ilike(f"%{q}%")).limit(limit)
+    profiles = session.exec(statement).all()
+    return profiles
 
 
 @router.get("/{profile_id}", response_model=Profile)
