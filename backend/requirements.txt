@@ -7,3 +7,4 @@ black==25.9.0
 isort==7.0.0
 sqlmodel==0.0.25
 reportlab==4.4.4
+python-dotenv==1.2.1
