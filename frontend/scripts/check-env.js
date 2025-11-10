@@ -78,6 +78,11 @@ function validateEnvVars(envVars, required, envFile) {
     const value = envVars[key];
     const allowed = config.allowedValues;
 
+    // Check for empty values
+    if (!value) {
+      issues.push(`❌ ${key} in ${envFile} is empty`);
+    }
+    
     // Validate against allowed values if specified
     if (allowed && !allowed.includes(value)) {
       issues.push(
@@ -85,11 +90,6 @@ function validateEnvVars(envVars, required, envFile) {
           `   Current: ${value}\n` +
           `   Allowed: ${allowed.join(", ")}`
       );
-    }
-
-    // Check for empty values
-    if (!value) {
-      issues.push(`❌ ${key} in ${envFile} is empty`);
     }
   }
 
