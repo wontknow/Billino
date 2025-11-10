@@ -14,7 +14,7 @@ def test_health():
 
 
 def test_health_cors_headers():
-    """Test dass CORS-Header in der /health Response enthalten sind."""
+    """Test that CORS headers are included in the /health response."""
     response = client.get(
         "/health",
         headers={"Origin": "http://localhost:3000"},
