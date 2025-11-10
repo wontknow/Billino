@@ -395,7 +395,7 @@ export function InvoiceForm() {
                     Profil <span className="text-destructive">*</span>
                   </FormLabel>
                   <Select
-                    onValueChange={(value) => field.onChange(parseInt(value))}
+                    onValueChange={(value) => field.onChange(parseInt(value, 10))}
                     value={field.value ? String(field.value) : ""}
                     disabled={isLoadingProfiles}
                   >
