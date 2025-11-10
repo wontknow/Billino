@@ -316,6 +316,8 @@ export function InvoiceForm() {
                 ? "border-red-600 bg-red-50 text-red-900"
                 : "border-green-600 bg-green-50 text-green-900"
             }`}
+            role="alert"
+            aria-live={alert.type === "error" ? "assertive" : "polite"}
           >
             <div className="flex items-start gap-3">
               <div className="flex-1">
