@@ -61,10 +61,8 @@ function loadEnvFile(envPath) {
   return envVars;
 }
 
-/**
- * Validate environment variables against requirements.
- */
 function validateEnvVars(envVars, required, envFile) {
+  /**Validate environment variables against requirements.*/
   const issues = [];
 
   for (const [key, config] of Object.entries(required)) {
@@ -105,18 +103,17 @@ function validateEnvVars(envVars, required, envFile) {
 /**
  * Check frontend environment configuration.
  */
-function checkFrontend(repoRoot) {
+function checkFrontend(frontendDir) {
   console.log("\n" + "=".repeat(70));
   console.log("🎨 FRONTEND ENVIRONMENT CHECK");
   console.log("=".repeat(70));
 
-  const frontendPath = path.join(repoRoot, "frontend");
-  const envFile = path.join(frontendPath, ".env.local");
+  const envFile = path.join(frontendDir, ".env.local");
 
   if (!fs.existsSync(envFile)) {
     console.log(`❌ No .env.local file found at ${envFile}`);
     console.log(`   Create one from .env.local.example:`);
-    console.log(`   cp ${frontendPath}/.env.local.example ${frontendPath}/.env.local`);
+    console.log(`   cp ${frontendDir}/.env.local.example ${frontendDir}/.env.local`);
     return false;
   }
 
@@ -146,7 +143,43 @@ function checkFrontend(repoRoot) {
  * Main entry point.
  */
 function main() {
-  const repoRoot = path.dirname(path.dirname(__dirname));
+  // Resolve frontend directory by finding frontend/package.json or using script location
+  // Strategy: Find the directory containing this script, then use parent as frontend root
+  let frontendDir;
+
+  // Try 1: Script is at frontend/scripts/check-env.js, so parent of __dirname is frontend
+  const scriptParent = path.dirname(__dirname);
+  if (fs.existsSync(path.join(scriptParent, "package.json"))) {
+    frontendDir = scriptParent;
+  } else {
+    // Try 2: Search up from cwd for a package.json with "next" dependency
+    let currentDir = process.cwd();
+    let found = false;
+
+    while (currentDir !== path.dirname(currentDir)) {
+      const pkgPath = path.join(currentDir, "package.json");
+      if (fs.existsSync(pkgPath)) {
+        try {
+          const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+          if (pkg.devDependencies?.next || pkg.dependencies?.next) {
+            frontendDir = currentDir;
+            found = true;
+            break;
+          }
+        } catch {
+          // Ignore parse errors, continue searching
+        }
+      }
+      currentDir = path.dirname(currentDir);
+    }
+
+    if (!found) {
+      console.error(
+        "❌ Error: Could not find frontend directory. Make sure check-env.js is in frontend/scripts/ or run from project root."
+      );
+      process.exit(1);
+    }
+  }
 
   // Parse CLI arguments
   if (process.argv.length > 2) {
@@ -165,7 +198,7 @@ function main() {
   }
 
   // Run checks
-  const frontendOk = checkFrontend(repoRoot);
+  const frontendOk = checkFrontend(frontendDir);
 
   // Summary
   console.log("\n" + "=".repeat(70));
