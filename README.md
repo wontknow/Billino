@@ -190,6 +190,82 @@ Architektur-Notiz (SOLID):
 
 ---
 
+## ⚙️ Environment & CORS Setup
+
+### Backend – Umgebungsvariablen (`.env`)
+
+Die Datei `backend/.env` steuert die CORS- und Logging-Konfiguration:
+
+```properties
+# Environment & Logging
+ENV=development              # oder: production
+LOG_LEVEL=DEBUG              # oder: INFO (Production)
+
+# CORS – Lokale Entwicklung
+ALLOWED_ORIGINS=http://localhost:3000,tauri://localhost,http://192.168.2.116:3000
+
+# Für Produktion (Deployment)
+# ENV=production
+# LOG_LEVEL=INFO
+# ALLOWED_ORIGINS=https://app.billino.de
+```
+
+**Wichtig:**
+- `ALLOWED_ORIGINS`: Komma-separierte Liste der erlaubten Frontend-Quellen
+- `ENV=development` aktiviert DEBUG-Logging mit strukturierten Ausgaben
+- `ENV=production` nutzt INFO-Level und Production-optimierte Logs
+
+**CORS-Funktionalität:**
+- Automatische Antwort auf Browser-Preflight-Requests (`OPTIONS`)
+- Credentials (`withCredentials`) erlaubt
+- Alle HTTP-Methoden und Header akzeptiert
+- Test: `curl -H "Origin: http://localhost:3000" http://127.0.0.1:8000/health`
+
+---
+
+### Frontend – Umgebungsvariablen (`.env.local`)
+
+Die Datei `frontend/.env.local` konfiguriert die Backend-API-URL:
+
+```bash
+# Environment
+NODE_ENV=development
+
+# API – Backend-Adresse
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+```
+
+**Wichtig:**
+- `NEXT_PUBLIC_*` Variablen werden zur Build-Zeit in den Frontend-Code eingebettet (Browser-sichtbar)
+- Nur für öffentliche Konfiguration verwenden (keine Secrets!)
+- Der API-Service nutzt diese Var automatisch in allen HTTP-Requests
+- Fallback (hardcoded): `http://localhost:8000/api` falls nicht gesetzt
+
+**Umgebungs-Übersteuerung:**
+| Umgebung | NEXT_PUBLIC_API_URL |
+|----------|---------------------|
+| Local Dev | `http://127.0.0.1:8000` |
+| Tauri Desktop | `http://127.0.0.1:8000` (Sidecar) |
+| Deployment | `https://api.billino.de` |
+
+**API-Service-Integration:**
+Alle Frontend-HTTP-Requests nutzen den zentralen `ApiClient` in `src/services/base.ts`:
+
+```typescript
+// src/services/base.ts
+export function getApiBase(): string {
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+}
+
+// Beispiel: Kundenabruf
+export async function request(path: string, ...): Promise<Response> {
+  const url = `${getApiBase()}${path}`;
+  // ...
+}
+```
+
+---
+
 ## 🚀 Entwicklung
 
 ### Backend (FastAPI)
