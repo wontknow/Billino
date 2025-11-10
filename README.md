@@ -69,9 +69,27 @@ Ein **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trennung – entwicke
   - RESTful API mit strukturierter Fehlerbehandlung
 - **Database**: SQLite mit Foreign Key-Constraints und Relationen
 - **API**: RESTful FastAPI mit OpenAPI/Swagger-Dokumentation
+- **Invoice-Form Frontend**: Vollständige Rechnungserstellung im Browser
+  - ✨ Customer-Suche mit Autocomplete & Dropdown
+  - ✨ Dynamic Invoice-Items (Add/Remove bis max. 10)
+  - ✨ Automatic Totals-Berechnung
+  - ✨ Steuer-Toggle mit Steuersatz-Eingabe
+  - ✨ Validierung mit Fehleranzeige
+  - ✨ Professionelle UI-Alerts (grün/rot) mit Auto-Dismiss
+  - ✨ Field-Level Error-Display
+  - ✨ Comprehensive Form-Logging für Debugging
+- **Strukturiertes Logging System**: Backend + Frontend
+  - 🔍 NODE_ENV-aware Logging (DEBUG in Dev, INFO in Prod)
+  - 🎨 Scoped Logger mit Emoji-Präfixen für bessere Lesbarkeit
+  - 📊 Alle Services & Endpoints instrumentiert
+- **Error Handling & Parsing**: Professionelle Error-Verarbeitung
+  - 🔧 FastAPI Validation-Error Parser
+  - 📋 Field-Level Error-Details im Frontend
+  - 🎯 Structured Error Messages
 
 ### 🚧 Geplant
-- **Frontend-Features**: Invoice-Form, Customer-Management UI, PDF-Viewer
+- **PDF-Viewer**: Frontend-Integration zur Anzeige generierter PDFs
+- **Customer Management UI**: Create/Edit/Delete UI (aktuell nur Read-Only Tabelle)
 - E-Rechnung (XRechnung / ZUGFeRD)
 - Desktop-App: Tauri v2 bündelt Backend + Frontend + DB in **eine ausführbare Datei**
 
@@ -362,8 +380,10 @@ jobs:
 - [x] **Phase 5.1** – PDF CRUD API (Erstellen, Speichern, Abrufen, Löschen)
 - [x] **Phase 6** – PDF-Renderer (A6×4 auf A4 mit Schnittmarken)
 - [x] **Phase 7** – Frontend Bootstrap (Next.js 16 + React 19 + shadcn/ui + Tailwind v4)
-- [ ] **Phase 8** – Invoice-Form (Autocomplete, Submit)
-- [ ] **Phase 9** – CORS + Env-Konfig
+- [x] **Phase 8** – Invoice-Form ✨ (Autocomplete, Submit, Alerts, Logging, Bug-Fixes)
+- [x] **Phase 8.1** – Logging & Error Handling ✨ (Strukturiertes Logging, Error Parser, UI Alerts)
+- [ ] **Phase 8.5** – PDF-Viewer (Frontend-Integration zur Anzeige generierter PDFs)
+- [ ] **Phase 9** – Customer Management UI (Create/Edit/Delete für Kunden)
 - [ ] **Phase 10** – Next Static Export
 - [ ] **Phase 11** – E-Invoice Foundations (XRechnung/ZUGFeRD)
 - [ ] **Phase 12** – Prototype E-Invoice
@@ -606,25 +626,28 @@ erDiagram
 
 ---
 
-## 📈 Entwicklungsstand (Oktober 2025)
+## 📈 Entwicklungsstand (November 2025)
 
 ### Aktuelle Metriken
-- **Test-Suite**: 167 Tests mit 88% Code-Coverage
-- **Codebase**: ~3.200 Lines of Code (ohne Scripts)
+- **Test-Suite**: 51 Frontend Tests + Backend Tests (88% Coverage)
+- **Codebase**: ~4.500+ Lines of Code (ohne Scripts/Generated)
 - **API-Endpunkte**: 25+ RESTful Endpoints
-- **Features**: Backend-Core vollständig implementiert
+- **Frontend-Features**: Backend-Core + Invoice-Form vollständig implementiert
+- **Logging**: Strukturiertes Backend + Frontend Logging System
 
 ### Code-Quality
-- **Umfassende Validierung**: Alle Eingaben werden validiert (Pydantic/SQLModel)
-- **Error Handling**: Strukturierte HTTP-Fehlerantworten
-- **Type Safety**: Vollständig typisiert mit Python Type Hints
+- **Umfassende Validierung**: Alle Eingaben werden validiert (Pydantic/SQLModel + Zod)
+- **Error Handling**: Strukturierte HTTP-Fehlerantworten mit Field-Level Details
+- **Type Safety**: Vollständig typisiert mit Python Type Hints + TypeScript
 - **Documentation**: Auto-generierte OpenAPI/Swagger-Docs
 - **CI/CD**: Automatisierte Tests bei jedem Commit/PR
+- **Logging**: Structured Logging mit DEBUG/PROD-Modes für Debugging
 
 ### Nächste Schritte
-1. **Frontend Development**: Invoice-Form, Customer-Management UI
-2. **Desktop Integration**: Tauri v2 Shell mit Python Sidecar
-3. **E-Invoice Support**: XRechnung/ZUGFeRD Integration
+1. **PDF-Viewer**: Frontend-Integration zur Anzeige generierter PDFs
+2. **Customer Management UI**: Create/Edit/Delete UI für Kunden
+3. **Desktop Integration**: Tauri v2 Shell mit Python Sidecar
+4. **E-Invoice Support**: XRechnung/ZUGFeRD Integration
 
 ---
 

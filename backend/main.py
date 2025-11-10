@@ -1,5 +1,4 @@
 # backend/main.py
-import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -10,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from database import init_db
 from routers import customers, health, invoices, pdfs, profiles, summary_invoices
+from utils import logger
 
 
 @asynccontextmanager
@@ -22,11 +22,6 @@ async def lifespan(app: FastAPI):
 
 # .env explizit aus dem Backend-Verzeichnis laden (robuster bei anderem Working Directory)
 load_dotenv(dotenv_path=Path(__file__).parent / ".env", override=False)
-
-# Logger konfigurieren (nur einmal, falls nicht schon global gesetzt)
-logger = logging.getLogger("billino")
-if not logger.handlers:
-    logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 
 app = FastAPI(
     title="Billino Backend",

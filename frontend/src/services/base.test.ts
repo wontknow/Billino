@@ -43,11 +43,10 @@ describe("ApiClient", () => {
         ok: false,
         status: 404,
         statusText: "Not Found",
+        json: async () => ({ detail: "404 Not Found" }),
       });
 
-      await expect(ApiClient.get("/missing")).rejects.toThrow(
-        "Request fehlgeschlagen: 404 Not Found"
-      );
+      await expect(ApiClient.get("/missing")).rejects.toThrow('{"detail":"404 Not Found"}');
     });
 
     it("übergibt zusätzliche RequestInit-Optionen", async () => {

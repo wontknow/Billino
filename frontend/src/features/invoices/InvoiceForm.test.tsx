@@ -7,6 +7,21 @@ import { ProfilesService } from "@/services/profiles";
 // Mock the services
 jest.mock("@/services/invoices");
 jest.mock("@/services/profiles");
+jest.mock("@/services/customers");
+jest.mock("@/lib/logger", () => ({
+  logger: {
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    createScoped: jest.fn(() => ({
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    })),
+  },
+}));
 
 describe("InvoiceForm", () => {
   beforeEach(() => {

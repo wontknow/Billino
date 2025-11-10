@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useForm, useWatch, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { invoiceFormSchema, type InvoiceFormData } from "@/types/invoice-form";
@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -29,6 +29,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { logger } from "@/lib/logger";
+import { parseApiError } from "@/lib/error-parser";
+
+const log = logger.createScoped("📋 FORM");
+
+interface AlertState {
+  type: "success" | "error";
+  title: string;
+  message: string;
+  fieldErrors?: Record<string, string>;
+}
 
 export function InvoiceForm() {
   const [previewNumber, setPreviewNumber] = useState<string>("");
@@ -40,15 +51,39 @@ export function InvoiceForm() {
   const [customerSearchInput, setCustomerSearchInput] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [alert, setAlert] = useState<AlertState | null>(null);
+  const shouldSkipSearchRef = useRef(false); // Flag to skip search after programmatic input change
+
+  // Auto-dismiss alert after 6 seconds for success, keep error visible
+  useEffect(() => {
+    if (!alert) return;
+    if (alert.type === "error") {
+      log.debug("Error alert - keeping visible until user dismisses");
+      return;
+    }
+
+    log.debug("Success alert - auto-dismissing in 6 seconds");
+    const timer = setTimeout(() => {
+      log.debug("Auto-dismiss timer fired, clearing alert");
+      setAlert(null);
+    }, 6000);
+
+    return () => {
+      log.debug("Cleaning up auto-dismiss timer");
+      clearTimeout(timer);
+    };
+  }, [alert]);
 
   // Fetch invoice number preview on mount
   useEffect(() => {
     const fetchPreview = async () => {
       try {
+        log.debug("Fetching invoice number preview");
         const { preview_number } = await InvoicesService.getNumberPreview();
         setPreviewNumber(preview_number);
+        log.debug("Invoice number preview loaded", { preview: preview_number });
       } catch (error) {
-        console.error("Fehler beim Laden der Rechnungsnummer-Vorschau:", error);
+        log.error("Error loading invoice number preview", error);
         setPreviewNumber("Fehler beim Laden");
       } finally {
         setIsLoadingPreview(false);
@@ -61,10 +96,12 @@ export function InvoiceForm() {
   useEffect(() => {
     const fetchProfiles = async () => {
       try {
+        log.debug("Fetching profiles for dropdown");
         const profilesList = await ProfilesService.list();
         setProfiles(profilesList);
+        log.debug("Profiles loaded successfully", { count: profilesList.length });
       } catch (error) {
-        console.error("Fehler beim Laden der Profile:", error);
+        log.error("Error loading profiles", error);
       } finally {
         setIsLoadingProfiles(false);
       }
@@ -74,6 +111,13 @@ export function InvoiceForm() {
 
   // Debounced customer search
   useEffect(() => {
+    // Check if we should skip this search (programmatic input change from selection)
+    if (shouldSkipSearchRef.current) {
+      log.debug("Skipping search - programmatic input change");
+      shouldSkipSearchRef.current = false; // Reset flag
+      return;
+    }
+
     // Clear results if input is too short
     if (customerSearchInput.length < 2) {
       setCustomerSearchResults([]);
@@ -84,12 +128,15 @@ export function InvoiceForm() {
     const timer = setTimeout(async () => {
       try {
         setIsSearchingCustomers(true);
-        console.log("🔍 Searching customers:", customerSearchInput);
+        log.debug("Customer search triggered", { query: customerSearchInput });
         const results = await CustomersService.search(customerSearchInput);
         setCustomerSearchResults(results);
-        console.log("✅ Search results:", results.length, "items");
+        log.debug("Customer search completed", {
+          count: results.length,
+          query: customerSearchInput,
+        });
       } catch (error) {
-        console.error("❌ Search error:", error);
+        log.error("Customer search failed", error);
       } finally {
         setIsSearchingCustomers(false);
       }
@@ -145,13 +192,14 @@ export function InvoiceForm() {
 
   const onSubmit = async (data: InvoiceFormData) => {
     setIsSubmitting(true);
+    setAlert(null);
 
     try {
-      console.log("📄 Starting invoice creation flow...");
-      console.log("Form data:", {
+      log.info("Invoice creation flow started", {
         profile_id: data.profile_id,
         customer_id: data.customer_id,
         items: data.invoice_items.length,
+        total: calculatedTotal,
       });
 
       // Step 1: Resolve customer_id
@@ -160,23 +208,28 @@ export function InvoiceForm() {
       if (data.customer_id !== null && data.customer_id !== undefined) {
         // Customer already selected via Combobox
         customer_id = data.customer_id;
-        console.log("✅ Customer already selected:", customer_id);
+        log.debug("Using existing customer", { customer_id });
       } else {
         // Customer not selected → auto-create with name from search input
         const customerName = customerSearchInput.trim();
         if (!customerName) {
-          alert("Fehler: Bitte geben Sie einen Kundennamen ein oder wählen Sie einen Kunden aus");
+          log.warn("Customer creation failed - no customer selected or created");
+          setAlert({
+            type: "error",
+            title: "Fehler",
+            message: "Bitte geben Sie einen Kundennamen ein oder wählen Sie einen Kunden aus",
+          });
           setIsSubmitting(false);
           return;
         }
-        console.log("⚠️ Customer not selected, creating new with name:", customerName);
+        log.info("Creating new customer", { name: customerName });
         const newCustomer = await CustomersService.create({
           name: customerName,
           address: null,
           city: null,
         });
         customer_id = newCustomer.id as number;
-        console.log("✅ Customer created:", newCustomer);
+        log.debug("New customer created successfully", { id: newCustomer.id });
       }
 
       // Step 2: Build invoice payload (profile_id is already required by schema)
@@ -195,18 +248,29 @@ export function InvoiceForm() {
         is_gross_amount: data.is_gross_amount,
       };
 
-      console.log("📤 Sending invoice payload:", payload);
+      log.debug("Invoice payload prepared", {
+        itemCount: payload.invoice_items.length,
+        total: payload.total_amount,
+        hasTax: payload.include_tax,
+      });
 
       // Step 3: Create invoice
       const createdInvoice = await InvoicesService.create(payload);
-      console.log("✅ Invoice created successfully:", createdInvoice);
+      log.debug("Invoice created by backend", { id: createdInvoice.id });
 
       // Step 4: Fetch and verify created invoice
       const fetchedInvoice = await InvoicesService.getById(createdInvoice.id as number);
-      console.log("📥 Fetched created invoice:", fetchedInvoice);
 
       // Success!
-      alert(`✅ Rechnung erfolgreich erstellt!\nRechnungsnummer: ${fetchedInvoice.number}`);
+      log.info("Setting success alert", {
+        number: fetchedInvoice.number,
+        id: fetchedInvoice.id,
+      });
+      setAlert({
+        type: "success",
+        title: "Erfolg",
+        message: `Rechnung ${fetchedInvoice.number} wurde erfolgreich erstellt.`,
+      });
 
       // Reset form
       form.reset({
@@ -226,440 +290,505 @@ export function InvoiceForm() {
       // Refresh preview number
       const { preview_number } = await InvoicesService.getNumberPreview();
       setPreviewNumber(preview_number);
+      log.debug("Form reset and preview refreshed");
     } catch (error) {
-      console.error("❌ Error creating invoice:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unbekannter Fehler";
-      alert(`Fehler beim Erstellen der Rechnung:\n${errorMessage}`);
+      log.error("Invoice creation failed", error);
+      const parsedError = parseApiError(error);
+      setAlert({
+        type: "error",
+        title: parsedError.title,
+        message: parsedError.message,
+        fieldErrors: parsedError.fieldErrors,
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle>Neue Rechnung erstellen</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Invoice Number Preview (Read-only) */}
-            <FormItem>
-              <FormLabel>Rechnungsnummer (Vorschau)</FormLabel>
-              <FormControl>
-                <Input
-                  value={isLoadingPreview ? "Lädt..." : previewNumber}
-                  disabled
-                  readOnly
-                  className="bg-muted"
-                />
-              </FormControl>
-              <FormDescription>
-                Diese Nummer wird automatisch beim Erstellen vergeben
-              </FormDescription>
-            </FormItem>
-
-            {/* Kundenname - Combobox mit Search */}
-            <FormField
-              control={form.control}
-              name="customer_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Kunde <span className="text-destructive">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Kundennamen eingeben..."
-                      value={customerSearchInput}
-                      role="combobox"
-                      aria-expanded={customerSearchResults.length > 0}
-                      aria-controls="customer-search-listbox"
-                      aria-activedescendant={
-                        highlightedIndex >= 0
-                          ? `customer-option-${customerSearchResults[highlightedIndex]?.id}`
-                          : undefined
-                      }
-                      aria-autocomplete="list"
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setCustomerSearchInput(value);
-                        setHighlightedIndex(-1); // Reset highlight on new input
-
-                        if (value.length < 2) {
-                          setCustomerSearchResults([]);
-                          field.onChange(null); // Reset selection
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (customerSearchResults.length === 0) return;
-
-                        switch (e.key) {
-                          case "ArrowDown":
-                            e.preventDefault();
-                            setHighlightedIndex((prev) =>
-                              prev < customerSearchResults.length - 1 ? prev + 1 : 0
-                            );
-                            break;
-                          case "ArrowUp":
-                            e.preventDefault();
-                            setHighlightedIndex((prev) =>
-                              prev > 0 ? prev - 1 : customerSearchResults.length - 1
-                            );
-                            break;
-                          case "Enter":
-                            e.preventDefault();
-                            if (
-                              highlightedIndex >= 0 &&
-                              highlightedIndex < customerSearchResults.length
-                            ) {
-                              const selectedCustomer = customerSearchResults[highlightedIndex];
-                              field.onChange(selectedCustomer.id);
-                              setCustomerSearchInput(selectedCustomer.name);
-                              setCustomerSearchResults([]);
-                              setHighlightedIndex(-1);
-                            } else if (
-                              highlightedIndex === -1 &&
-                              customerSearchResults.length > 0
-                            ) {
-                              // Auto-select the first result if nothing is highlighted
-                              const selectedCustomer = customerSearchResults[0];
-                              field.onChange(selectedCustomer.id);
-                              setCustomerSearchInput(selectedCustomer.name);
-                              setCustomerSearchResults([]);
-                              setHighlightedIndex(-1);
-                            }
-                            break;
-                          case "Escape":
-                            e.preventDefault();
-                            setCustomerSearchResults([]);
-                            setHighlightedIndex(-1);
-                            break;
-                        }
-                      }}
-                    />
-                  </FormControl>
-
-                  {/* Search Results Dropdown */}
-                  {customerSearchResults.length > 0 && (
-                    <div
-                      id="customer-search-listbox"
-                      role="listbox"
-                      aria-label="Kunden Suchergebnisse"
-                      className="border rounded-md p-2 mt-2 space-y-1 bg-background"
-                    >
-                      {customerSearchResults.map((customer, index) => (
-                        <button
-                          key={customer.id}
-                          id={`customer-option-${customer.id}`}
-                          type="button"
-                          role="option"
-                          aria-selected={highlightedIndex === index}
-                          className={`w-full text-left px-2 py-1 rounded ${
-                            highlightedIndex === index ? "bg-accent" : "hover:bg-accent"
-                          }`}
-                          onClick={() => {
-                            field.onChange(customer.id);
-                            setCustomerSearchInput(customer.name);
-                            setCustomerSearchResults([]);
-                            setHighlightedIndex(-1);
-                          }}
-                          onMouseEnter={() => setHighlightedIndex(index)}
-                        >
-                          {customer.name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {customerSearchInput && field.value === null && (
-                    <FormDescription className="text-blue-600">
-                      Neuer Kunde wird automatisch erstellt
-                    </FormDescription>
-                  )}
-                  {isSearchingCustomers && (
-                    <FormDescription className="text-amber-600">Suche lädt...</FormDescription>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Profil - Select */}
-            <FormField
-              control={form.control}
-              name="profile_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Profil <span className="text-destructive">*</span>
-                  </FormLabel>
-                  <Select
-                    onValueChange={(value) => field.onChange(parseInt(value, 10))}
-                    value={field.value ? String(field.value) : ""}
-                    disabled={isLoadingProfiles}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={isLoadingProfiles ? "Lädt Profile..." : "Profil auswählen"}
-                        />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {profiles.map((profile) => (
-                        <SelectItem key={profile.id} value={String(profile.id)}>
-                          {profile.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Datum */}
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Datum <span className="text-destructive">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Invoice Items Section */}
-            <div className="border rounded-lg p-4 space-y-4">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="font-semibold text-lg">Rechnungspositionen</h3>
-                <span className="text-sm text-muted-foreground">
-                  {fields.length} von max. 10 Positionen
-                </span>
+    <div className="w-full max-w-2xl mx-auto">
+      {/* Alert Messages - Outside Card for better visibility */}
+      {alert && (
+        <div className="mb-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div
+            className={`mb-0 border-l-4 rounded-md p-4 relative pr-12 ${
+              alert.type === "error"
+                ? "border-red-600 bg-red-50 text-red-900"
+                : "border-green-600 bg-green-50 text-green-900"
+            }`}
+            role="alert"
+            aria-live={alert.type === "error" ? "assertive" : "polite"}
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex-1">
+                <div className="font-semibold text-sm">{alert.title}</div>
+                <div className="text-sm mt-1">{alert.message}</div>
+                {alert.fieldErrors && Object.keys(alert.fieldErrors).length > 0 && (
+                  <div className="mt-3 space-y-1 text-sm">
+                    {Object.entries(alert.fieldErrors).map(([field, error]) => (
+                      <div key={field} className="text-xs opacity-90">
+                        • <span className="font-medium">{field}:</span> {error}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-
-              {fields.map((field, index) => (
-                <div key={field.id} className="border rounded-md p-3 space-y-3 bg-muted/30">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Position {index + 1}</span>
-                    {fields.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => remove(index)}
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-
-                  {/* Item Description */}
-                  <FormField
-                    control={form.control}
-                    name={`invoice_items.${index}.description`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          Beschreibung <span className="text-destructive">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <Input placeholder="z.B. Beratungsleistung" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Item Quantity */}
-                    <FormField
-                      control={form.control}
-                      name={`invoice_items.${index}.quantity`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>
-                            Menge <span className="text-destructive">*</span>
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="1"
-                              min="1"
-                              placeholder="1"
-                              {...field}
-                              onChange={(e) => {
-                                const value = e.target.value === "" ? 0 : parseInt(e.target.value);
-                                field.onChange(isNaN(value) ? 0 : value);
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Item Price */}
-                    <FormField
-                      control={form.control}
-                      name={`invoice_items.${index}.price`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>
-                            Preis (€) <span className="text-destructive">*</span>
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              placeholder="0.00"
-                              {...field}
-                              onChange={(e) => {
-                                const value =
-                                  e.target.value === "" ? 0 : parseFloat(e.target.value);
-                                field.onChange(isNaN(value) ? 0 : value);
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  {/* Item Subtotal */}
-                  <div className="pt-2 border-t text-sm">
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Zwischensumme:</span>
-                      <span className="font-semibold">
-                        {(
-                          (invoiceItems?.[index]?.quantity || 0) *
-                          (invoiceItems?.[index]?.price || 0)
-                        ).toFixed(2)}{" "}
-                        €
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {/* Add Item Button */}
-              {fields.length < 10 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => append({ description: "", quantity: 0, price: 0 })}
-                  className="w-full"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Position hinzufügen
-                </Button>
-              )}
-
-              {/* Total Amount Display */}
-              <div className="pt-3 border-t-2">
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold text-lg">Gesamtsumme:</span>
-                  <span className="text-xl font-bold">{calculatedTotal.toFixed(2)} €</span>
-                </div>
-              </div>
+              {/* Close Button */}
+              <button
+                onClick={() => setAlert(null)}
+                className={`absolute right-4 top-4 p-1 hover:opacity-70 transition-opacity ${
+                  alert.type === "error" ? "text-red-600" : "text-green-600"
+                }`}
+                aria-label="Alert schließen"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
+          </div>
+        </div>
+      )}
 
-            {/* Brutto/Netto */}
-            <FormField
-              control={form.control}
-              name="is_gross_amount"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                  <FormControl>
-                    <input
-                      type="checkbox"
-                      checked={field.value}
-                      onChange={field.onChange}
-                      className="h-4 w-4"
-                    />
-                  </FormControl>
-                  <FormLabel className="font-normal">Bruttobetrag (sonst Netto)</FormLabel>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Neue Rechnung erstellen</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Invoice Number Preview (Read-only) */}
+              <FormItem>
+                <FormLabel>Rechnungsnummer (Vorschau)</FormLabel>
+                <FormControl>
+                  <Input
+                    value={isLoadingPreview ? "Lädt..." : previewNumber}
+                    disabled
+                    readOnly
+                    className="bg-muted"
+                  />
+                </FormControl>
+                <FormDescription>
+                  Diese Nummer wird automatisch beim Erstellen vergeben
+                </FormDescription>
+              </FormItem>
 
-            {/* Versteuert */}
-            <FormField
-              control={form.control}
-              name="include_tax"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                  <FormControl>
-                    <input
-                      type="checkbox"
-                      checked={field.value}
-                      onChange={field.onChange}
-                      className="h-4 w-4"
-                    />
-                  </FormControl>
-                  <FormLabel className="font-normal">Rechnung versteuern</FormLabel>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Steuersatz (nur wenn versteuert) */}
-            {includeTax && (
+              {/* Kundenname - Combobox mit Search */}
               <FormField
                 control={form.control}
-                name="tax_rate"
+                name="customer_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Steuersatz <span className="text-destructive">*</span>
+                      Kunde <span className="text-destructive">*</span>
                     </FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="1"
-                        placeholder="0.19"
-                        {...field}
+                        placeholder="Kundennamen eingeben..."
+                        value={customerSearchInput}
+                        role="combobox"
+                        aria-expanded={customerSearchResults.length > 0}
+                        aria-controls="customer-search-listbox"
+                        aria-activedescendant={
+                          highlightedIndex >= 0
+                            ? `customer-option-${customerSearchResults[highlightedIndex]?.id}`
+                            : undefined
+                        }
+                        aria-autocomplete="list"
                         onChange={(e) => {
-                          const val = parseFloat(e.target.value);
-                          field.onChange(isNaN(val) ? undefined : val);
+                          const value = e.target.value;
+                          setCustomerSearchInput(value);
+                          setHighlightedIndex(-1); // Reset highlight on new input
+
+                          if (value.length < 2) {
+                            setCustomerSearchResults([]);
+                            field.onChange(null); // Reset selection
+                          }
                         }}
-                        value={field.value ?? ""}
+                        onKeyDown={(e) => {
+                          if (customerSearchResults.length === 0) return;
+
+                          switch (e.key) {
+                            case "ArrowDown":
+                              e.preventDefault();
+                              setHighlightedIndex((prev) =>
+                                prev < customerSearchResults.length - 1 ? prev + 1 : 0
+                              );
+                              break;
+                            case "ArrowUp":
+                              e.preventDefault();
+                              setHighlightedIndex((prev) =>
+                                prev > 0 ? prev - 1 : customerSearchResults.length - 1
+                              );
+                              break;
+                            case "Enter":
+                              e.preventDefault();
+                              if (
+                                highlightedIndex >= 0 &&
+                                highlightedIndex < customerSearchResults.length
+                              ) {
+                                const selectedCustomer = customerSearchResults[highlightedIndex];
+                                log.debug("Customer selected via Enter key", {
+                                  name: selectedCustomer.name,
+                                  id: selectedCustomer.id,
+                                });
+                                field.onChange(selectedCustomer.id);
+                                shouldSkipSearchRef.current = true; // Prevent search after programmatic input change
+                                setCustomerSearchInput(selectedCustomer.name);
+                                setCustomerSearchResults([]);
+                                setHighlightedIndex(-1);
+                              } else if (
+                                highlightedIndex === -1 &&
+                                customerSearchResults.length > 0
+                              ) {
+                                // Auto-select the first result if nothing is highlighted
+                                const selectedCustomer = customerSearchResults[0];
+                                log.debug("First result auto-selected via Enter", {
+                                  name: selectedCustomer.name,
+                                  id: selectedCustomer.id,
+                                });
+                                field.onChange(selectedCustomer.id);
+                                shouldSkipSearchRef.current = true; // Prevent search after programmatic input change
+                                setCustomerSearchInput(selectedCustomer.name);
+                                setCustomerSearchResults([]);
+                                setHighlightedIndex(-1);
+                              }
+                              break;
+                            case "Escape":
+                              e.preventDefault();
+                              setCustomerSearchResults([]);
+                              setHighlightedIndex(-1);
+                              break;
+                          }
+                        }}
                       />
                     </FormControl>
-                    <FormDescription>Als Dezimalzahl (z.B. 0.19 für 19%)</FormDescription>
+
+                    {/* Search Results Dropdown */}
+                    {customerSearchResults.length > 0 && (
+                      <div
+                        id="customer-search-listbox"
+                        role="listbox"
+                        aria-label="Kunden Suchergebnisse"
+                        className="border rounded-md p-2 mt-2 space-y-1 bg-background"
+                      >
+                        {customerSearchResults.map((customer, index) => (
+                          <button
+                            key={customer.id}
+                            id={`customer-option-${customer.id}`}
+                            type="button"
+                            role="option"
+                            aria-selected={highlightedIndex === index}
+                            className={`w-full text-left px-2 py-1 rounded ${
+                              highlightedIndex === index ? "bg-accent" : "hover:bg-accent"
+                            }`}
+                            onClick={() => {
+                              log.debug("Customer selected from dropdown", {
+                                name: customer.name,
+                                id: customer.id,
+                              });
+                              field.onChange(customer.id);
+                              shouldSkipSearchRef.current = true; // Prevent search after programmatic input change
+                              setCustomerSearchInput(customer.name);
+                              setCustomerSearchResults([]);
+                              setHighlightedIndex(-1);
+                            }}
+                            onMouseEnter={() => setHighlightedIndex(index)}
+                          >
+                            {customer.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {customerSearchInput && field.value === null && (
+                      <FormDescription className="text-blue-600">
+                        Neuer Kunde wird automatisch erstellt
+                      </FormDescription>
+                    )}
+                    {isSearchingCustomers && (
+                      <FormDescription className="text-amber-600">Suche lädt...</FormDescription>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            )}
 
-            {/* Submit Button */}
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Rechnung wird erstellt...
-                </>
-              ) : (
-                "Rechnung erstellen"
+              {/* Profil - Select */}
+              <FormField
+                control={form.control}
+                name="profile_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Profil <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(parseInt(value, 10))}
+                      value={field.value ? String(field.value) : ""}
+                      disabled={isLoadingProfiles}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder={isLoadingProfiles ? "Lädt Profile..." : "Profil auswählen"}
+                          />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {profiles.map((profile) => (
+                          <SelectItem key={profile.id} value={String(profile.id)}>
+                            {profile.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Datum */}
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Datum <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Invoice Items Section */}
+              <div className="border rounded-lg p-4 space-y-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-semibold text-lg">Rechnungspositionen</h3>
+                  <span className="text-sm text-muted-foreground">
+                    {fields.length} von max. 10 Positionen
+                  </span>
+                </div>
+
+                {fields.map((field, index) => (
+                  <div key={field.id} className="border rounded-md p-3 space-y-3 bg-muted/30">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Position {index + 1}</span>
+                      {fields.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => remove(index)}
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Item Description */}
+                    <FormField
+                      control={form.control}
+                      name={`invoice_items.${index}.description`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            Beschreibung <span className="text-destructive">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="z.B. Beratungsleistung" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Item Quantity */}
+                      <FormField
+                        control={form.control}
+                        name={`invoice_items.${index}.quantity`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              Menge <span className="text-destructive">*</span>
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                step="1"
+                                min="1"
+                                placeholder="1"
+                                {...field}
+                                onChange={(e) => {
+                                  const value =
+                                    e.target.value === "" ? 0 : parseInt(e.target.value);
+                                  field.onChange(isNaN(value) ? 0 : value);
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Item Price */}
+                      <FormField
+                        control={form.control}
+                        name={`invoice_items.${index}.price`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              Preis (€) <span className="text-destructive">*</span>
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                placeholder="0.00"
+                                {...field}
+                                onChange={(e) => {
+                                  const value =
+                                    e.target.value === "" ? 0 : parseFloat(e.target.value);
+                                  field.onChange(isNaN(value) ? 0 : value);
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Item Subtotal */}
+                    <div className="pt-2 border-t text-sm">
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Zwischensumme:</span>
+                        <span className="font-semibold">
+                          {(
+                            (invoiceItems?.[index]?.quantity || 0) *
+                            (invoiceItems?.[index]?.price || 0)
+                          ).toFixed(2)}{" "}
+                          €
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Add Item Button */}
+                {fields.length < 10 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => append({ description: "", quantity: 0, price: 0 })}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Position hinzufügen
+                  </Button>
+                )}
+
+                {/* Total Amount Display */}
+                <div className="pt-3 border-t-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-lg">Gesamtsumme:</span>
+                    <span className="text-xl font-bold">{calculatedTotal.toFixed(2)} €</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Brutto/Netto */}
+              <FormField
+                control={form.control}
+                name="is_gross_amount"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className="h-4 w-4"
+                      />
+                    </FormControl>
+                    <FormLabel className="font-normal">Bruttobetrag (sonst Netto)</FormLabel>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Versteuert */}
+              <FormField
+                control={form.control}
+                name="include_tax"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className="h-4 w-4"
+                      />
+                    </FormControl>
+                    <FormLabel className="font-normal">Rechnung versteuern</FormLabel>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Steuersatz (nur wenn versteuert) */}
+              {includeTax && (
+                <FormField
+                  control={form.control}
+                  name="tax_rate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Steuersatz <span className="text-destructive">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="1"
+                          placeholder="0.19"
+                          {...field}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            field.onChange(isNaN(val) ? undefined : val);
+                          }}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormDescription>Als Dezimalzahl (z.B. 0.19 für 19%)</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+
+              {/* Submit Button */}
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Rechnung wird erstellt...
+                  </>
+                ) : (
+                  "Rechnung erstellen"
+                )}
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

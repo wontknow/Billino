@@ -18,6 +18,7 @@ from services import (
     generate_next_invoice_number,
     get_preview_invoice_number,
 )
+from utils import logger
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
@@ -30,17 +31,23 @@ def get_invoice_number_preview(session: Session = Depends(get_session)):
 
     Note: Numbers are sequential across all profiles (German tax law compliance).
     """
+    logger.debug("🔢 GET /invoices/number-preview - Fetching next invoice number")
     next_number = get_preview_invoice_number(session)
+    logger.debug(f"✅ Next invoice number preview: {next_number}")
     return {"preview_number": next_number}
 
 
 @router.post("/", response_model=InvoiceRead, status_code=201)
 def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_session)):
+    logger.debug(
+        f"📝 POST /invoices - Creating invoice for customer_id={invoice.customer_id}, profile_id={invoice.profile_id}"
+    )
 
     profile = session.get(Profile, invoice.profile_id)
     customer = session.get(Customer, invoice.customer_id)
     # Profile und Customer validieren
     if not profile:
+        logger.error(f"❌ Profile {invoice.profile_id} not found")
         raise HTTPException(
             status_code=400,
             detail=[
@@ -52,6 +59,7 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
             ],
         )
     if not customer:
+        logger.error(f"❌ Customer {invoice.customer_id} not found")
         raise HTTPException(
             status_code=400,
             detail=[
@@ -65,6 +73,7 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
 
     # Generate next invoice number automatically (globally, not per profile)
     invoice_number = generate_next_invoice_number(session)
+    logger.debug(f"🔢 Generated invoice number: {invoice_number}")
 
     # Vererbe Steuersatz vom Profil, wenn nicht explizit angegeben
     if invoice.include_tax is None:
@@ -82,8 +91,12 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
     )
     tolerance = 0.01
     difference = round(calculated_total - invoice.total_amount, 2)
+    logger.debug(
+        f"💰 Total validation - Calculated: {calculated_total}, Expected: {invoice.total_amount}, Diff: {difference}"
+    )
 
     if difference >= tolerance:
+        logger.error(f"❌ Total amount exceeds expected by {difference}")
         raise HTTPException(
             status_code=422,
             detail=[
@@ -96,6 +109,7 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
         )
 
     if -difference >= tolerance:
+        logger.error(f"❌ Total amount is less than expected by {-difference}")
         raise HTTPException(
             status_code=422,
             detail=[
@@ -137,6 +151,10 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
     for db_item in db_items:
         session.refresh(db_item)
 
+    logger.info(
+        f"✅ Invoice {invoice_number} created successfully (id={db_invoice.id})"
+    )
+
     return InvoiceRead(
         id=db_invoice.id,
         number=db_invoice.number,
@@ -162,7 +180,9 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
 
 @router.get("/", response_model=list[InvoiceRead])
 def read_invoices(session: Session = Depends(get_session)):
+    logger.debug("📄 GET /invoices - Listing all invoices")
     invoices = session.exec(select(Invoice)).all()
+    logger.debug(f"✅ Found {len(invoices)} invoices")
     result = []
     for inv in invoices:
         items = session.exec(
@@ -194,8 +214,10 @@ def read_invoices(session: Session = Depends(get_session)):
 
 @router.get("/{invoice_id}", response_model=InvoiceRead)
 def read_invoice(invoice_id: int, session: Session = Depends(get_session)):
+    logger.debug(f"📖 GET /invoices/{invoice_id} - Fetching invoice")
     invoice = session.get(Invoice, invoice_id)
     if not invoice:
+        logger.error(f"❌ Invoice {invoice_id} not found")
         raise HTTPException(
             status_code=404,
             detail=[
@@ -209,6 +231,7 @@ def read_invoice(invoice_id: int, session: Session = Depends(get_session)):
     items = session.exec(
         select(InvoiceItem).where(InvoiceItem.invoice_id == invoice.id)
     ).all()
+    logger.debug(f"✅ Invoice {invoice_id} fetched with {len(items)} items")
     return InvoiceRead(
         id=invoice.id,
         number=invoice.number,
@@ -232,8 +255,10 @@ def read_invoice(invoice_id: int, session: Session = Depends(get_session)):
 
 @router.delete("/{invoice_id}", status_code=204)
 def delete_invoice(invoice_id: int, session: Session = Depends(get_session)):
+    logger.info(f"🗑️ DELETE /invoices/{invoice_id} - Deleting invoice")
     invoice = session.get(Invoice, invoice_id)
     if not invoice:
+        logger.error(f"❌ Invoice {invoice_id} not found for deletion")
         raise HTTPException(
             status_code=404,
             detail=[
@@ -253,4 +278,5 @@ def delete_invoice(invoice_id: int, session: Session = Depends(get_session)):
     # Dann die Invoice selbst löschen
     session.delete(invoice)
     session.commit()
+    logger.info(f"✅ Invoice {invoice_id} deleted successfully with {len(items)} items")
     return
