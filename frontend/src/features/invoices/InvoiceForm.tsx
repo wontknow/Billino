@@ -8,6 +8,7 @@ import { InvoicesService } from "@/services/invoices";
 import { ProfilesService } from "@/services/profiles";
 import { CustomersService } from "@/services/customers";
 import type { Profile } from "@/types/profile";
+import type { Customer } from "@/types/customer";
 import {
   Form,
   FormControl,
@@ -34,6 +35,10 @@ export function InvoiceForm() {
   const [isLoadingPreview, setIsLoadingPreview] = useState(true);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(true);
+  const [customerSearchResults, setCustomerSearchResults] = useState<Customer[]>([]);
+  const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
+  const [customerSearchInput, setCustomerSearchInput] = useState("");
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch invoice number preview on mount
@@ -67,11 +72,38 @@ export function InvoiceForm() {
     fetchProfiles();
   }, []);
 
+  // Debounced customer search
+  useEffect(() => {
+    // Clear results if input is too short
+    if (customerSearchInput.length < 2) {
+      setCustomerSearchResults([]);
+      return;
+    }
+
+    // Set up debounced search
+    const timer = setTimeout(async () => {
+      try {
+        setIsSearchingCustomers(true);
+        console.log("🔍 Searching customers:", customerSearchInput);
+        const results = await CustomersService.search(customerSearchInput);
+        setCustomerSearchResults(results);
+        console.log("✅ Search results:", results.length, "items");
+      } catch (error) {
+        console.error("❌ Search error:", error);
+      } finally {
+        setIsSearchingCustomers(false);
+      }
+    }, 300); // 300ms debounce
+
+    // Cleanup function - called when component unmounts or before next effect runs
+    return () => clearTimeout(timer);
+  }, [customerSearchInput]);
+
   const form = useForm<InvoiceFormData>({
     resolver: zodResolver(invoiceFormSchema),
     defaultValues: {
-      customer_name: "",
-      profile_name: "",
+      customer_id: null,
+      profile_id: undefined,
       date: new Date().toISOString().split("T")[0],
       is_gross_amount: false,
       include_tax: false,
@@ -116,37 +148,42 @@ export function InvoiceForm() {
 
     try {
       console.log("📄 Starting invoice creation flow...");
-      console.log("Form data:", data);
+      console.log("Form data:", {
+        profile_id: data.profile_id,
+        customer_id: data.customer_id,
+        items: data.invoice_items.length,
+      });
 
-      // Step 1: Find profile_id by name
-      const profile = profiles.find((p) => p.name === data.profile_name);
-      if (!profile) {
-        alert(`Fehler: Profil "${data.profile_name}" nicht gefunden`);
-        setIsSubmitting(false);
-        return;
-      }
-      console.log("✅ Profile found:", profile);
+      // Step 1: Resolve customer_id
+      let customer_id: number;
 
-      // Step 2: Find or create customer
-      let customer = await CustomersService.findByName(data.customer_name);
-
-      if (!customer) {
-        console.log("⚠️ Customer not found, creating new customer...");
-        customer = await CustomersService.create({
-          name: data.customer_name,
+      if (data.customer_id !== null && data.customer_id !== undefined) {
+        // Customer already selected via Combobox
+        customer_id = data.customer_id;
+        console.log("✅ Customer already selected:", customer_id);
+      } else {
+        // Customer not selected → auto-create with name from search input
+        const customerName = customerSearchInput.trim();
+        if (!customerName) {
+          alert("Fehler: Bitte geben Sie einen Kundennamen ein oder wählen Sie einen Kunden aus");
+          setIsSubmitting(false);
+          return;
+        }
+        console.log("⚠️ Customer not selected, creating new with name:", customerName);
+        const newCustomer = await CustomersService.create({
+          name: customerName,
           address: null,
           city: null,
         });
-        console.log("✅ Customer created:", customer);
-      } else {
-        console.log("✅ Customer found:", customer);
+        customer_id = newCustomer.id as number;
+        console.log("✅ Customer created:", newCustomer);
       }
 
-      // Step 3: Build invoice payload
+      // Step 2: Build invoice payload (profile_id is already required by schema)
       const payload = {
         date: data.date,
-        customer_id: customer.id as number,
-        profile_id: profile.id as number,
+        customer_id,
+        profile_id: data.profile_id,
         total_amount: calculatedTotal,
         invoice_items: data.invoice_items.map((item) => ({
           description: item.description,
@@ -160,11 +197,11 @@ export function InvoiceForm() {
 
       console.log("📤 Sending invoice payload:", payload);
 
-      // Step 4: Create invoice
+      // Step 3: Create invoice
       const createdInvoice = await InvoicesService.create(payload);
       console.log("✅ Invoice created successfully:", createdInvoice);
 
-      // Step 5: Fetch and log created invoice
+      // Step 4: Fetch and verify created invoice
       const fetchedInvoice = await InvoicesService.getById(createdInvoice.id as number);
       console.log("📥 Fetched created invoice:", fetchedInvoice);
 
@@ -173,14 +210,18 @@ export function InvoiceForm() {
 
       // Reset form
       form.reset({
-        customer_name: "",
-        profile_name: "",
+        customer_id: null,
+        profile_id: undefined,
         date: new Date().toISOString().split("T")[0],
         is_gross_amount: false,
         include_tax: false,
         tax_rate: undefined,
         invoice_items: [{ description: "", quantity: 0, price: 0 }],
       });
+
+      // Reset customer search input
+      setCustomerSearchInput("");
+      setCustomerSearchResults([]);
 
       // Refresh preview number
       const { preview_number } = await InvoicesService.getNumberPreview();
@@ -218,35 +259,144 @@ export function InvoiceForm() {
               </FormDescription>
             </FormItem>
 
-            {/* Kundenname */}
+            {/* Kundenname - Combobox mit Search */}
             <FormField
               control={form.control}
-              name="customer_name"
+              name="customer_id"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    Kundenname <span className="text-destructive">*</span>
+                    Kunde <span className="text-destructive">*</span>
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder="z.B. Max Mustermann GmbH" {...field} />
+                    <Input
+                      placeholder="Kundennamen eingeben..."
+                      value={customerSearchInput}
+                      role="combobox"
+                      aria-expanded={customerSearchResults.length > 0}
+                      aria-controls="customer-search-listbox"
+                      aria-activedescendant={
+                        highlightedIndex >= 0
+                          ? `customer-option-${customerSearchResults[highlightedIndex]?.id}`
+                          : undefined
+                      }
+                      aria-autocomplete="list"
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setCustomerSearchInput(value);
+                        setHighlightedIndex(-1); // Reset highlight on new input
+
+                        if (value.length < 2) {
+                          setCustomerSearchResults([]);
+                          field.onChange(null); // Reset selection
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (customerSearchResults.length === 0) return;
+
+                        switch (e.key) {
+                          case "ArrowDown":
+                            e.preventDefault();
+                            setHighlightedIndex((prev) =>
+                              prev < customerSearchResults.length - 1 ? prev + 1 : 0
+                            );
+                            break;
+                          case "ArrowUp":
+                            e.preventDefault();
+                            setHighlightedIndex((prev) =>
+                              prev > 0 ? prev - 1 : customerSearchResults.length - 1
+                            );
+                            break;
+                          case "Enter":
+                            e.preventDefault();
+                            if (
+                              highlightedIndex >= 0 &&
+                              highlightedIndex < customerSearchResults.length
+                            ) {
+                              const selectedCustomer = customerSearchResults[highlightedIndex];
+                              field.onChange(selectedCustomer.id);
+                              setCustomerSearchInput(selectedCustomer.name);
+                              setCustomerSearchResults([]);
+                              setHighlightedIndex(-1);
+                            } else if (
+                              highlightedIndex === -1 &&
+                              customerSearchResults.length > 0
+                            ) {
+                              // Auto-select the first result if nothing is highlighted
+                              const selectedCustomer = customerSearchResults[0];
+                              field.onChange(selectedCustomer.id);
+                              setCustomerSearchInput(selectedCustomer.name);
+                              setCustomerSearchResults([]);
+                              setHighlightedIndex(-1);
+                            }
+                            break;
+                          case "Escape":
+                            e.preventDefault();
+                            setCustomerSearchResults([]);
+                            setHighlightedIndex(-1);
+                            break;
+                        }
+                      }}
+                    />
                   </FormControl>
+
+                  {/* Search Results Dropdown */}
+                  {customerSearchResults.length > 0 && (
+                    <div
+                      id="customer-search-listbox"
+                      role="listbox"
+                      aria-label="Kunden Suchergebnisse"
+                      className="border rounded-md p-2 mt-2 space-y-1 bg-background"
+                    >
+                      {customerSearchResults.map((customer, index) => (
+                        <button
+                          key={customer.id}
+                          id={`customer-option-${customer.id}`}
+                          type="button"
+                          role="option"
+                          aria-selected={highlightedIndex === index}
+                          className={`w-full text-left px-2 py-1 rounded ${
+                            highlightedIndex === index ? "bg-accent" : "hover:bg-accent"
+                          }`}
+                          onClick={() => {
+                            field.onChange(customer.id);
+                            setCustomerSearchInput(customer.name);
+                            setCustomerSearchResults([]);
+                            setHighlightedIndex(-1);
+                          }}
+                          onMouseEnter={() => setHighlightedIndex(index)}
+                        >
+                          {customer.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {customerSearchInput && field.value === null && (
+                    <FormDescription className="text-blue-600">
+                      Neuer Kunde wird automatisch erstellt
+                    </FormDescription>
+                  )}
+                  {isSearchingCustomers && (
+                    <FormDescription className="text-amber-600">Suche lädt...</FormDescription>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            {/* Profilname - Dropdown */}
+            {/* Profil - Select */}
             <FormField
               control={form.control}
-              name="profile_name"
+              name="profile_id"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
                     Profil <span className="text-destructive">*</span>
                   </FormLabel>
                   <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
+                    onValueChange={(value) => field.onChange(parseInt(value, 10))}
+                    value={field.value ? String(field.value) : ""}
                     disabled={isLoadingProfiles}
                   >
                     <FormControl>
@@ -258,7 +408,7 @@ export function InvoiceForm() {
                     </FormControl>
                     <SelectContent>
                       {profiles.map((profile) => (
-                        <SelectItem key={profile.id} value={profile.name}>
+                        <SelectItem key={profile.id} value={String(profile.id)}>
                           {profile.name}
                         </SelectItem>
                       ))}

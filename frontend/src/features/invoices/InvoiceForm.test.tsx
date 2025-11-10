@@ -31,7 +31,7 @@ describe("InvoiceForm", () => {
 
     await waitFor(() => {
       expect(screen.getByLabelText(/Rechnungsnummer \(Vorschau\)/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Kundenname/i)).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/Kundennamen eingeben/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Profil/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Datum/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/^Beschreibung/i)).toBeInTheDocument(); // Item description
