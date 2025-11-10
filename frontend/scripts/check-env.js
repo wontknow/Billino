@@ -61,8 +61,10 @@ function loadEnvFile(envPath) {
   return envVars;
 }
 
+/**
+ * Validate environment variables against requirements.
+ */
 function validateEnvVars(envVars, required, envFile) {
-  /**Validate environment variables against requirements.*/
   const issues = [];
 
   for (const [key, config] of Object.entries(required)) {
