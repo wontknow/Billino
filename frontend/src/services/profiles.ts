@@ -1,5 +1,8 @@
 import { ApiClient } from "./base";
 import type { Profile } from "@/types/profile";
+import { logger } from "@/lib/logger";
+
+const log = logger.createScoped("⚙️ PROFILES");
 
 /**
  * ProfilesService - Domain-orientierter Service für Profile.
@@ -7,6 +10,7 @@ import type { Profile } from "@/types/profile";
  */
 export class ProfilesService {
   static async list(): Promise<Profile[]> {
+    log.debug("Fetching profiles list");
     return ApiClient.get<Profile[]>("/profiles/");
   }
 
@@ -26,20 +30,18 @@ export class ProfilesService {
    */
   private static async searchEntities<T>(entity: string, query: string): Promise<T[]> {
     if (query.length < 2) {
-      console.log(`🔍 Search query too short (<2 chars), returning empty`);
+      log.debug(`Search query too short (<2 chars), returning empty`);
       return [];
     }
     try {
-      console.log(`🔍 Searching ${entity}:`, query);
+      log.debug(`Searching ${entity}`, { query });
       const results = await ApiClient.get<T[]>(`/${entity}/search?q=${encodeURIComponent(query)}`);
-      console.log(
-        `✅ ${entity.charAt(0).toUpperCase() + entity.slice(1)} search results:`,
-        results.length,
-        "items"
-      );
+      log.debug(`${entity.charAt(0).toUpperCase() + entity.slice(1)} search results`, {
+        count: (results as unknown[]).length,
+      });
       return results;
     } catch (error) {
-      console.error(`❌ ${entity.charAt(0).toUpperCase() + entity.slice(1)} search error:`, error);
+      log.error(`${entity.charAt(0).toUpperCase() + entity.slice(1)} search error`, error);
       throw error;
     }
   }

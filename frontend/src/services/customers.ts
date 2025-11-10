@@ -1,5 +1,8 @@
 import { Customer } from "@/types/customer";
 import { ApiClient } from "./base";
+import { logger } from "@/lib/logger";
+
+const log = logger.createScoped("👥 CUSTOMERS");
 
 /**
  * Payload für Customer-Erstellung
@@ -16,11 +19,15 @@ export interface CustomerCreatePayload {
  */
 export class CustomersService {
   static async list(): Promise<Customer[]> {
+    log.debug("Fetching customers list");
     return ApiClient.get<Customer[]>("/customers/");
   }
 
   static async create(payload: CustomerCreatePayload): Promise<Customer> {
-    return ApiClient.post<Customer>("/customers/", payload);
+    log.info("Creating customer", { name: payload.name });
+    const result = await ApiClient.post<Customer>("/customers/", payload);
+    log.info("Customer created successfully", { id: result.id, name: result.name });
+    return result;
   }
 
   /**
@@ -40,20 +47,18 @@ export class CustomersService {
    */
   private static async searchEntities<T>(entity: string, query: string): Promise<T[]> {
     if (query.length < 2) {
-      console.log(`🔍 Search query too short (<2 chars) for ${entity}, returning empty`);
+      log.debug(`Search query too short (<2 chars) for ${entity}, returning empty`);
       return [];
     }
     try {
-      console.log(`🔍 Searching ${entity}:`, query);
+      log.debug(`Searching ${entity}`, { query });
       const results = await ApiClient.get<T[]>(`/${entity}/search?q=${encodeURIComponent(query)}`);
-      console.log(
-        `✅ ${entity.charAt(0).toUpperCase() + entity.slice(1)} search results:`,
-        results.length,
-        "items"
-      );
+      log.debug(`${entity.charAt(0).toUpperCase() + entity.slice(1)} search results`, {
+        count: (results as unknown[]).length,
+      });
       return results;
     } catch (error) {
-      console.error(`❌ ${entity.charAt(0).toUpperCase() + entity.slice(1)} search error:`, error);
+      log.error(`${entity.charAt(0).toUpperCase() + entity.slice(1)} search error`, error);
       throw error;
     }
   }
