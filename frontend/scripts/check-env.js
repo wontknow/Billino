@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint-disable @typescript-eslint/no-require-imports, no-undef */
+/* eslint-disable @typescript-eslint/no-require-imports */
 
 /**
  * Environment Configuration Validator (Frontend)
@@ -117,11 +117,7 @@ function checkFrontend(repoRoot) {
   console.log(`✅ Found ${envFile}`);
 
   const envVars = loadEnvFile(envFile);
-  const [isValid, issues] = validateEnvVars(
-    envVars,
-    FRONTEND_ENV_REQUIRED,
-    ".env.local"
-  );
+  const [isValid, issues] = validateEnvVars(envVars, FRONTEND_ENV_REQUIRED, ".env.local");
 
   if (isValid) {
     console.log("✅ All required variables are set correctly");
