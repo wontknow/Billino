@@ -79,7 +79,7 @@ Ein **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trennung – entwicke
   - ✨ Field-Level Error-Display
   - ✨ Comprehensive Form-Logging für Debugging
 - **Strukturiertes Logging System**: Backend + Frontend
-  - 🔍 NODE_ENV-aware Logging (DEBUG in Dev, INFO in Prod)
+  - 🔍 ENV-aware Logging (DEBUG in Dev, INFO in Prod)
   - 🎨 Scoped Logger mit Emoji-Präfixen für bessere Lesbarkeit
   - 📊 Alle Services & Endpoints instrumentiert
 - **Error Handling & Parsing**: Professionelle Error-Verarbeitung
@@ -383,7 +383,7 @@ jobs:
 - [x] **Phase 8** – Invoice-Form ✨ (Autocomplete, Submit, Alerts, Logging, Bug-Fixes)
 - [x] **Phase 8.1** – Logging & Error Handling ✨ (Strukturiertes Logging, Error Parser, UI Alerts)
 - [ ] **Phase 8.5** – PDF-Viewer (Frontend-Integration zur Anzeige generierter PDFs)
-- [ ] **Phase 9** – Customer Management UI (Create/Edit/Delete für Kunden)
+- [ ] **Phase 9** – Customer Management & Profiles UI (Create/Edit/Delete für Kunden & Profile)
 - [ ] **Phase 10** – Next Static Export
 - [ ] **Phase 11** – E-Invoice Foundations (XRechnung/ZUGFeRD)
 - [ ] **Phase 12** – Prototype E-Invoice
