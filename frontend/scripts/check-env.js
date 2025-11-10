@@ -7,7 +7,7 @@
  *
  * Usage:
  *     node scripts/check-env.js
- *     npm run check-env
+ *     pnpm check-env
  */
 
 const fs = require("fs");
@@ -147,7 +147,7 @@ function main() {
       console.log(
         "Environment Configuration Validator (Frontend)\n" +
           "Usage: node scripts/check-env.js\n" +
-          "       npm run check-env"
+          "       pnpm check-env"
       );
       process.exit(0);
     } else {
