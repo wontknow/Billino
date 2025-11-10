@@ -1,3 +1,5 @@
+import os
+
 from fastapi.testclient import TestClient
 
 from main import app
@@ -39,16 +41,22 @@ def test_health_cors_preflight():
 
 def test_cors_allowed_origins():
     """Test dass konfigurierte Origins akzeptiert werden."""
-    allowed_origins = [
-        "http://localhost:3000",
-        "tauri://localhost",
-        "http://192.168.2.116:3000",
-    ]
+    # Origins aus .env lesen (oder Default falls nicht gesetzt)
+    allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(
+        ","
+    )
+    allowed_origins = [o.strip() for o in allowed_origins_env]
 
+    # Mindestens localhost:3000 sollte immer dabei sein
+    assert "http://localhost:3000" in allowed_origins
+
+    # Alle konfigurierten Origins testen
     for origin in allowed_origins:
         response = client.get(
             "/health",
             headers={"Origin": origin},
         )
-        assert response.status_code == 200
-        assert response.headers.get("access-control-allow-origin") == origin
+        assert response.status_code == 200, f"Failed for origin: {origin}"
+        assert (
+            response.headers.get("access-control-allow-origin") == origin
+        ), f"CORS header missing or wrong for origin: {origin}"
