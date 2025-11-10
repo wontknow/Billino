@@ -41,7 +41,7 @@ class Logger {
   }
 
   /**
-   * Get emoji for log level
+   * Get emoji representation for log level
    */
   private getLevelColor(level: LogLevel): string {
     const colors: Record<LogLevel, string> = {
