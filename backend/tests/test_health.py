@@ -25,7 +25,7 @@ def test_health_cors_headers():
 
 
 def test_health_cors_preflight():
-    """Test that OPTIONS preflight request is answered correctly."""
+    """Test dass OPTIONS-Preflight-Request korrekt beantwortet wird."""
     response = client.options(
         "/health",
         headers={
@@ -41,7 +41,7 @@ def test_health_cors_preflight():
 
 def test_cors_allowed_origins():
     """Test that configured origins are accepted."""
-    # Read origins from .env (or default if not set)
+    # Read origins from .env (or use default if not set)
     allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(
         ","
     )
