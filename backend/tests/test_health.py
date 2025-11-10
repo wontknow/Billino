@@ -47,7 +47,7 @@ def test_cors_allowed_origins():
     )
     allowed_origins = [o.strip() for o in allowed_origins_env]
 
-    # Mindestens localhost:3000 sollte immer dabei sein
+    # At least localhost:3000 should always be present
     assert "http://localhost:3000" in allowed_origins
 
     # Test all configured origins
