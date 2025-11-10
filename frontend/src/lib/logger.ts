@@ -14,8 +14,8 @@
 type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR";
 
 class Logger {
-  private isDev: boolean;
-  private prefix: string;
+  protected isDev: boolean;
+  protected prefix: string;
 
   constructor() {
     // Check if we're in development
@@ -33,7 +33,7 @@ class Logger {
   /**
    * Format log output
    */
-  private format(level: LogLevel, message: string, data?: unknown): string {
+  protected format(level: LogLevel, message: string, data?: unknown): string {
     const timestamp = new Date().toISOString().split("T")[1].slice(0, 8); // HH:MM:SS
     const levelColor = this.getLevelColor(level);
     const formatted = `[${timestamp}] ${levelColor} [${this.prefix}] ${message}`;
@@ -43,7 +43,7 @@ class Logger {
   /**
    * Get emoji representation for log level
    */
-  private getLevelColor(level: LogLevel): string {
+  protected getLevelColor(level: LogLevel): string {
     const colors: Record<LogLevel, string> = {
       DEBUG: "🔍",
       INFO: "ℹ️",
@@ -93,44 +93,11 @@ class Logger {
 /**
  * Scoped logger for specific modules/features
  */
-class ScopedLogger {
-  constructor(
-    private prefix: string,
-    private isDev: boolean
-  ) {}
-
-  private format(level: LogLevel, message: string, data?: unknown): string {
-    const timestamp = new Date().toISOString().split("T")[1].slice(0, 8);
-    const levelColor = this.getLevelColor(level);
-    const formatted = `[${timestamp}] ${levelColor} [${this.prefix}] ${message}`;
-    return data ? `${formatted} ${JSON.stringify(data)}` : formatted;
-  }
-
-  private getLevelColor(level: LogLevel): string {
-    const colors: Record<LogLevel, string> = {
-      DEBUG: "🔍",
-      INFO: "ℹ️",
-      WARN: "⚠️",
-      ERROR: "❌",
-    };
-    return colors[level];
-  }
-
-  debug(message: string, data?: unknown): void {
-    if (!this.isDev) return;
-    console.log(this.format("DEBUG", message, data));
-  }
-
-  info(message: string, data?: unknown): void {
-    console.log(this.format("INFO", message, data));
-  }
-
-  warn(message: string, data?: unknown): void {
-    console.warn(this.format("WARN", message, data));
-  }
-
-  error(message: string, data?: unknown): void {
-    console.error(this.format("ERROR", message, data));
+class ScopedLogger extends Logger {
+  constructor(prefix: string, isDev: boolean) {
+    super();
+    this.prefix = prefix;
+    this.isDev = isDev;
   }
 }
 
