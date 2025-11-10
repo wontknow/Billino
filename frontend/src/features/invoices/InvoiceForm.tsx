@@ -72,6 +72,33 @@ export function InvoiceForm() {
     fetchProfiles();
   }, []);
 
+  // Debounced customer search
+  useEffect(() => {
+    // Clear results if input is too short
+    if (customerSearchInput.length < 2) {
+      setCustomerSearchResults([]);
+      return;
+    }
+
+    // Set up debounced search
+    const timer = setTimeout(async () => {
+      try {
+        setIsSearchingCustomers(true);
+        console.log("🔍 Searching customers:", customerSearchInput);
+        const results = await CustomersService.search(customerSearchInput);
+        setCustomerSearchResults(results);
+        console.log("✅ Search results:", results.length, "items");
+      } catch (error) {
+        console.error("❌ Search error:", error);
+      } finally {
+        setIsSearchingCustomers(false);
+      }
+    }, 300); // 300ms debounce
+
+    // Cleanup function - called when component unmounts or before next effect runs
+    return () => clearTimeout(timer);
+  }, [customerSearchInput]);
+
   const form = useForm<InvoiceFormData>({
     resolver: zodResolver(invoiceFormSchema),
     defaultValues: {
