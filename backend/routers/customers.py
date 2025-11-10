@@ -37,7 +37,11 @@ def search_customers(
     """
     # Escape LIKE wildcards in user input
     escaped_q = q.replace("%", "\\%").replace("_", "\\_")
-    statement = select(Customer).where(Customer.name.ilike(f"%{escaped_q}%", escape="\\")).limit(limit)
+    statement = (
+        select(Customer)
+        .where(Customer.name.ilike(f"%{escaped_q}%", escape="\\"))
+        .limit(limit)
+    )
     customers = session.exec(statement).all()
     return customers
 

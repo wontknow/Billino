@@ -31,7 +31,9 @@ allowed_origins = os.getenv("ALLOWED_ORIGINS")
 if allowed_origins is None or allowed_origins.strip() == "":
     origins = ["http://localhost:3000", "tauri://localhost"]
 else:
-    origins = [origin.strip() for origin in allowed_origins.split(",") if origin.strip()]
+    origins = [
+        origin.strip() for origin in allowed_origins.split(",") if origin.strip()
+    ]
 
 app.add_middleware(
     CORSMiddleware,
