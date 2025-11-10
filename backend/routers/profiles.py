@@ -34,7 +34,9 @@ def search_profiles(
     - **q**: Search query (minimum 2 characters)
     - **limit**: Maximum number of results (default=10, max=50)
     """
-    statement = select(Profile).where(Profile.name.ilike(f"%{q}%")).limit(limit)
+    # Escape LIKE wildcards in user input
+    escaped_q = q.replace("%", "\\%").replace("_", "\\_")
+    statement = select(Profile).where(Profile.name.ilike(f"%{escaped_q}%", escape="\\")).limit(limit)
     profiles = session.exec(statement).all()
     return profiles
 
