@@ -49,13 +49,14 @@ def validate_env_vars(
             continue
         value = env_vars[key]
         allowed = config.get("allowed_values")
+        if not value:
+            issues.append(f"Variable {key} in {env_file} is empty")
+
         if allowed and value not in allowed:
             issues.append(
                 f"Invalid value for {key} in {env_file}\nCurrent: {value}\nAllowed: {', '.join(allowed)}"
             )
-        if not value:
-            issues.append(f"Variable {key} in {env_file} is empty")
-    return len(issues) == 0, issues
+        return len(issues) == 0, issues
 
 
 def check_backend(repo_root: Path) -> bool:
