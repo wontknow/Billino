@@ -62,9 +62,10 @@ class Logger {
   }
 
   /**
-   * Info log - shown in dev and prod
+   * Info log - only in development
    */
   info(message: string, data?: unknown): void {
+    if (!this.isDev) return;
     console.log(this.format("INFO", message, data));
   }
 
