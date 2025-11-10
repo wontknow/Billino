@@ -273,8 +273,7 @@ export function InvoiceForm() {
                       value={customerSearchInput}
                       onChange={(e) => {
                         const value = e.target.value;
-                        setCustomerSearchInput(value);
-                        
+                        setCustomerSearchInput(value);                        
                         // Reset selection when input changes
                         if (value.length < 2) {
                           field.onChange(null);
