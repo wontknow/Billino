@@ -38,6 +38,7 @@ export function InvoiceForm() {
   const [customerSearchResults, setCustomerSearchResults] = useState<Customer[]>([]);
   const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
   const [customerSearchInput, setCustomerSearchInput] = useState("");
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch invoice number preview on mount
@@ -244,9 +245,19 @@ export function InvoiceForm() {
                     <Input
                       placeholder="Kundennamen eingeben..."
                       value={customerSearchInput}
+                      role="combobox"
+                      aria-expanded={customerSearchResults.length > 0}
+                      aria-controls="customer-search-listbox"
+                      aria-activedescendant={
+                        highlightedIndex >= 0
+                          ? `customer-option-${customerSearchResults[highlightedIndex]?.id}`
+                          : undefined
+                      }
+                      aria-autocomplete="list"
                       onChange={(e) => {
                         const value = e.target.value;
                         setCustomerSearchInput(value);
+                        setHighlightedIndex(-1); // Reset highlight on new input
 
                         // Auto-search after debounce
                         if (value.length >= 2) {
@@ -270,22 +281,69 @@ export function InvoiceForm() {
                           field.onChange(null); // Reset selection
                         }
                       }}
+                      onKeyDown={(e) => {
+                        if (customerSearchResults.length === 0) return;
+
+                        switch (e.key) {
+                          case "ArrowDown":
+                            e.preventDefault();
+                            setHighlightedIndex((prev) =>
+                              prev < customerSearchResults.length - 1 ? prev + 1 : 0
+                            );
+                            break;
+                          case "ArrowUp":
+                            e.preventDefault();
+                            setHighlightedIndex((prev) =>
+                              prev > 0 ? prev - 1 : customerSearchResults.length - 1
+                            );
+                            break;
+                          case "Enter":
+                            e.preventDefault();
+                            if (highlightedIndex >= 0 && highlightedIndex < customerSearchResults.length) {
+                              const selectedCustomer = customerSearchResults[highlightedIndex];
+                              field.onChange(selectedCustomer.id);
+                              setCustomerSearchInput(selectedCustomer.name);
+                              setCustomerSearchResults([]);
+                              setHighlightedIndex(-1);
+                            }
+                            break;
+                          case "Escape":
+                            e.preventDefault();
+                            setCustomerSearchResults([]);
+                            setHighlightedIndex(-1);
+                            break;
+                        }
+                      }}
                     />
                   </FormControl>
 
                   {/* Search Results Dropdown */}
                   {customerSearchResults.length > 0 && (
-                    <div className="border rounded-md p-2 mt-2 space-y-1 bg-background">
-                      {customerSearchResults.map((customer) => (
+                    <div
+                      id="customer-search-listbox"
+                      role="listbox"
+                      aria-label="Kunden Suchergebnisse"
+                      className="border rounded-md p-2 mt-2 space-y-1 bg-background"
+                    >
+                      {customerSearchResults.map((customer, index) => (
                         <button
                           key={customer.id}
+                          id={`customer-option-${customer.id}`}
                           type="button"
-                          className="w-full text-left px-2 py-1 hover:bg-accent rounded"
+                          role="option"
+                          aria-selected={highlightedIndex === index}
+                          className={`w-full text-left px-2 py-1 rounded ${
+                            highlightedIndex === index
+                              ? "bg-accent"
+                              : "hover:bg-accent"
+                          }`}
                           onClick={() => {
                             field.onChange(customer.id);
                             setCustomerSearchInput(customer.name);
                             setCustomerSearchResults([]);
+                            setHighlightedIndex(-1);
                           }}
+                          onMouseEnter={() => setHighlightedIndex(index)}
                         >
                           {customer.name}
                         </button>
