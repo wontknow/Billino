@@ -35,7 +35,9 @@ def search_customers(
     - **q**: Search query (minimum 2 characters)
     - **limit**: Maximum number of results (default=10, max=50)
     """
-    statement = select(Customer).where(Customer.name.ilike(f"%{q}%")).limit(limit)
+    # Escape LIKE wildcards in user input
+    escaped_q = q.replace("%", "\\%").replace("_", "\\_")
+    statement = select(Customer).where(Customer.name.ilike(f"%{escaped_q}%", escape="\\")).limit(limit)
     customers = session.exec(statement).all()
     return customers
 
