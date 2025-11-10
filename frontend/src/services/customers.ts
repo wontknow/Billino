@@ -31,4 +31,27 @@ export class CustomersService {
     const found = customers.find((c) => c.name.toLowerCase() === name.toLowerCase());
     return found || null;
   }
+
+  /**
+   * Search customers by name (backend filters with ilike)
+   * @param query - Search term (min 2 chars required by backend)
+   * @returns Filtered customer list
+   */
+  static async search(query: string): Promise<Customer[]> {
+    if (query.length < 2) {
+      console.log("🔍 Search query too short (<2 chars), returning empty");
+      return [];
+    }
+    try {
+      console.log("🔍 Searching customers:", query);
+      const results = await ApiClient.get<Customer[]>(
+        `/customers/search?q=${encodeURIComponent(query)}`
+      );
+      console.log("✅ Customer search results:", results.length, "items");
+      return results;
+    } catch (error) {
+      console.error("❌ Customer search error:", error);
+      throw error;
+    }
+  }
 }

@@ -14,11 +14,15 @@ export type InvoiceItemFormData = z.infer<typeof invoiceItemSchema>;
 /**
  * Zod Schema für Invoice-Formular
  * Validierung: Pflichtfelder, Datentypen, Formate
+ *
+ * Storage: IDs statt Names (für direkte API-Nutzung)
+ * - customer_id: null = auto-create customer on submit
+ * - profile_id: must be selected (required)
  */
 export const invoiceFormSchema = z
   .object({
-    customer_name: z.string().min(1, "Kundenname ist erforderlich"),
-    profile_name: z.string().min(1, "Profilname ist erforderlich"),
+    customer_id: z.number().nullish().describe("Selected customer ID or null for auto-create"),
+    profile_id: z.number().min(1, "Profil ist erforderlich"),
     date: z.string().min(1, "Datum ist erforderlich"),
     is_gross_amount: z.boolean(),
     include_tax: z.boolean(),
