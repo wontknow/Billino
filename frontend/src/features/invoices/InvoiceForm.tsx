@@ -286,24 +286,7 @@ export function InvoiceForm() {
                         setCustomerSearchInput(value);
                         setHighlightedIndex(-1); // Reset highlight on new input
 
-                        // Auto-search after debounce
-                        if (value.length >= 2) {
-                          const timer = setTimeout(async () => {
-                            try {
-                              setIsSearchingCustomers(true);
-                              console.log("🔍 Searching customers:", value);
-                              const results = await CustomersService.search(value);
-                              setCustomerSearchResults(results);
-                              console.log("✅ Search results:", results.length, "items");
-                            } catch (error) {
-                              console.error("❌ Search error:", error);
-                            } finally {
-                              setIsSearchingCustomers(false);
-                            }
-                          }, 300); // 300ms debounce
-
-                          return () => clearTimeout(timer);
-                        } else {
+                        if (value.length < 2) {
                           setCustomerSearchResults([]);
                           field.onChange(null); // Reset selection
                         }
