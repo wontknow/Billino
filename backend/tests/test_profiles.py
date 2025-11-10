@@ -122,3 +122,112 @@ def test_profile_tax_defaults():
     # Default Werte prüfen
     assert data["include_tax"] is True
     assert data["default_tax_rate"] == 0.19
+
+
+# ===== Search Endpoint Tests =====
+
+
+def test_search_profiles_happy_path():
+    """Test: Erfolgreiche Suche mit Treffern"""
+    # Erstelle Test-Profile
+    client.post(
+        "/profiles/",
+        json={"name": "Max Mustermann", "address": "Str. 1", "city": "Berlin"},
+    )
+    client.post(
+        "/profiles/",
+        json={"name": "Maxi Design Studio", "address": "Str. 2", "city": "München"},
+    )
+    client.post(
+        "/profiles/",
+        json={"name": "Peter Schmidt", "address": "Str. 3", "city": "Hamburg"},
+    )
+
+    # Suche nach "max" (case-insensitive)
+    resp = client.get("/profiles/search?q=max")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) >= 2
+    names = [p["name"] for p in data]
+    assert "Max Mustermann" in names
+    assert "Maxi Design Studio" in names
+    assert "Peter Schmidt" not in names
+
+
+def test_search_profiles_no_results():
+    """Test: Suche ohne Treffer"""
+    client.post(
+        "/profiles/",
+        json={"name": "Anna Schmidt", "address": "Str. 1", "city": "Berlin"},
+    )
+
+    resp = client.get("/profiles/search?q=xyz")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 0
+
+
+def test_search_profiles_query_too_short():
+    """Test: Query < 2 Zeichen → 422 Validation Error"""
+    resp = client.get("/profiles/search?q=a")
+    assert resp.status_code == 422
+    error = resp.json()
+    assert "detail" in error
+
+
+def test_search_profiles_special_characters():
+    """Test: Sonderzeichen in Query (SQL-Injection-Schutz)"""
+    # Erstelle Test-Profile mit Sonderzeichen
+    client.post(
+        "/profiles/",
+        json={"name": "Müller & Söhne", "address": "Str. 1", "city": "Berlin"},
+    )
+    client.post(
+        "/profiles/",
+        json={"name": "100% Design", "address": "Str. 2", "city": "München"},
+    )
+
+    # Suche mit Prozentzeichen (SQL LIKE Wildcard)
+    resp = client.get("/profiles/search?q=100%25")  # URL-encoded %
+    assert resp.status_code == 200
+    data = resp.json()
+    # Sollte "100% Design" finden
+    assert any(p["name"] == "100% Design" for p in data)
+
+    # Suche mit Umlauten
+    resp2 = client.get("/profiles/search?q=müller")
+    assert resp2.status_code == 200
+    data2 = resp2.json()
+    assert any(p["name"] == "Müller & Söhne" for p in data2)
+
+
+def test_search_profiles_limit_parameter():
+    """Test: Limit-Parameter funktioniert"""
+    # Erstelle viele Test-Profile
+    for i in range(15):
+        client.post(
+            "/profiles/",
+            json={"name": f"Test Profile {i}", "address": "Str. 1", "city": "Berlin"},
+        )
+
+    # Standard-Limit (10)
+    resp = client.get("/profiles/search?q=test")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 10
+
+    # Custom Limit (5)
+    resp2 = client.get("/profiles/search?q=test&limit=5")
+    assert resp2.status_code == 200
+    data2 = resp2.json()
+    assert len(data2) == 5
+
+    # Max Limit (50)
+    resp3 = client.get("/profiles/search?q=test&limit=50")
+    assert resp3.status_code == 200
+    data3 = resp3.json()
+    assert len(data3) >= 15  # Mindestens die 15 neu erstellten
+
+    # Ungültiges Limit (> 50)
+    resp4 = client.get("/profiles/search?q=test&limit=100")
+    assert resp4.status_code == 422

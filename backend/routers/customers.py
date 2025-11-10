@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 
 from database import get_session
@@ -21,6 +21,29 @@ def create_customer(customer: Customer, session: Session = Depends(get_session))
 @router.get("/", response_model=list[Customer])
 def list_customers(session: Session = Depends(get_session)):
     return session.exec(select(Customer)).all()
+
+
+@router.get("/search", response_model=list[Customer])
+def search_customers(
+    q: str = Query(..., min_length=2, description="Search query (min. 2 characters)"),
+    limit: int = Query(10, ge=1, le=50, description="Max results (default=10, max=50)"),
+    session: Session = Depends(get_session),
+):
+    """
+    Search for customers by name (case-insensitive substring match).
+
+    - **q**: Search query (minimum 2 characters)
+    - **limit**: Maximum number of results (default=10, max=50)
+    """
+    # Escape LIKE wildcards in user input
+    escaped_q = q.replace("%", "\\%").replace("_", "\\_")
+    statement = (
+        select(Customer)
+        .where(Customer.name.ilike(f"%{escaped_q}%", escape="\\"))
+        .limit(limit)
+    )
+    customers = session.exec(statement).all()
+    return customers
 
 
 @router.put("/{customer_id}", response_model=Customer)

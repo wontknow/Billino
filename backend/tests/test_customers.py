@@ -135,3 +135,91 @@ def test_delete_customer(client):
     resp3 = client.get("/customers")
     ids = [c["id"] for c in resp3.json()]
     assert cust["id"] not in ids
+
+
+# ===== Search Endpoint Tests =====
+
+
+def test_search_customers_happy_path(client):
+    """Test: Erfolgreiche Suche mit Treffern"""
+    # Erstelle Test-Kunden
+    client.post("/customers", json={"name": "Max Mustermann GmbH", "city": "Berlin"})
+    client.post("/customers", json={"name": "Maxi Media AG", "city": "München"})
+    client.post("/customers", json={"name": "Peter Schmidt", "city": "Hamburg"})
+
+    # Suche nach "max" (case-insensitive)
+    resp = client.get("/customers/search?q=max")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) >= 2
+    names = [c["name"] for c in data]
+    assert "Max Mustermann GmbH" in names
+    assert "Maxi Media AG" in names
+    assert "Peter Schmidt" not in names
+
+
+def test_search_customers_no_results(client):
+    """Test: Suche ohne Treffer"""
+    client.post("/customers", json={"name": "Anna Schmidt", "city": "Berlin"})
+
+    resp = client.get("/customers/search?q=xyz")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 0
+
+
+def test_search_customers_query_too_short(client):
+    """Test: Query < 2 Zeichen → 422 Validation Error"""
+    resp = client.get("/customers/search?q=a")
+    assert resp.status_code == 422
+    error = resp.json()
+    assert "detail" in error
+
+
+def test_search_customers_special_characters(client):
+    """Test: Sonderzeichen in Query (SQL-Injection-Schutz)"""
+    # Erstelle Test-Kunde mit Sonderzeichen
+    client.post("/customers", json={"name": "Müller & Co. KG", "city": "Berlin"})
+    client.post("/customers", json={"name": "50% Rabatt GmbH", "city": "München"})
+
+    # Suche mit Prozentzeichen (SQL LIKE Wildcard)
+    resp = client.get("/customers/search?q=50%25")  # URL-encoded %
+    assert resp.status_code == 200
+    data = resp.json()
+    # Sollte nur "50% Rabatt GmbH" finden, nicht alle
+    assert any(c["name"] == "50% Rabatt GmbH" for c in data)
+
+    # Suche mit Unterstrich
+    resp2 = client.get("/customers/search?q=müller")
+    assert resp2.status_code == 200
+    data2 = resp2.json()
+    assert any(c["name"] == "Müller & Co. KG" for c in data2)
+
+
+def test_search_customers_limit_parameter(client):
+    """Test: Limit-Parameter funktioniert"""
+    # Erstelle viele Test-Kunden
+    for i in range(15):
+        client.post("/customers", json={"name": f"Test Customer {i}", "city": "Berlin"})
+
+    # Standard-Limit (10)
+    resp = client.get("/customers/search?q=test")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 10
+
+    # Custom Limit (5)
+    resp2 = client.get("/customers/search?q=test&limit=5")
+    assert resp2.status_code == 200
+    data2 = resp2.json()
+    assert len(data2) == 5
+
+    # Max Limit (50)
+    resp3 = client.get("/customers/search?q=test&limit=50")
+    assert resp3.status_code == 200
+    data3 = resp3.json()
+    assert len(data3) >= 15  # Mindestens die 15 neu erstellten
+
+    # Ungültiges Limit (> 50)
+    resp4 = client.get("/customers/search?q=test&limit=100")
+    assert resp4.status_code == 422
