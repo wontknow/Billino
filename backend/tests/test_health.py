@@ -50,7 +50,7 @@ def test_cors_allowed_origins():
     # Mindestens localhost:3000 sollte immer dabei sein
     assert "http://localhost:3000" in allowed_origins
 
-    # Alle konfigurierten Origins testen
+    # Test all configured origins
     for origin in allowed_origins:
         response = client.get(
             "/health",
