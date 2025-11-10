@@ -140,8 +140,10 @@ function checkFrontend(repoRoot) {
   }
 }
 
+/**
+ * Main entry point.
+ */
 function main() {
-  /**Main entry point.*/
   const repoRoot = path.dirname(path.dirname(__dirname));
 
   // Parse CLI arguments
