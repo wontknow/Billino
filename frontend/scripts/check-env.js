@@ -34,8 +34,10 @@ const FRONTEND_ENV_REQUIRED = {
 // Helper Functions
 // ============================================================================
 
+/**
+ * Load environment variables from .env.local file.
+ */
 function loadEnvFile(envPath) {
-  /**Load environment variables from .env.local file.*/
   const envVars = {};
 
   if (!fs.existsSync(envPath)) {
