@@ -40,7 +40,7 @@ def test_health_cors_preflight():
 
 
 def test_cors_allowed_origins():
-    """Test dass konfigurierte Origins akzeptiert werden."""
+    """Test that configured origins are accepted."""
     # Origins aus .env lesen (oder Default falls nicht gesetzt)
     allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(
         ","
