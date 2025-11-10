@@ -1,6 +1,17 @@
 import { z } from "zod";
 
 /**
+ * Zod Schema für einzelnes Invoice Item
+ */
+export const invoiceItemSchema = z.object({
+  description: z.string().min(3, "Beschreibung muss mindestens 3 Zeichen haben"),
+  quantity: z.number().int().positive("Menge muss größer als 0 sein"),
+  price: z.number().positive("Preis muss größer als 0 sein"),
+});
+
+export type InvoiceItemFormData = z.infer<typeof invoiceItemSchema>;
+
+/**
  * Zod Schema für Invoice-Formular
  * Validierung: Pflichtfelder, Datentypen, Formate
  */
@@ -9,11 +20,14 @@ export const invoiceFormSchema = z
     customer_name: z.string().min(1, "Kundenname ist erforderlich"),
     profile_name: z.string().min(1, "Profilname ist erforderlich"),
     date: z.string().min(1, "Datum ist erforderlich"),
-    total_amount: z.number().positive("Betrag muss größer als 0 sein"),
     is_gross_amount: z.boolean(),
     include_tax: z.boolean(),
     tax_rate: z.number().min(0).max(1).optional(),
-    description: z.string().min(3, "Beschreibung muss mindestens 3 Zeichen haben"),
+    // Invoice items array (1-10 items)
+    invoice_items: z
+      .array(invoiceItemSchema)
+      .min(1, "Mindestens ein Artikel erforderlich")
+      .max(10, "Maximal 10 Artikel erlaubt"),
   })
   .refine(
     (data) => {
