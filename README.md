@@ -268,6 +268,30 @@ export async function request(path: string, ...): Promise<Response> {
 
 ## 🚀 Entwicklung
 
+### ⚡ Umgebungskonfiguration validieren
+
+Vor dem Start sollten alle Umgebungsvariablen überprüft werden:
+
+**Backend:**
+```bash
+cd backend
+python scripts/check_env.py         # Validiert backend/.env
+```
+
+**Frontend:**
+```bash
+cd frontend
+pnpm check-env                      # Validiert frontend/.env.local
+```
+
+Beide Scripts prüfen auf:
+- ✅ Erforderliche Variablen vorhanden
+- ✅ Gültige Werte (z.B. `ENV=development` vs. `ENV=invalid`)
+- ✅ Keine leeren Werte
+- ✅ Hilfreiche Fehlermeldungen mit Defaults
+
+---
+
 ### Backend (FastAPI)
 ```bash
 cd backend
