@@ -82,7 +82,7 @@ function validateEnvVars(envVars, required, envFile) {
     if (!value) {
       issues.push(`❌ ${key} in ${envFile} is empty`);
     }
-    
+
     // Validate against allowed values if specified
     if (allowed && !allowed.includes(value)) {
       issues.push(
