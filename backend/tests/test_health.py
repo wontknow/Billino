@@ -25,7 +25,7 @@ def test_health_cors_headers():
 
 
 def test_health_cors_preflight():
-    """Test dass OPTIONS-Preflight-Request korrekt beantwortet wird."""
+    """Test that OPTIONS preflight request is answered correctly."""
     response = client.options(
         "/health",
         headers={
