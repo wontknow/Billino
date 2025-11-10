@@ -315,6 +315,13 @@ export function InvoiceForm() {
                               setCustomerSearchInput(selectedCustomer.name);
                               setCustomerSearchResults([]);
                               setHighlightedIndex(-1);
+                            } else if (highlightedIndex === -1 && customerSearchResults.length > 0) {
+                              // Auto-select the first result if nothing is highlighted
+                              const selectedCustomer = customerSearchResults[0];
+                              field.onChange(selectedCustomer.id);
+                              setCustomerSearchInput(selectedCustomer.name);
+                              setCustomerSearchResults([]);
+                              setHighlightedIndex(-1);
                             }
                             break;
                           case "Escape":
