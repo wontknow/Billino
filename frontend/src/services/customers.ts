@@ -33,25 +33,35 @@ export class CustomersService {
   }
 
   /**
+   * Generic search for entities by name (backend filters with ilike)
+   * @param entity - The entity endpoint (e.g., "customers")
+   * @param query - Search term (min 2 chars required by backend)
+   * @returns Filtered entity list
+   */
+  private static async searchEntities<T>(entity: string, query: string): Promise<T[]> {
+    if (query.length < 2) {
+      console.log(`🔍 Search query too short (<2 chars) for ${entity}, returning empty`);
+      return [];
+    }
+    try {
+      console.log(`🔍 Searching ${entity}:`, query);
+      const results = await ApiClient.get<T[]>(
+        `/${entity}/search?q=${encodeURIComponent(query)}`
+      );
+      console.log(`✅ ${entity.charAt(0).toUpperCase() + entity.slice(1)} search results:`, results.length, "items");
+      return results;
+    } catch (error) {
+      console.error(`❌ ${entity.charAt(0).toUpperCase() + entity.slice(1)} search error:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Search customers by name (backend filters with ilike)
    * @param query - Search term (min 2 chars required by backend)
    * @returns Filtered customer list
    */
   static async search(query: string): Promise<Customer[]> {
-    if (query.length < 2) {
-      console.log("🔍 Search query too short (<2 chars), returning empty");
-      return [];
-    }
-    try {
-      console.log("🔍 Searching customers:", query);
-      const results = await ApiClient.get<Customer[]>(
-        `/customers/search?q=${encodeURIComponent(query)}`
-      );
-      console.log("✅ Customer search results:", results.length, "items");
-      return results;
-    } catch (error) {
-      console.error("❌ Customer search error:", error);
-      throw error;
-    }
+    return this.searchEntities<Customer>("customers", query);
   }
 }
