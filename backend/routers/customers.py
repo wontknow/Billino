@@ -19,7 +19,7 @@ def create_customer(customer: Customer, session: Session = Depends(get_session))
     session.commit()
     session.refresh(customer)
     logger.info(
-        f"✅ Customer created successfully", {"id": customer.id, "name": customer.name}
+        f"✅ Customer created successfully (id={customer.id}, name={customer.name})"
     )
     return customer
 
