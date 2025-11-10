@@ -34,8 +34,10 @@ const FRONTEND_ENV_REQUIRED = {
 // Helper Functions
 // ============================================================================
 
+/**
+ * Load environment variables from .env.local file.
+ */
 function loadEnvFile(envPath) {
-  /**Load environment variables from .env.local file.*/
   const envVars = {};
 
   if (!fs.existsSync(envPath)) {
@@ -98,8 +100,10 @@ function validateEnvVars(envVars, required, envFile) {
 // Main Validation Logic
 // ============================================================================
 
+/**
+ * Check frontend environment configuration.
+ */
 function checkFrontend(repoRoot) {
-  /**Check frontend environment configuration.*/
   console.log("\n" + "=".repeat(70));
   console.log("🎨 FRONTEND ENVIRONMENT CHECK");
   console.log("=".repeat(70));
@@ -136,8 +140,10 @@ function checkFrontend(repoRoot) {
   }
 }
 
+/**
+ * Main entry point.
+ */
 function main() {
-  /**Main entry point.*/
   const repoRoot = path.dirname(path.dirname(__dirname));
 
   // Parse CLI arguments
