@@ -45,10 +45,12 @@ export class CustomersService {
     }
     try {
       console.log(`🔍 Searching ${entity}:`, query);
-      const results = await ApiClient.get<T[]>(
-        `/${entity}/search?q=${encodeURIComponent(query)}`
+      const results = await ApiClient.get<T[]>(`/${entity}/search?q=${encodeURIComponent(query)}`);
+      console.log(
+        `✅ ${entity.charAt(0).toUpperCase() + entity.slice(1)} search results:`,
+        results.length,
+        "items"
       );
-      console.log(`✅ ${entity.charAt(0).toUpperCase() + entity.slice(1)} search results:`, results.length, "items");
       return results;
     } catch (error) {
       console.error(`❌ ${entity.charAt(0).toUpperCase() + entity.slice(1)} search error:`, error);
