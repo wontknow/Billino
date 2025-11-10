@@ -25,8 +25,8 @@ class Environment(str, Enum):
 
 
 def get_environment() -> Environment:
-    """Get the current environment from NODE_ENV or default to development."""
-    env_str = os.getenv("NODE_ENV", "development").lower()
+    """Get the current environment from ENV or default to development."""
+    env_str = os.getenv("ENV", "development").lower()
     return Environment.DEV if env_str in ["dev", "development"] else Environment.PROD
 
 
