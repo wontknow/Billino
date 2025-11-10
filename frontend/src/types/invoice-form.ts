@@ -22,7 +22,9 @@ export type InvoiceItemFormData = z.infer<typeof invoiceItemSchema>;
 export const invoiceFormSchema = z
   .object({
     customer_id: z.number().nullish().describe("Selected customer ID or null for auto-create"),
-    profile_id: z.number({ required_error: "Profil ist erforderlich" }).min(1, "Profil ist erforderlich"),
+    profile_id: z
+      .number({ required_error: "Profil ist erforderlich" })
+      .min(1, "Profil ist erforderlich"),
     date: z.string().min(1, "Datum ist erforderlich"),
     is_gross_amount: z.boolean(),
     include_tax: z.boolean(),

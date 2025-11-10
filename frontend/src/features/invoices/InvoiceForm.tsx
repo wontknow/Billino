@@ -309,13 +309,19 @@ export function InvoiceForm() {
                             break;
                           case "Enter":
                             e.preventDefault();
-                            if (highlightedIndex >= 0 && highlightedIndex < customerSearchResults.length) {
+                            if (
+                              highlightedIndex >= 0 &&
+                              highlightedIndex < customerSearchResults.length
+                            ) {
                               const selectedCustomer = customerSearchResults[highlightedIndex];
                               field.onChange(selectedCustomer.id);
                               setCustomerSearchInput(selectedCustomer.name);
                               setCustomerSearchResults([]);
                               setHighlightedIndex(-1);
-                            } else if (highlightedIndex === -1 && customerSearchResults.length > 0) {
+                            } else if (
+                              highlightedIndex === -1 &&
+                              customerSearchResults.length > 0
+                            ) {
                               // Auto-select the first result if nothing is highlighted
                               const selectedCustomer = customerSearchResults[0];
                               field.onChange(selectedCustomer.id);
@@ -350,9 +356,7 @@ export function InvoiceForm() {
                           role="option"
                           aria-selected={highlightedIndex === index}
                           className={`w-full text-left px-2 py-1 rounded ${
-                            highlightedIndex === index
-                              ? "bg-accent"
-                              : "hover:bg-accent"
+                            highlightedIndex === index ? "bg-accent" : "hover:bg-accent"
                           }`}
                           onClick={() => {
                             field.onChange(customer.id);
