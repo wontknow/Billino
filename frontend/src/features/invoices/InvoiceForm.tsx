@@ -267,7 +267,9 @@ export function InvoiceForm() {
                           return () => clearTimeout(timer);
                         } else {
                           setCustomerSearchResults([]);
-                          field.onChange(null); // Reset selection
+                          if (value.length === 0) {
+                            field.onChange(null); // Reset selection
+                          }
                         }
                       }}
                     />
