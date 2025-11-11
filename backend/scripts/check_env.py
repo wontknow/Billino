@@ -56,7 +56,7 @@ def validate_env_vars(
             issues.append(
                 f"Invalid value for {key} in {env_file}\nCurrent: {value}\nAllowed: {', '.join(allowed)}"
             )
-        return len(issues) == 0, issues
+    return len(issues) == 0, issues
 
 
 def check_backend(repo_root: Path) -> bool:
