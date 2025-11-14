@@ -26,7 +26,7 @@ const FRONTEND_ENV_REQUIRED = {
   NEXT_PUBLIC_API_URL: {
     description: "Backend API URL (must be accessible from browser)",
     allowedValues: null, // Any URL acceptable
-    default: "http://localhost:8000/api",
+    default: "http://localhost:8000",
   },
 };
 

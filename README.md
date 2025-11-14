@@ -239,7 +239,7 @@ NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
 - `NEXT_PUBLIC_*` Variablen werden zur Build-Zeit in den Frontend-Code eingebettet (Browser-sichtbar)
 - Nur für öffentliche Konfiguration verwenden (keine Secrets!)
 - Der API-Service nutzt diese Var automatisch in allen HTTP-Requests
-- Fallback (hardcoded): `http://localhost:8000/api` falls nicht gesetzt
+- Fallback (hardcoded): `http://localhost:8000` falls nicht gesetzt
 
 **Umgebungs-Übersteuerung:**
 | Umgebung | NEXT_PUBLIC_API_URL |
@@ -254,7 +254,7 @@ Alle Frontend-HTTP-Requests nutzen den zentralen `ApiClient` in `src/services/ba
 ```typescript
 // src/services/base.ts
 export function getApiBase(): string {
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 }
 
 // Beispiel: Kundenabruf

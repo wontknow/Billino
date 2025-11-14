@@ -11,7 +11,7 @@ describe("ApiClient", () => {
   describe("baseUrl", () => {
     it("gibt Default-URL zurück wenn keine Env-Variable gesetzt", () => {
       const url = ApiClient.baseUrl();
-      expect(url).toBe("http://localhost:8000/api");
+      expect(url).toBe("http://localhost:8000");
     });
 
     it("nutzt NEXT_PUBLIC_API_URL wenn gesetzt", () => {
@@ -58,7 +58,7 @@ describe("ApiClient", () => {
       await ApiClient.get("/test", { headers: { Authorization: "Bearer token" } });
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "http://localhost:8000/api/test",
+        "http://localhost:8000/test",
         expect.objectContaining({
           cache: "no-store",
           headers: { Authorization: "Bearer token" },

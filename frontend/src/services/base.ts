@@ -20,7 +20,7 @@ interface ApiErrorDetail {
 
 export class ApiClient {
   static baseUrl(): string {
-    return process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || "http://localhost:8000/api";
+    return process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || "http://localhost:8000";
   }
 
   static async get<T>(path: string, init?: RequestInit): Promise<T> {
