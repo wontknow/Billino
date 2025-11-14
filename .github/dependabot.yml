@@ -1,10 +1,95 @@
 version: 2
 updates:
+  # Backend Python Dependencies - main branch
   - package-ecosystem: "pip"
     directory: "/backend"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    target-branch: "main"
+    open-pull-requests-limit: 10
+    allow:
+      - dependency-type: "all"
+    versioning-strategy: "auto"
+
+  # Frontend npm Dependencies - main branch
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    target-branch: "main"
+    open-pull-requests-limit: 10
+
+  # Backend Python Dependencies - develop branch
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "03:00"
+    target-branch: "develop"
+    open-pull-requests-limit: 5
+    allow:
+      - dependency-type: "all"
+
+  # Frontend npm Dependencies - develop branch
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "03:00"
+    target-branch: "develop"
+    open-pull-requests-limit: 5
+
+  # Backend Python Dependencies - mvp/stable (Security only)
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "03:00"
+    target-branch: "mvp/stable"
+    open-pull-requests-limit: 5
+    allow:
+      - dependency-type: "direct"
+
+  # Frontend npm Dependencies - mvp/stable (Security only)
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "03:00"
+    target-branch: "mvp/stable"
+    open-pull-requests-limit: 5
+    allow:
+      - dependency-type: "direct"
+
+  # Backend Python Dependencies - customized-stable (Security only)
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+      time: "03:00"
+    target-branch: "customized-stable"
+    open-pull-requests-limit: 5
+    allow:
+      - dependency-type: "direct"
+
+  # Frontend npm Dependencies - customized-stable (Security only)
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+      time: "03:00"
+    target-branch: "customized-stable"
+    open-pull-requests-limit: 5
+    allow:
+      - dependency-type: "direct"
+
