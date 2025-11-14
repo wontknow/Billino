@@ -79,7 +79,7 @@ Ein **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trennung – entwicke
   - ✨ Field-Level Error-Display
   - ✨ Comprehensive Form-Logging für Debugging
 - **Strukturiertes Logging System**: Backend + Frontend
-  - 🔍 NODE_ENV-aware Logging (DEBUG in Dev, INFO in Prod)
+  - 🔍 ENV-aware Logging (DEBUG in Dev, INFO in Prod)
   - 🎨 Scoped Logger mit Emoji-Präfixen für bessere Lesbarkeit
   - 📊 Alle Services & Endpoints instrumentiert
 - **Error Handling & Parsing**: Professionelle Error-Verarbeitung
@@ -190,7 +190,109 @@ Architektur-Notiz (SOLID):
 
 ---
 
+## ⚙️ Environment & CORS Setup
+
+### Backend – Umgebungsvariablen (`.env`)
+
+Die Datei `backend/.env` steuert die CORS- und Logging-Konfiguration:
+
+```properties
+# Environment & Logging
+ENV=development              # oder: production
+LOG_LEVEL=DEBUG              # oder: INFO (Production)
+
+# CORS – Lokale Entwicklung
+ALLOWED_ORIGINS=http://localhost:3000,tauri://localhost,http://192.168.2.116:3000
+
+# Für Produktion (Deployment)
+# ENV=production
+# LOG_LEVEL=INFO
+# ALLOWED_ORIGINS=https://app.billino.de
+```
+
+**Wichtig:**
+- `ALLOWED_ORIGINS`: Komma-separierte Liste der erlaubten Frontend-Quellen
+- `ENV=development` aktiviert DEBUG-Logging mit strukturierten Ausgaben
+- `ENV=production` nutzt INFO-Level und Production-optimierte Logs
+
+**CORS-Funktionalität:**
+- Automatische Antwort auf Browser-Preflight-Requests (`OPTIONS`)
+- Credentials (`withCredentials`) erlaubt
+- Alle HTTP-Methoden und Header akzeptiert
+- Test: `curl -H "Origin: http://localhost:3000" http://127.0.0.1:8000/health`
+
+---
+
+### Frontend – Umgebungsvariablen (`.env.local`)
+
+Die Datei `frontend/.env.local` konfiguriert die Backend-API-URL:
+
+```bash
+# Environment
+NODE_ENV=development
+
+# API – Backend-Adresse
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+```
+
+**Wichtig:**
+- `NEXT_PUBLIC_*` Variablen werden zur Build-Zeit in den Frontend-Code eingebettet (Browser-sichtbar)
+- Nur für öffentliche Konfiguration verwenden (keine Secrets!)
+- Der API-Service nutzt diese Var automatisch in allen HTTP-Requests
+- Fallback (hardcoded): `http://localhost:8000` falls nicht gesetzt
+
+**Umgebungs-Übersteuerung:**
+| Umgebung | NEXT_PUBLIC_API_URL |
+|----------|---------------------|
+| Local Dev | `http://127.0.0.1:8000` |
+| Tauri Desktop | `http://127.0.0.1:8000` (Sidecar) |
+| Deployment | `https://api.billino.de` |
+
+**API-Service-Integration:**
+Alle Frontend-HTTP-Requests nutzen den zentralen `ApiClient` in `src/services/base.ts`:
+
+```typescript
+// src/services/base.ts
+export class ApiClient {
+  static baseUrl(): string {
+    return process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || "http://localhost:8000";
+  }
+
+  // Beispiel: Kundenabruf
+  static async get<T>(path: string, init?: RequestInit): Promise<T> {
+    const url = `${this.baseUrl()}${path}`;
+    // ...
+  }
+}
+```
+
+---
+
 ## 🚀 Entwicklung
+
+### ⚡ Umgebungskonfiguration validieren
+
+Vor dem Start sollten alle Umgebungsvariablen überprüft werden:
+
+**Backend:**
+```bash
+cd backend
+python scripts/check_env.py         # Validiert backend/.env
+```
+
+**Frontend:**
+```bash
+cd frontend
+pnpm check-env                      # Validiert frontend/.env.local
+```
+
+Beide Scripts prüfen auf:
+- ✅ Erforderliche Variablen vorhanden
+- ✅ Gültige Werte (z.B. `ENV=development` vs. `ENV=invalid`)
+- ✅ Keine leeren Werte
+- ✅ Hilfreiche Fehlermeldungen mit Defaults
+
+---
 
 ### Backend (FastAPI)
 ```bash
@@ -383,7 +485,7 @@ jobs:
 - [x] **Phase 8** – Invoice-Form ✨ (Autocomplete, Submit, Alerts, Logging, Bug-Fixes)
 - [x] **Phase 8.1** – Logging & Error Handling ✨ (Strukturiertes Logging, Error Parser, UI Alerts)
 - [ ] **Phase 8.5** – PDF-Viewer (Frontend-Integration zur Anzeige generierter PDFs)
-- [ ] **Phase 9** – Customer Management UI (Create/Edit/Delete für Kunden)
+- [ ] **Phase 9** – Customer Management & Profiles UI (Create/Edit/Delete für Kunden & Profile)
 - [ ] **Phase 10** – Next Static Export
 - [ ] **Phase 11** – E-Invoice Foundations (XRechnung/ZUGFeRD)
 - [ ] **Phase 12** – Prototype E-Invoice
