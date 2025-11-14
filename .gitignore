@@ -9,6 +9,7 @@ __pycache__/
 *.pyc
 *.pyo
 .venv/
+venv/
 env/
 *.db
 
@@ -33,6 +34,7 @@ backend/services/*.pdf
 # Docs PR drafts (not for version control)
 docs/pr/
 docs/issues/
+docs/tickets/
 
 # Environment files
 .env

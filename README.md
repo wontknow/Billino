@@ -69,11 +69,32 @@ Ein **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trennung – entwicke
   - RESTful API mit strukturierter Fehlerbehandlung
 - **Database**: SQLite mit Foreign Key-Constraints und Relationen
 - **API**: RESTful FastAPI mit OpenAPI/Swagger-Dokumentation
+- **Invoice-Form Frontend**: Vollständige Rechnungserstellung im Browser
+  - ✨ Customer-Suche mit Autocomplete & Dropdown
+  - ✨ Dynamic Invoice-Items (Add/Remove bis max. 10)
+  - ✨ Automatic Totals-Berechnung
+  - ✨ Steuer-Toggle mit Steuersatz-Eingabe
+  - ✨ Validierung mit Fehleranzeige
+  - ✨ Professionelle UI-Alerts (grün/rot) mit Auto-Dismiss
+  - ✨ Field-Level Error-Display
+  - ✨ Comprehensive Form-Logging für Debugging
+- **Strukturiertes Logging System**: Backend + Frontend
+  - 🔍 ENV-aware Logging (DEBUG in Dev, INFO in Prod)
+  - 🎨 Scoped Logger mit Emoji-Präfixen für bessere Lesbarkeit
+  - 📊 Alle Services & Endpoints instrumentiert
+- **Error Handling & Parsing**: Professionelle Error-Verarbeitung
+  - 🔧 FastAPI Validation-Error Parser
+  - 📋 Field-Level Error-Details im Frontend
+  - 🎯 Structured Error Messages
 
 ### 🚧 Geplant
-- **Frontend-Features**: Invoice-Form, Customer-Management UI, PDF-Viewer
+- **PDF-Viewer**: Frontend-Integration zur Anzeige generierter PDFs
+- **Customer Management UI**: Create/Edit/Delete UI (aktuell nur Read-Only Tabelle)
 - E-Rechnung (XRechnung / ZUGFeRD)
 - Desktop-App: Tauri v2 bündelt Backend + Frontend + DB in **eine ausführbare Datei**
+
+### 🎯 MVP v1.0.0 Status: ✅ RELEASED (November 2025)
+Alle **✅ Implementiert** Features = **MVP Complete**. Alle 🚧 Geplanten Features = **Post-MVP**.
 
 ---
 
@@ -172,7 +193,109 @@ Architektur-Notiz (SOLID):
 
 ---
 
+## ⚙️ Environment & CORS Setup
+
+### Backend – Umgebungsvariablen (`.env`)
+
+Die Datei `backend/.env` steuert die CORS- und Logging-Konfiguration:
+
+```properties
+# Environment & Logging
+ENV=development              # oder: production
+LOG_LEVEL=DEBUG              # oder: INFO (Production)
+
+# CORS – Lokale Entwicklung
+ALLOWED_ORIGINS=http://localhost:3000,tauri://localhost,http://192.168.2.116:3000
+
+# Für Produktion (Deployment)
+# ENV=production
+# LOG_LEVEL=INFO
+# ALLOWED_ORIGINS=https://app.billino.de
+```
+
+**Wichtig:**
+- `ALLOWED_ORIGINS`: Komma-separierte Liste der erlaubten Frontend-Quellen
+- `ENV=development` aktiviert DEBUG-Logging mit strukturierten Ausgaben
+- `ENV=production` nutzt INFO-Level und Production-optimierte Logs
+
+**CORS-Funktionalität:**
+- Automatische Antwort auf Browser-Preflight-Requests (`OPTIONS`)
+- Credentials (`withCredentials`) erlaubt
+- Alle HTTP-Methoden und Header akzeptiert
+- Test: `curl -H "Origin: http://localhost:3000" http://127.0.0.1:8000/health`
+
+---
+
+### Frontend – Umgebungsvariablen (`.env.local`)
+
+Die Datei `frontend/.env.local` konfiguriert die Backend-API-URL:
+
+```bash
+# Environment
+NODE_ENV=development
+
+# API – Backend-Adresse
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+```
+
+**Wichtig:**
+- `NEXT_PUBLIC_*` Variablen werden zur Build-Zeit in den Frontend-Code eingebettet (Browser-sichtbar)
+- Nur für öffentliche Konfiguration verwenden (keine Secrets!)
+- Der API-Service nutzt diese Var automatisch in allen HTTP-Requests
+- Fallback (hardcoded): `http://localhost:8000` falls nicht gesetzt
+
+**Umgebungs-Übersteuerung:**
+| Umgebung | NEXT_PUBLIC_API_URL |
+|----------|---------------------|
+| Local Dev | `http://127.0.0.1:8000` |
+| Tauri Desktop | `http://127.0.0.1:8000` (Sidecar) |
+| Deployment | `https://api.billino.de` |
+
+**API-Service-Integration:**
+Alle Frontend-HTTP-Requests nutzen den zentralen `ApiClient` in `src/services/base.ts`:
+
+```typescript
+// src/services/base.ts
+export class ApiClient {
+  static baseUrl(): string {
+    return process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || "http://localhost:8000";
+  }
+
+  // Beispiel: Kundenabruf
+  static async get<T>(path: string, init?: RequestInit): Promise<T> {
+    const url = `${this.baseUrl()}${path}`;
+    // ...
+  }
+}
+```
+
+---
+
 ## 🚀 Entwicklung
+
+### ⚡ Umgebungskonfiguration validieren
+
+Vor dem Start sollten alle Umgebungsvariablen überprüft werden:
+
+**Backend:**
+```bash
+cd backend
+python scripts/check_env.py         # Validiert backend/.env
+```
+
+**Frontend:**
+```bash
+cd frontend
+pnpm check-env                      # Validiert frontend/.env.local
+```
+
+Beide Scripts prüfen auf:
+- ✅ Erforderliche Variablen vorhanden
+- ✅ Gültige Werte (z.B. `ENV=development` vs. `ENV=invalid`)
+- ✅ Keine leeren Werte
+- ✅ Hilfreiche Fehlermeldungen mit Defaults
+
+---
 
 ### Backend (FastAPI)
 ```bash
@@ -351,19 +474,24 @@ jobs:
 
 ## 📑 Projektphasen (Roadmap)
 
-- [x] **Phase 0** – Repo-Bootstrap (Ordner, CI/CD, Readme, Templates)
-- [x] **Phase 1** – Backend-Skeleton (FastAPI Healthcheck)
-- [x] **Phase 2** – DB-Anbindung (SQLite via SQLModel)
-- [x] **Phase 3** – Models + CRUD (Kunden, Profile)
-- [x] **Phase 4** – Invoice-Core (Rechnung, Nummernlogik, Steuerberechnung)
-- [x] **Phase 4.1** – Auto-Rechnungsnummern (§14 UStG konforme Generierung)
-- [x] **Phase 4.5** – Summary Invoices (Sammelrechnungen mit Service-Layer)
-- [x] **Phase 5** – PDF-Renderer (A4, professionelles Design)
-- [x] **Phase 5.1** – PDF CRUD API (Erstellen, Speichern, Abrufen, Löschen)
-- [x] **Phase 6** – PDF-Renderer (A6×4 auf A4 mit Schnittmarken)
-- [x] **Phase 7** – Frontend Bootstrap (Next.js 16 + React 19 + shadcn/ui + Tailwind v4)
-- [ ] **Phase 8** – Invoice-Form (Autocomplete, Submit)
-- [ ] **Phase 9** – CORS + Env-Konfig
+**MVP v1.0.0 Phasen:**
+- [x] **Phase 0** – Repo-Bootstrap (Ordner, CI/CD, Readme, Templates) 🎯 MVP
+- [x] **Phase 1** – Backend-Skeleton (FastAPI Healthcheck) 🎯 MVP
+- [x] **Phase 2** – DB-Anbindung (SQLite via SQLModel) 🎯 MVP
+- [x] **Phase 3** – Models + CRUD (Kunden, Profile) 🎯 MVP
+- [x] **Phase 4** – Invoice-Core (Rechnung, Nummernlogik, Steuerberechnung) 🎯 MVP
+- [x] **Phase 4.1** – Auto-Rechnungsnummern (§14 UStG konforme Generierung) 🎯 MVP
+- [x] **Phase 4.5** – Summary Invoices (Sammelrechnungen mit Service-Layer) 🎯 MVP
+- [x] **Phase 5** – PDF-Renderer (A4, professionelles Design) 🎯 MVP
+- [x] **Phase 5.1** – PDF CRUD API (Erstellen, Speichern, Abrufen, Löschen) 🎯 MVP
+- [x] **Phase 6** – PDF-Renderer (A6×4 auf A4 mit Schnittmarken) 🎯 MVP
+- [x] **Phase 7** – Frontend Bootstrap (Next.js 16 + React 19 + shadcn/ui + Tailwind v4) 🎯 MVP
+- [x] **Phase 8** – Invoice-Form ✨ (Autocomplete, Submit, Alerts, Logging, Bug-Fixes) 🎯 MVP
+- [x] **Phase 8.1** – Logging & Error Handling ✨ (Strukturiertes Logging, Error Parser, UI Alerts) 🎯 MVP
+
+**Post-MVP Phasen:**
+- [ ] **Phase 8.5** – PDF-Viewer (Frontend-Integration zur Anzeige generierter PDFs)
+- [ ] **Phase 9** – Customer Management & Profiles UI (Create/Edit/Delete für Kunden & Profile)
 - [ ] **Phase 10** – Next Static Export
 - [ ] **Phase 11** – E-Invoice Foundations (XRechnung/ZUGFeRD)
 - [ ] **Phase 12** – Prototype E-Invoice
@@ -606,25 +734,28 @@ erDiagram
 
 ---
 
-## 📈 Entwicklungsstand (Oktober 2025)
+## 📈 Entwicklungsstand (November 2025)
 
 ### Aktuelle Metriken
-- **Test-Suite**: 167 Tests mit 88% Code-Coverage
-- **Codebase**: ~3.200 Lines of Code (ohne Scripts)
+- **Test-Suite**: 51 Frontend Tests + Backend Tests (88% Coverage)
+- **Codebase**: ~4.500+ Lines of Code (ohne Scripts/Generated)
 - **API-Endpunkte**: 25+ RESTful Endpoints
-- **Features**: Backend-Core vollständig implementiert
+- **Frontend-Features**: Backend-Core + Invoice-Form vollständig implementiert
+- **Logging**: Strukturiertes Backend + Frontend Logging System
 
 ### Code-Quality
-- **Umfassende Validierung**: Alle Eingaben werden validiert (Pydantic/SQLModel)
-- **Error Handling**: Strukturierte HTTP-Fehlerantworten
-- **Type Safety**: Vollständig typisiert mit Python Type Hints
+- **Umfassende Validierung**: Alle Eingaben werden validiert (Pydantic/SQLModel + Zod)
+- **Error Handling**: Strukturierte HTTP-Fehlerantworten mit Field-Level Details
+- **Type Safety**: Vollständig typisiert mit Python Type Hints + TypeScript
 - **Documentation**: Auto-generierte OpenAPI/Swagger-Docs
 - **CI/CD**: Automatisierte Tests bei jedem Commit/PR
+- **Logging**: Structured Logging mit DEBUG/PROD-Modes für Debugging
 
 ### Nächste Schritte
-1. **Frontend Development**: Invoice-Form, Customer-Management UI
-2. **Desktop Integration**: Tauri v2 Shell mit Python Sidecar
-3. **E-Invoice Support**: XRechnung/ZUGFeRD Integration
+1. **PDF-Viewer**: Frontend-Integration zur Anzeige generierter PDFs
+2. **Customer Management UI**: Create/Edit/Delete UI für Kunden
+3. **Desktop Integration**: Tauri v2 Shell mit Python Sidecar
+4. **E-Invoice Support**: XRechnung/ZUGFeRD Integration
 
 ---
 

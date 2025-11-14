@@ -11,7 +11,7 @@ describe("ApiClient", () => {
   describe("baseUrl", () => {
     it("gibt Default-URL zurück wenn keine Env-Variable gesetzt", () => {
       const url = ApiClient.baseUrl();
-      expect(url).toBe("http://localhost:8000/api");
+      expect(url).toBe("http://localhost:8000");
     });
 
     it("nutzt NEXT_PUBLIC_API_URL wenn gesetzt", () => {
@@ -43,11 +43,10 @@ describe("ApiClient", () => {
         ok: false,
         status: 404,
         statusText: "Not Found",
+        json: async () => ({ detail: "404 Not Found" }),
       });
 
-      await expect(ApiClient.get("/missing")).rejects.toThrow(
-        "Request fehlgeschlagen: 404 Not Found"
-      );
+      await expect(ApiClient.get("/missing")).rejects.toThrow('{"detail":"404 Not Found"}');
     });
 
     it("übergibt zusätzliche RequestInit-Optionen", async () => {
@@ -59,7 +58,7 @@ describe("ApiClient", () => {
       await ApiClient.get("/test", { headers: { Authorization: "Bearer token" } });
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "http://localhost:8000/api/test",
+        "http://localhost:8000/test",
         expect.objectContaining({
           cache: "no-store",
           headers: { Authorization: "Bearer token" },

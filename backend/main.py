@@ -1,6 +1,7 @@
 # backend/main.py
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -8,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from database import init_db
 from routers import customers, health, invoices, pdfs, profiles, summary_invoices
+from utils import logger
 
 
 @asynccontextmanager
@@ -18,7 +20,8 @@ async def lifespan(app: FastAPI):
     # Shutdown (hier später evtl. cleanup, Logs, etc.)
 
 
-load_dotenv()
+# .env explizit aus dem Backend-Verzeichnis laden (robuster bei anderem Working Directory)
+load_dotenv(dotenv_path=Path(__file__).parent / ".env", override=False)
 
 app = FastAPI(
     title="Billino Backend",
@@ -26,14 +29,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS Middleware konfigurieren
-allowed_origins = os.getenv("ALLOWED_ORIGINS")
-if allowed_origins is None or allowed_origins.strip() == "":
-    origins = ["http://localhost:3000", "tauri://localhost"]
-else:
-    origins = [
-        origin.strip() for origin in allowed_origins.split(",") if origin.strip()
-    ]
+# CORS – alles über .env steuern
+origins = [
+    o.strip() for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+]
+logger.info(f"[CORS] Allowed origins: {origins}")
 
 app.add_middleware(
     CORSMiddleware,
