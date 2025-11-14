@@ -253,14 +253,16 @@ Alle Frontend-HTTP-Requests nutzen den zentralen `ApiClient` in `src/services/ba
 
 ```typescript
 // src/services/base.ts
-export function getApiBase(): string {
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-}
+export class ApiClient {
+  static baseUrl(): string {
+    return process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || "http://localhost:8000";
+  }
 
-// Beispiel: Kundenabruf
-export async function request(path: string, ...): Promise<Response> {
-  const url = `${getApiBase()}${path}`;
-  // ...
+  // Beispiel: Kundenabruf
+  static async get<T>(path: string, init?: RequestInit): Promise<T> {
+    const url = `${this.baseUrl()}${path}`;
+    // ...
+  }
 }
 ```
 
