@@ -93,6 +93,9 @@ Ein **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trennung – entwicke
 - E-Rechnung (XRechnung / ZUGFeRD)
 - Desktop-App: Tauri v2 bündelt Backend + Frontend + DB in **eine ausführbare Datei**
 
+### 🎯 MVP v1.0.0 Status: ✅ RELEASED (November 2025)
+Alle **✅ Implementiert** Features = **MVP Complete**. Alle 🚧 Geplanten Features = **Post-MVP**.
+
 ---
 
 ## 🛠 Tech Stack
@@ -471,19 +474,22 @@ jobs:
 
 ## 📑 Projektphasen (Roadmap)
 
-- [x] **Phase 0** – Repo-Bootstrap (Ordner, CI/CD, Readme, Templates)
-- [x] **Phase 1** – Backend-Skeleton (FastAPI Healthcheck)
-- [x] **Phase 2** – DB-Anbindung (SQLite via SQLModel)
-- [x] **Phase 3** – Models + CRUD (Kunden, Profile)
-- [x] **Phase 4** – Invoice-Core (Rechnung, Nummernlogik, Steuerberechnung)
-- [x] **Phase 4.1** – Auto-Rechnungsnummern (§14 UStG konforme Generierung)
-- [x] **Phase 4.5** – Summary Invoices (Sammelrechnungen mit Service-Layer)
-- [x] **Phase 5** – PDF-Renderer (A4, professionelles Design)
-- [x] **Phase 5.1** – PDF CRUD API (Erstellen, Speichern, Abrufen, Löschen)
-- [x] **Phase 6** – PDF-Renderer (A6×4 auf A4 mit Schnittmarken)
-- [x] **Phase 7** – Frontend Bootstrap (Next.js 16 + React 19 + shadcn/ui + Tailwind v4)
-- [x] **Phase 8** – Invoice-Form ✨ (Autocomplete, Submit, Alerts, Logging, Bug-Fixes)
-- [x] **Phase 8.1** – Logging & Error Handling ✨ (Strukturiertes Logging, Error Parser, UI Alerts)
+**MVP v1.0.0 Phasen:**
+- [x] **Phase 0** – Repo-Bootstrap (Ordner, CI/CD, Readme, Templates) 🎯 MVP
+- [x] **Phase 1** – Backend-Skeleton (FastAPI Healthcheck) 🎯 MVP
+- [x] **Phase 2** – DB-Anbindung (SQLite via SQLModel) 🎯 MVP
+- [x] **Phase 3** – Models + CRUD (Kunden, Profile) 🎯 MVP
+- [x] **Phase 4** – Invoice-Core (Rechnung, Nummernlogik, Steuerberechnung) 🎯 MVP
+- [x] **Phase 4.1** – Auto-Rechnungsnummern (§14 UStG konforme Generierung) 🎯 MVP
+- [x] **Phase 4.5** – Summary Invoices (Sammelrechnungen mit Service-Layer) 🎯 MVP
+- [x] **Phase 5** – PDF-Renderer (A4, professionelles Design) 🎯 MVP
+- [x] **Phase 5.1** – PDF CRUD API (Erstellen, Speichern, Abrufen, Löschen) 🎯 MVP
+- [x] **Phase 6** – PDF-Renderer (A6×4 auf A4 mit Schnittmarken) 🎯 MVP
+- [x] **Phase 7** – Frontend Bootstrap (Next.js 16 + React 19 + shadcn/ui + Tailwind v4) 🎯 MVP
+- [x] **Phase 8** – Invoice-Form ✨ (Autocomplete, Submit, Alerts, Logging, Bug-Fixes) 🎯 MVP
+- [x] **Phase 8.1** – Logging & Error Handling ✨ (Strukturiertes Logging, Error Parser, UI Alerts) 🎯 MVP
+
+**Post-MVP Phasen:**
 - [ ] **Phase 8.5** – PDF-Viewer (Frontend-Integration zur Anzeige generierter PDFs)
 - [ ] **Phase 9** – Customer Management & Profiles UI (Create/Edit/Delete für Kunden & Profile)
 - [ ] **Phase 10** – Next Static Export
