@@ -6,7 +6,7 @@ on:
       - main
       - develop
       - mvp/stable
-      - customized-stable
+      - customized/stable
   pull_request:
     branches: 
       - main

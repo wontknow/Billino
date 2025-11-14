@@ -69,26 +69,26 @@ updates:
     allow:
       - dependency-type: "direct"
 
-  # Backend Python Dependencies - customized-stable (Security only)
+  # Backend Python Dependencies - customized/stable (Security only)
   - package-ecosystem: "pip"
     directory: "/backend"
     schedule:
       interval: "weekly"
       day: "thursday"
       time: "03:00"
-    target-branch: "customized-stable"
+    target-branch: "customized/stable"
     open-pull-requests-limit: 5
     allow:
       - dependency-type: "direct"
 
-  # Frontend npm Dependencies - customized-stable (Security only)
+  # Frontend npm Dependencies - customized/stable (Security only)
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
       interval: "weekly"
       day: "thursday"
       time: "03:00"
-    target-branch: "customized-stable"
+    target-branch: "customized/stable"
     open-pull-requests-limit: 5
     allow:
       - dependency-type: "direct"
