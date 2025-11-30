@@ -1,0 +1,42 @@
+name: Auto-format Dependabot PRs (Frontend)
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - dependabot/**
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install frontend deps
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run Prettier
+        working-directory: ./frontend
+        run: npm run format # oder dein Format-Skript
+
+      - name: Commit changes if needed
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            git config --global user.name "github-actions"
+            git config --global user.email "actions@github.com"
+            git add .
+            git commit -m "chore: auto-format frontend (dependabot)"
+            git push
+          fi
