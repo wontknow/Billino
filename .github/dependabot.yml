@@ -1,29 +1,11 @@
 version: 2
 updates:
-  # Backend Python Dependencies - main branch
-  - package-ecosystem: "pip"
-    directory: "/backend"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "03:00"
-    target-branch: "main"
-    open-pull-requests-limit: 10
-    allow:
-      - dependency-type: "all"
-    versioning-strategy: "auto"
 
-  # Frontend npm Dependencies - main branch
-  - package-ecosystem: "npm"
-    directory: "/frontend"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "03:00"
-    target-branch: "main"
-    open-pull-requests-limit: 10
+  # =========================
+  # DEVELOP – Update-Hub
+  # Alle Updates, gruppiert
+  # =========================
 
-  # Backend Python Dependencies - develop branch
   - package-ecosystem: "pip"
     directory: "/backend"
     schedule:
@@ -31,11 +13,11 @@ updates:
       day: "tuesday"
       time: "03:00"
     target-branch: "develop"
-    open-pull-requests-limit: 5
-    allow:
-      - dependency-type: "all"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
 
-  # Frontend npm Dependencies - develop branch
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
@@ -43,53 +25,106 @@ updates:
       day: "tuesday"
       time: "03:00"
     target-branch: "develop"
-    open-pull-requests-limit: 5
+    groups:
+      dependencies:
+        patterns:
+          - "*"
 
-  # Backend Python Dependencies - mvp/stable (Security only)
+
+  # =========================
+  # MAIN – stabil & ruhig
+  # Keine Major Updates
+  # =========================
+
   - package-ecosystem: "pip"
     directory: "/backend"
     schedule:
-      interval: "weekly"
-      day: "wednesday"
+      interval: "monthly"
       time: "03:00"
-    target-branch: "mvp/stable"
-    open-pull-requests-limit: 5
-    allow:
-      - dependency-type: "direct"
+    target-branch: "main"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
 
-  # Frontend npm Dependencies - mvp/stable (Security only)
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
-      interval: "weekly"
-      day: "wednesday"
+      interval: "monthly"
       time: "03:00"
-    target-branch: "mvp/stable"
-    open-pull-requests-limit: 5
-    allow:
-      - dependency-type: "direct"
+    target-branch: "main"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
 
-  # Backend Python Dependencies - customized/stable (Security only)
+
+  # =========================
+  # MVP / STABLE – Security only
+  # Direkte Dependencies
+  # =========================
+
   - package-ecosystem: "pip"
     directory: "/backend"
     schedule:
-      interval: "weekly"
-      day: "thursday"
+      interval: "monthly"
       time: "03:00"
-    target-branch: "customized/stable"
-    open-pull-requests-limit: 5
+    target-branch: "mvp/stable"
     allow:
       - dependency-type: "direct"
+    groups:
+      security:
+        patterns:
+          - "*"
 
-  # Frontend npm Dependencies - customized/stable (Security only)
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
-      interval: "weekly"
-      day: "thursday"
+      interval: "monthly"
       time: "03:00"
-    target-branch: "customized/stable"
-    open-pull-requests-limit: 5
+    target-branch: "mvp/stable"
     allow:
       - dependency-type: "direct"
+    groups:
+      security:
+        patterns:
+          - "*"
 
+
+  # =========================
+  # CUSTOMIZED / STABLE – Security only
+  # =========================
+
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "monthly"
+      time: "03:00"
+    target-branch: "customized/stable"
+    allow:
+      - dependency-type: "direct"
+    groups:
+      security:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "monthly"
+      time: "03:00"
+    target-branch: "customized/stable"
+    allow:
+      - dependency-type: "direct"
+    groups:
+      security:
+        patterns:
+          - "*"
