@@ -80,10 +80,6 @@ updates:
     target-branch: "mvp/stable"
     allow:
       - dependency-type: "direct"
-    groups:
-      security:
-        patterns:
-          - "*"
 
   - package-ecosystem: "npm"
     directory: "/frontend"
@@ -93,10 +89,6 @@ updates:
     target-branch: "mvp/stable"
     allow:
       - dependency-type: "direct"
-    groups:
-      security:
-        patterns:
-          - "*"
 
 
   # =========================
@@ -111,10 +103,6 @@ updates:
     target-branch: "customized/stable"
     allow:
       - dependency-type: "direct"
-    groups:
-      security:
-        patterns:
-          - "*"
 
   - package-ecosystem: "npm"
     directory: "/frontend"
@@ -124,7 +112,3 @@ updates:
     target-branch: "customized/stable"
     allow:
       - dependency-type: "direct"
-    groups:
-      security:
-        patterns:
-          - "*"
