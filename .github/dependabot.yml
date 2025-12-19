@@ -14,7 +14,7 @@ updates:
       time: "03:00"
     target-branch: "develop"
     groups:
-      dependencies:
+      all-dependencies:
         patterns:
           - "*"
 
@@ -26,7 +26,7 @@ updates:
       time: "03:00"
     target-branch: "develop"
     groups:
-      dependencies:
+      all-dependencies:
         patterns:
           - "*"
 
@@ -47,7 +47,7 @@ updates:
         update-types:
           - "version-update:semver-major"
     groups:
-      dependencies:
+      all-dependencies:
         patterns:
           - "*"
 
@@ -62,69 +62,46 @@ updates:
         update-types:
           - "version-update:semver-major"
     groups:
-      dependencies:
+      all-dependencies:
         patterns:
           - "*"
 
 
   # =========================
   # MVP / STABLE – Security only
-  # Direkte Dependencies
+  # Scheduled updates disabled
   # =========================
 
   - package-ecosystem: "pip"
     directory: "/backend"
     schedule:
       interval: "monthly"
-      time: "03:00"
     target-branch: "mvp/stable"
-    allow:
-      - dependency-type: "direct"
-    groups:
-      security:
-        patterns:
-          - "*"
+    open-pull-requests-limit: 0
 
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
       interval: "monthly"
-      time: "03:00"
     target-branch: "mvp/stable"
-    allow:
-      - dependency-type: "direct"
-    groups:
-      security:
-        patterns:
-          - "*"
+    open-pull-requests-limit: 0
 
 
   # =========================
   # CUSTOMIZED / STABLE – Security only
+  # Scheduled updates disabled
   # =========================
 
   - package-ecosystem: "pip"
     directory: "/backend"
     schedule:
       interval: "monthly"
-      time: "03:00"
     target-branch: "customized/stable"
-    allow:
-      - dependency-type: "direct"
-    groups:
-      security:
-        patterns:
-          - "*"
+    open-pull-requests-limit: 0
 
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
       interval: "monthly"
-      time: "03:00"
     target-branch: "customized/stable"
-    allow:
-      - dependency-type: "direct"
-    groups:
-      security:
-        patterns:
-          - "*"
+    open-pull-requests-limit: 0
