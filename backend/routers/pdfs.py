@@ -1,4 +1,5 @@
 import base64
+import os
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -11,6 +12,9 @@ from models.summary_invoice import SummaryInvoice
 from services.pdf_a6_generator import PDFA6Generator
 from services.pdf_data_service import PDFDataService
 from services.pdf_generator import PDFGenerator
+from utils import logger
+
+LOG_DEV = os.getenv("ENV", "dev").lower() != "prod"
 
 router = APIRouter(prefix="/pdfs", tags=["PDFs"])
 
@@ -342,6 +346,8 @@ def get_a6_pdfs(session: Session = Depends(get_session)):
 
 @router.get("/by-invoice/{invoice_id}", response_model=StoredPDFRead)
 def get_pdf_by_invoice_id(invoice_id: int, session: Session = Depends(get_session)):
+    if LOG_DEV:
+        logger.debug(f"🔍 [DEV] Fetch PDF by invoice_id={invoice_id}")
     """
     Get PDF by invoice ID.
 
@@ -380,6 +386,8 @@ def get_pdf_by_invoice_id(invoice_id: int, session: Session = Depends(get_sessio
 def get_pdf_by_summary_invoice_id(
     summary_invoice_id: int, session: Session = Depends(get_session)
 ):
+    if LOG_DEV:
+        logger.debug(f"🔍 [DEV] Fetch PDF by summary_invoice_id={summary_invoice_id}")
     """
     Get PDF by summary invoice ID.
 

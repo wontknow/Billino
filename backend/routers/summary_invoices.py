@@ -1,6 +1,8 @@
 ### Summary Invoices
 # Create, Read (list), Read (single), Delete
 
+import os
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlmodel import select
@@ -13,6 +15,9 @@ from models import (
     SummaryInvoiceRead,
 )
 from services import create_summary_invoice
+from utils import logger
+
+LOG_DEV = os.getenv("ENV", "dev").lower() != "prod"
 
 router = APIRouter(prefix="/summary-invoices", tags=["summary_invoices"])
 
@@ -56,6 +61,15 @@ def create_summary(
     }
     ```
     """
+    if LOG_DEV:
+        logger.debug(
+            "🧾 [DEV] POST /summary-invoices",
+            {
+                "profile_id": summary.profile_id,
+                "invoice_count": len(summary.invoice_ids),
+            },
+        )
+
     try:
         summary_invoice = create_summary_invoice(session, summary)
     except ValueError as e:
@@ -64,6 +78,14 @@ def create_summary(
             detail=[{"loc": ["body"], "msg": str(e), "type": "value_error"}],
         )
 
+    logger.info(
+        "📄 Summary invoice created",
+        {
+            "id": summary_invoice.id,
+            "profile_id": summary_invoice.profile_id,
+            "invoice_count": len(summary.invoice_ids),
+        },
+    )
     return summary_invoice
 
 
@@ -94,6 +116,8 @@ def list_summaries(session: Session = Depends(get_session)):
     ```
     """
     summaries = session.exec(select(SummaryInvoice)).all()
+    if LOG_DEV:
+        logger.debug("🔍 [DEV] GET /summary-invoices", {"count": len(summaries)})
     # Create list of SummaryInvoiceRead with invoice_ids from links
     summary_invoices = []
     for summary in summaries:
@@ -153,6 +177,11 @@ def list_summaries_by_profile(profile_id: int, session: Session = Depends(get_se
     summaries = session.exec(
         select(SummaryInvoice).where(SummaryInvoice.profile_id == profile_id)
     ).all()
+    if LOG_DEV:
+        logger.debug(
+            "🔍 [DEV] GET /summary-invoices/by-profile",
+            {"profile_id": profile_id, "count": len(summaries)},
+        )
     # Create list of SummaryInvoiceRead with invoice_ids from links
     summary_invoices = []
     for summary in summaries:
