@@ -15,7 +15,6 @@ import type { Invoice } from "@/types/invoice";
 import type { Profile } from "@/types/profile";
 import { SummaryInvoicesService } from "@/services/summaryInvoices";
 import { ProfilesService } from "@/services/profiles";
-import { PDFsService } from "@/services/pdfs";
 import { logger } from "@/lib/logger";
 
 interface SummaryInvoiceDialogProps {
@@ -126,12 +125,9 @@ export const SummaryInvoiceDialog: React.FC<SummaryInvoiceDialogProps> = ({
         recipient_name: recipientName || undefined,
       });
 
-      // Fire-and-forget PDF generation
-      PDFsService.createPdfForSummaryInvoice(summary.id, recipientName || undefined).catch(
-        (error) => {
-          log.warn("PDF creation failed (non-blocking)", error);
-        }
-      );
+      // PDF will be generated automatically in the backend
+      // No need for explicit PDF creation anymore
+      log.debug("Summary invoice created, PDF will be generated automatically in background");
 
       setAlert({ type: "success", message: "Sammelrechnung erstellt." });
       onSuccess?.(summary.id);

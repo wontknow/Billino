@@ -4,12 +4,10 @@ import userEvent from "@testing-library/user-event";
 import { SummaryInvoiceDialog } from "./SummaryInvoiceDialog";
 import { ProfilesService } from "@/services/profiles";
 import { SummaryInvoicesService } from "@/services/summaryInvoices";
-import { PDFsService } from "@/services/pdfs";
 import type { Invoice } from "@/types/invoice";
 
 jest.mock("@/services/profiles");
 jest.mock("@/services/summaryInvoices");
-jest.mock("@/services/pdfs");
 
 const mockProfiles = [{ id: 1, name: "Profil A" }];
 const invoices: Invoice[] = [
@@ -29,11 +27,6 @@ const setup = async () => {
     total_gross: 0,
     invoice_ids: [10, 11],
   });
-  (PDFsService.createPdfForSummaryInvoice as jest.Mock).mockResolvedValue({
-    blob: new Blob(["PDF"], { type: "application/pdf" }),
-    filename: "summaryInvoice-99.pdf",
-    type: "summary_invoice",
-  });
 
   const user = userEvent.setup();
   render(
@@ -46,7 +39,7 @@ const setup = async () => {
 };
 
 describe("SummaryInvoiceDialog", () => {
-  it("erstellt Sammelrechnung und triggert PDF mit korrekter ID und recipient_name", async () => {
+  it("erstellt Sammelrechnung mit korrekten Parametern (PDF wird im Backend generiert)", async () => {
     const { user } = await setup();
 
     // select both invoices
@@ -69,6 +62,6 @@ describe("SummaryInvoiceDialog", () => {
       });
     });
 
-    expect(PDFsService.createPdfForSummaryInvoice).toHaveBeenCalledWith(99, "Finanzamt Mustermann");
+    // PDF generation is now handled automatically in backend - no explicit call needed
   });
 });

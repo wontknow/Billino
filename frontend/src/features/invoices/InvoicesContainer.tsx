@@ -63,12 +63,12 @@ export const InvoicesContainer: React.FC<InvoicesContainerProps> = ({
   const [isA6DialogOpen, setIsA6DialogOpen] = useState(false);
 
   const defaultInvoicePdfLoader = useCallback(
-    (invoiceId: number) => PDFsService.getPdfByInvoiceId(invoiceId),
+    (invoiceId: number) => PDFsService.getPdfByInvoiceIdWithFallback(invoiceId),
     []
   );
 
   const defaultSummaryPdfLoader = useCallback(
-    (summaryId: number) => PDFsService.getPdfBySummaryInvoiceId(summaryId),
+    (summaryId: number) => PDFsService.getPdfBySummaryInvoiceIdWithFallback(summaryId),
     []
   );
 
