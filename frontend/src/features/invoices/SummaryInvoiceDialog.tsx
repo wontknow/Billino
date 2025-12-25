@@ -10,12 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import type { Invoice } from "@/types/invoice";
 import type { Profile } from "@/types/profile";
 import { SummaryInvoicesService } from "@/services/summaryInvoices";
