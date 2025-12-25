@@ -51,9 +51,12 @@ def create_invoice_pdf(invoice_id: int, session: Session = Depends(get_session))
 
     **Note:** The PDF content is base64-encoded. Decode before saving to file.
     """
+    logger.debug(f"📥 POST /pdfs/invoices/{invoice_id} - Creating PDF for invoice")
+
     # Check if invoice exists
     invoice = session.get(Invoice, invoice_id)
     if not invoice:
+        logger.warning(f"⚠️ Invoice {invoice_id} not found for PDF creation")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found"
         )
@@ -63,6 +66,9 @@ def create_invoice_pdf(invoice_id: int, session: Session = Depends(get_session))
         select(StoredPDF).where(StoredPDF.invoice_id == invoice_id)
     ).first()
     if existing_pdf:
+        logger.warning(
+            f"⚠️ PDF for invoice {invoice_id} already exists (ID: {existing_pdf.id})"
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="PDF for this invoice already exists",
@@ -73,6 +79,7 @@ def create_invoice_pdf(invoice_id: int, session: Session = Depends(get_session))
     pdf_generator = PDFGenerator()
 
     try:
+        logger.debug(f"🖨️ Generating PDF data for invoice {invoice_id}...")
         pdf_data = pdf_data_service.get_invoice_pdf_data(invoice_id)
         pdf_bytes = pdf_generator.generate_invoice_pdf(pdf_data)
 
@@ -87,9 +94,13 @@ def create_invoice_pdf(invoice_id: int, session: Session = Depends(get_session))
         session.commit()
         session.refresh(stored_pdf)
 
+        logger.info(
+            f"✅ PDF created for invoice {invoice_id} (PDF ID: {stored_pdf.id}, size: {len(pdf_base64)} bytes)"
+        )
         return stored_pdf
 
     except ValueError as e:
+        logger.error(f"❌ PDF generation failed for invoice {invoice_id}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
@@ -346,8 +357,6 @@ def get_a6_pdfs(session: Session = Depends(get_session)):
 
 @router.get("/by-invoice/{invoice_id}", response_model=StoredPDFRead)
 def get_pdf_by_invoice_id(invoice_id: int, session: Session = Depends(get_session)):
-    if LOG_DEV:
-        logger.debug(f"🔍 [DEV] Fetch PDF by invoice_id={invoice_id}")
     """
     Get PDF by invoice ID.
 
@@ -371,14 +380,20 @@ def get_pdf_by_invoice_id(invoice_id: int, session: Session = Depends(get_sessio
     }
     ```
     """
+    logger.debug(f"📥 GET /pdfs/by-invoice/{invoice_id} - Fetching PDF for invoice")
+
     pdf = session.exec(
         select(StoredPDF).where(StoredPDF.invoice_id == invoice_id)
     ).first()
+
     if not pdf:
+        logger.warning(f"⚠️ PDF not found for invoice {invoice_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No PDF found for invoice ID {invoice_id}",
         )
+
+    logger.debug(f"✅ PDF found for invoice {invoice_id} (PDF ID: {pdf.id})")
     return pdf
 
 
@@ -386,8 +401,6 @@ def get_pdf_by_invoice_id(invoice_id: int, session: Session = Depends(get_sessio
 def get_pdf_by_summary_invoice_id(
     summary_invoice_id: int, session: Session = Depends(get_session)
 ):
-    if LOG_DEV:
-        logger.debug(f"🔍 [DEV] Fetch PDF by summary_invoice_id={summary_invoice_id}")
     """
     Get PDF by summary invoice ID.
 
@@ -411,14 +424,24 @@ def get_pdf_by_summary_invoice_id(
     }
     ```
     """
+    logger.debug(
+        f"📥 GET /pdfs/by-summary/{summary_invoice_id} - Fetching PDF for summary invoice"
+    )
+
     pdf = session.exec(
         select(StoredPDF).where(StoredPDF.summary_invoice_id == summary_invoice_id)
     ).first()
+
     if not pdf:
+        logger.warning(f"⚠️ PDF not found for summary invoice {summary_invoice_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No PDF found for summary invoice ID {summary_invoice_id}",
         )
+
+    logger.debug(
+        f"✅ PDF found for summary invoice {summary_invoice_id} (PDF ID: {pdf.id})"
+    )
     return pdf
 
 
