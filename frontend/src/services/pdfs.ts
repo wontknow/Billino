@@ -1,4 +1,4 @@
-import { ApiClient } from "./base";
+import { ApiClient, ApiError } from "./base";
 import { logger } from "@/lib/logger";
 import { StoredPDF, PdfBlob, PdfFilename } from "@/types/pdf";
 
@@ -40,6 +40,62 @@ export class PDFsService {
       `/pdfs/by-summary/${summaryInvoiceId}`
     );
     return PDFsService.convertBase64ToPdfBlob(pdfResponse);
+  }
+
+  /**
+   * Get PDF for invoice with lazy loading fallback.
+   * If PDF doesn't exist, it triggers generation and waits for it.
+   */
+  static async getPdfByInvoiceIdWithFallback(invoiceId: number): Promise<PdfBlob> {
+    log.debug(`🔄 PDF Loading: Fetching PDF for invoice ${invoiceId}`);
+    try {
+      const pdfResponse: StoredPDF = await ApiClient.get<StoredPDF>(
+        `/pdfs/by-invoice/${invoiceId}`
+      );
+      log.debug(`✅ PDF Loaded: Invoice ${invoiceId} PDF found`);
+      return PDFsService.convertBase64ToPdfBlob(pdfResponse);
+    } catch (error: unknown) {
+      if (error instanceof ApiError) {
+        if (error.status === 404) {
+          log.warn(`⚠️ PDF Not Found: Invoice ${invoiceId} - Triggering generation...`);
+          return PDFsService.createPdfForInvoice(invoiceId);
+        }
+        log.error(`❌ PDF Loading Error [${error.status}]: Invoice ${invoiceId}`, error.detail);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Get PDF for summary invoice with lazy loading fallback.
+   * If PDF doesn't exist, it triggers generation and waits for it.
+   */
+  static async getPdfBySummaryInvoiceIdWithFallback(
+    summaryInvoiceId: number,
+    recipientName?: string
+  ): Promise<PdfBlob> {
+    log.debug(`🔄 PDF Loading: Fetching PDF for summary invoice ${summaryInvoiceId}`);
+    try {
+      const pdfResponse: StoredPDF = await ApiClient.get<StoredPDF>(
+        `/pdfs/by-summary/${summaryInvoiceId}`
+      );
+      log.debug(`✅ PDF Loaded: Summary invoice ${summaryInvoiceId} PDF found`);
+      return PDFsService.convertBase64ToPdfBlob(pdfResponse);
+    } catch (error: unknown) {
+      if (error instanceof ApiError) {
+        if (error.status === 404) {
+          log.warn(
+            `⚠️ PDF Not Found: Summary invoice ${summaryInvoiceId} - Triggering generation...`
+          );
+          return PDFsService.createPdfForSummaryInvoice(summaryInvoiceId, recipientName);
+        }
+        log.error(
+          `❌ PDF Loading Error [${error.status}]: Summary invoice ${summaryInvoiceId}`,
+          error.detail
+        );
+      }
+      throw error;
+    }
   }
 
   static async getAllA6Pdfs(): Promise<PdfBlob[]> {
