@@ -147,15 +147,20 @@ def update_customer(
     """
     Update an existing customer.
 
-    Updates the customer record with the provided data. Only provided fields are updated.
+    Updates the customer record with the data from the request body. This endpoint expects
+    a full Customer object, and all fields sent in the request will overwrite the existing
+    values (including when they are set to `null` or omitted in the JSON payload).
 
     **Path Parameters:**
     - `customer_id` (integer, required): ID of the customer to update
 
     **Request Body:**
-    - `name` (string, optional): Customer name
-    - `address` (string, optional): Customer address
-    - `city` (string, optional): Customer city
+    A full Customer representation. For correct behavior, all current field values should
+    be supplied, as any field that differs from the stored value will be updated to the
+    value provided in the request.
+    - `name` (string): Customer name
+    - `address` (string or null): Customer address
+    - `city` (string or null): Customer city
 
     **Returns:**
     - Updated Customer object
