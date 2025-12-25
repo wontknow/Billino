@@ -64,7 +64,10 @@ def create_summary(
     if LOG_DEV:
         logger.debug(
             "🧾 [DEV] POST /summary-invoices",
-            {"profile_id": summary.profile_id, "invoice_count": len(summary.invoice_ids)},
+            {
+                "profile_id": summary.profile_id,
+                "invoice_count": len(summary.invoice_ids),
+            },
         )
 
     try:
@@ -77,7 +80,11 @@ def create_summary(
 
     logger.info(
         "📄 Summary invoice created",
-        {"id": summary_invoice.id, "profile_id": summary_invoice.profile_id, "invoice_count": len(summary.invoice_ids)},
+        {
+            "id": summary_invoice.id,
+            "profile_id": summary_invoice.profile_id,
+            "invoice_count": len(summary.invoice_ids),
+        },
     )
     return summary_invoice
 
