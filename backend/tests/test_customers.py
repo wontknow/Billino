@@ -54,7 +54,7 @@ def test_create_customer_with_address(client):
             "city": "Berlin",
         },
     )
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["id"] is not None
     assert data["name"] == "Anna Müller"
@@ -66,7 +66,7 @@ def test_create_customer_without_address(client):
     response = client.post(
         "/customers", json={"name": "Peter Schmidt", "city": "München"}
     )
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["id"] is not None
     assert data["name"] == "Peter Schmidt"
@@ -77,7 +77,7 @@ def test_create_customer_without_city(client):
     response = client.post(
         "/customers", json={"name": "Peter Schmidt", "address": "Nebenstr. 2"}
     )
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["id"] is not None
     assert data["name"] == "Peter Schmidt"
