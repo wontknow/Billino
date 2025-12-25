@@ -1,5 +1,6 @@
 ### Summary Invoices
 # Create, Read (list), Read (single), Delete
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlmodel import select
@@ -15,21 +16,46 @@ from services import create_summary_invoice
 
 router = APIRouter(prefix="/summary-invoices", tags=["summary_invoices"])
 
-## summary invoice read model
-# id
-# range_text
-# date
-# profile_id
-# total_net
-# total_tax
-# total_gross
-# invoice_ids
-
 
 @router.post("/", response_model=SummaryInvoiceRead, status_code=201)
 def create_summary(
     summary: SummaryInvoiceCreate, session: Session = Depends(get_session)
 ):
+    """
+    Create a new summary invoice (Sammelrechnung).
+
+    Combines multiple regular invoices into a single summary invoice.
+    All invoices must belong to the same profile.
+
+    **Request Body:**
+    - `profile_id` (integer, required): ID of the seller profile
+    - `invoice_ids` (array of integers, required): IDs of invoices to include (at least one)
+
+    **Returns:**
+    - SummaryInvoiceRead object with calculated totals
+
+    **Example Request:**
+    ```json
+    {
+        "profile_id": 1,
+        "invoice_ids": [1, 2, 3]
+    }
+    ```
+
+    **Example Response (201):**
+    ```json
+    {
+        "id": 1,
+        "range_text": "Invoice #1-3",
+        "date": "2025-12-19",
+        "profile_id": 1,
+        "total_net": 100.00,
+        "total_tax": 19.00,
+        "total_gross": 119.00,
+        "invoice_ids": [1, 2, 3]
+    }
+    ```
+    """
     try:
         summary_invoice = create_summary_invoice(session, summary)
     except ValueError as e:
@@ -43,6 +69,30 @@ def create_summary(
 
 @router.get("/", response_model=list[SummaryInvoiceRead])
 def list_summaries(session: Session = Depends(get_session)):
+    """
+    List all summary invoices.
+
+    Retrieves a list of all summary invoices with their associated regular invoice IDs.
+
+    **Returns:**
+    - List of SummaryInvoiceRead objects
+
+    **Example Response (200):**
+    ```json
+    [
+        {
+            "id": 1,
+            "range_text": "Invoice #1-3",
+            "date": "2025-12-19",
+            "profile_id": 1,
+            "total_net": 100.00,
+            "total_tax": 19.00,
+            "total_gross": 119.00,
+            "invoice_ids": [1, 2, 3]
+        }
+    ]
+    ```
+    """
     summaries = session.exec(select(SummaryInvoice)).all()
     # Create list of SummaryInvoiceRead with invoice_ids from links
     summary_invoices = []
@@ -73,6 +123,33 @@ def list_summaries(session: Session = Depends(get_session)):
 # get summaries by profile_id
 @router.get("/by-profile/{profile_id}", response_model=list[SummaryInvoiceRead])
 def list_summaries_by_profile(profile_id: int, session: Session = Depends(get_session)):
+    """
+    List all summary invoices for a specific profile.
+
+    Retrieves all summary invoices created for a given seller profile.
+
+    **Path Parameters:**
+    - `profile_id` (integer, required): ID of the seller profile
+
+    **Returns:**
+    - List of SummaryInvoiceRead objects for the specified profile
+
+    **Example Response (200):**
+    ```json
+    [
+        {
+            "id": 1,
+            "range_text": "Invoice #1-3",
+            "date": "2025-12-19",
+            "profile_id": 1,
+            "total_net": 100.00,
+            "total_tax": 19.00,
+            "total_gross": 119.00,
+            "invoice_ids": [1, 2, 3]
+        }
+    ]
+    ```
+    """
     summaries = session.exec(
         select(SummaryInvoice).where(SummaryInvoice.profile_id == profile_id)
     ).all()
@@ -104,6 +181,31 @@ def list_summaries_by_profile(profile_id: int, session: Session = Depends(get_se
 
 @router.get("/{summary_id}", response_model=SummaryInvoiceRead)
 def read_summary(summary_id: int, session: Session = Depends(get_session)):
+    """
+    Get a single summary invoice by ID.
+
+    Retrieves detailed information about a specific summary invoice including its associated invoice IDs.
+
+    **Path Parameters:**
+    - `summary_id` (integer, required): ID of the summary invoice to retrieve
+
+    **Returns:**
+    - SummaryInvoiceRead object
+
+    **Example Response (200):**
+    ```json
+    {
+        "id": 1,
+        "range_text": "Invoice #1-3",
+        "date": "2025-12-19",
+        "profile_id": 1,
+        "total_net": 100.00,
+        "total_tax": 19.00,
+        "total_gross": 119.00,
+        "invoice_ids": [1, 2, 3]
+    }
+    ```
+    """
     summary = session.get(SummaryInvoice, summary_id)
     if not summary:
         raise HTTPException(
@@ -140,6 +242,18 @@ def read_summary(summary_id: int, session: Session = Depends(get_session)):
 
 @router.delete("/{summary_id}", status_code=204)
 def delete_summary(summary_id: int, session: Session = Depends(get_session)):
+    """
+    Delete a summary invoice.
+
+    Removes a summary invoice and all its associated links to regular invoices.
+    Note: The regular invoices themselves are NOT deleted.
+
+    **Path Parameters:**
+    - `summary_id` (integer, required): ID of the summary invoice to delete
+
+    **Returns:**
+    - No content (HTTP 204)
+    """
     summary = session.get(SummaryInvoice, summary_id)
     if not summary:
         raise HTTPException(

@@ -26,10 +26,23 @@ router = APIRouter(prefix="/invoices", tags=["invoices"])
 @router.get("/number-preview")
 def get_invoice_number_preview(session: Session = Depends(get_session)):
     """
-    Get a preview of what the next invoice number would be globally.
+    Get a preview of the next invoice number.
+
+    Returns what the next automatically generated invoice number will be.
     Useful for frontend to show users what number their invoice will get.
 
-    Note: Numbers are sequential across all profiles (German tax law compliance).
+    Note: Invoice numbers are sequential across all profiles (German tax law compliance).
+    Format: "YY | NNN" (e.g., "25 | 001")
+
+    **Returns:**
+    - `preview_number` (string): The next invoice number in format "YY | NNN"
+
+    **Example Response (200):**
+    ```json
+    {
+        "preview_number": "25 | 042"
+    }
+    ```
     """
     logger.debug("🔢 GET /invoices/number-preview - Fetching next invoice number")
     next_number = get_preview_invoice_number(session)
@@ -39,6 +52,74 @@ def get_invoice_number_preview(session: Session = Depends(get_session)):
 
 @router.post("/", response_model=InvoiceRead, status_code=201)
 def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_session)):
+    """
+    Create a new invoice.
+
+    Creates a new invoice with automatic invoice number generation. The request must include
+    at least one invoice item. The sum of invoice items must match the total_amount (within 0.01 tolerance).
+
+    **Request Body:**
+    - `date` (string, required): Invoice date (format: "YYYY-MM-DD")
+    - `customer_id` (integer, required): ID of the customer
+    - `profile_id` (integer, required): ID of the seller profile
+    - `total_amount` (float, required): Total amount (must match sum of items)
+    - `invoice_items` (array, required): At least one invoice item with:
+        - `quantity` (integer): Quantity of items
+        - `description` (string): Item description
+        - `price` (float): Price per item
+        - `tax_rate` (float, optional): Individual tax rate for this item
+    - `include_tax` (boolean, optional): Whether to include VAT. If not provided, inherits from profile
+    - `tax_rate` (float, optional): VAT rate as decimal (0.19 for 19%). Required if include_tax=true
+    - `is_gross_amount` (boolean, optional): Whether total_amount is gross or net (default: false = net)
+
+    **Returns:**
+    - InvoiceRead object with assigned invoice number and ID
+
+    **Example Request:**
+    ```json
+    {
+        "date": "2025-12-19",
+        "customer_id": 1,
+        "profile_id": 1,
+        "total_amount": 119.00,
+        "invoice_items": [
+            {
+                "quantity": 2,
+                "description": "Consulting Service",
+                "price": 50.00
+            }
+        ],
+        "include_tax": true,
+        "tax_rate": 0.19,
+        "is_gross_amount": true
+    }
+    ```
+
+    **Example Response (201):**
+    ```json
+    {
+        "id": 1,
+        "number": "25 | 001",
+        "date": "2025-12-19",
+        "customer_id": 1,
+        "profile_id": 1,
+        "total_amount": 119.00,
+        "include_tax": true,
+        "tax_rate": 0.19,
+        "is_gross_amount": true,
+        "invoice_items": [
+            {
+                "id": 1,
+                "invoice_id": 1,
+                "quantity": 2,
+                "description": "Consulting Service",
+                "price": 50.00,
+                "tax_rate": null
+            }
+        ]
+    }
+    ```
+    """
     logger.debug(
         f"📝 POST /invoices - Creating invoice for customer_id={invoice.customer_id}, profile_id={invoice.profile_id}"
     )
@@ -180,6 +261,41 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
 
 @router.get("/", response_model=list[InvoiceRead])
 def read_invoices(session: Session = Depends(get_session)):
+    """
+    List all invoices.
+
+    Retrieves a list of all invoices in the database with their line items.
+
+    **Returns:**
+    - List of InvoiceRead objects with all related invoice items
+
+    **Example Response (200):**
+    ```json
+    [
+        {
+            "id": 1,
+            "number": "25 | 001",
+            "date": "2025-12-19",
+            "customer_id": 1,
+            "profile_id": 1,
+            "total_amount": 119.00,
+            "include_tax": true,
+            "tax_rate": 0.19,
+            "is_gross_amount": true,
+            "invoice_items": [
+                {
+                    "id": 1,
+                    "invoice_id": 1,
+                    "quantity": 2,
+                    "description": "Consulting Service",
+                    "price": 50.00,
+                    "tax_rate": null
+                }
+            ]
+        }
+    ]
+    ```
+    """
     logger.debug("📄 GET /invoices - Listing all invoices")
     invoices = session.exec(select(Invoice)).all()
     logger.debug(f"✅ Found {len(invoices)} invoices")
@@ -214,6 +330,42 @@ def read_invoices(session: Session = Depends(get_session)):
 
 @router.get("/{invoice_id}", response_model=InvoiceRead)
 def read_invoice(invoice_id: int, session: Session = Depends(get_session)):
+    """
+    Get a single invoice by ID.
+
+    Retrieves detailed information about a specific invoice including all line items.
+
+    **Path Parameters:**
+    - `invoice_id` (integer, required): ID of the invoice to retrieve
+
+    **Returns:**
+    - InvoiceRead object with all related invoice items
+
+    **Example Response (200):**
+    ```json
+    {
+        "id": 1,
+        "number": "25 | 001",
+        "date": "2025-12-19",
+        "customer_id": 1,
+        "profile_id": 1,
+        "total_amount": 119.00,
+        "include_tax": true,
+        "tax_rate": 0.19,
+        "is_gross_amount": true,
+        "invoice_items": [
+            {
+                "id": 1,
+                "invoice_id": 1,
+                "quantity": 2,
+                "description": "Consulting Service",
+                "price": 50.00,
+                "tax_rate": null
+            }
+        ]
+    }
+    ```
+    """
     logger.debug(f"📖 GET /invoices/{invoice_id} - Fetching invoice")
     invoice = session.get(Invoice, invoice_id)
     if not invoice:
@@ -255,6 +407,19 @@ def read_invoice(invoice_id: int, session: Session = Depends(get_session)):
 
 @router.delete("/{invoice_id}", status_code=204)
 def delete_invoice(invoice_id: int, session: Session = Depends(get_session)):
+    """
+    Delete an invoice.
+
+    Removes an invoice and all its related line items from the database.
+
+    **Path Parameters:**
+    - `invoice_id` (integer, required): ID of the invoice to delete
+
+    **Returns:**
+    - No content (HTTP 204)
+
+    **Note:** Deleting an invoice will also remove all associated invoice items.
+    """
     logger.info(f"🗑️ DELETE /invoices/{invoice_id} - Deleting invoice")
     invoice = session.get(Invoice, invoice_id)
     if not invoice:
