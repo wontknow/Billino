@@ -70,12 +70,19 @@ describe("PDFsService", () => {
   });
 
   it("erstellt ein Sammelrechnungs-PDF mit recipient_name, wenn angegeben", async () => {
-    const storedPdf = createStoredPdf({ id: 11, type: "summary_invoice", summary_invoice_id: 55, invoice_id: null });
+    const storedPdf = createStoredPdf({
+      id: 11,
+      type: "summary_invoice",
+      summary_invoice_id: 55,
+      invoice_id: null,
+    });
     (ApiClient.post as jest.Mock).mockResolvedValueOnce(storedPdf);
 
     const result = await PDFsService.createPdfForSummaryInvoice(55, "Finanzamt");
 
-    expect(ApiClient.post).toHaveBeenCalledWith("/pdfs/summary-invoices/55", { recipient_name: "Finanzamt" });
+    expect(ApiClient.post).toHaveBeenCalledWith("/pdfs/summary-invoices/55", {
+      recipient_name: "Finanzamt",
+    });
     expect(result.filename).toBe("summaryInvoice-55.pdf");
     expect(result.type).toBe("summary_invoice");
   });

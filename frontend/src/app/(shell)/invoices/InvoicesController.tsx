@@ -10,13 +10,13 @@ export default async function InvoicesController() {
 
   try {
     invoices = await InvoicesService.list();
-  } catch (error) {
+  } catch {
     // fall back to empty list; container shows empty state
   }
 
   try {
     summaryInvoices = await SummaryInvoicesService.getSummaryInvoiceList();
-  } catch (error) {
+  } catch {
     // optional: ignore and keep empty list
   }
 

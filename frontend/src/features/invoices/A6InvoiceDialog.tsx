@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import type { Invoice } from "@/types/invoice";
 import { PDFsService } from "@/services/pdfs";
@@ -104,7 +110,8 @@ export const A6InvoiceDialog: React.FC<A6InvoiceDialogProps> = ({
               ) : (
                 <ul className="divide-y">
                   {invoices.map((invoice) => {
-                    const numericId = typeof invoice.id === "string" ? Number(invoice.id) : invoice.id;
+                    const numericId =
+                      typeof invoice.id === "string" ? Number(invoice.id) : invoice.id;
                     const checked = selectedInvoiceIds.includes(Number(numericId));
                     return (
                       <li

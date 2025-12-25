@@ -51,7 +51,7 @@ export const SummaryInvoicesTable: React.FC<SummaryInvoicesTableProps> = ({
             <TableCaption>
               {hasData
                 ? `${summaryInvoices.length} Sammelrechnung(en)`
-                : emptyMessage ?? "Keine Sammelrechnungen gefunden"}
+                : (emptyMessage ?? "Keine Sammelrechnungen gefunden")}
             </TableCaption>
             <TableHeader>
               <TableRow>

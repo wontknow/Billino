@@ -37,12 +37,7 @@ const setup = async () => {
 
   const user = userEvent.setup();
   render(
-    <SummaryInvoiceDialog
-      isOpen
-      invoices={invoices}
-      onClose={jest.fn()}
-      onSuccess={jest.fn()}
-    />
+    <SummaryInvoiceDialog isOpen invoices={invoices} onClose={jest.fn()} onSuccess={jest.fn()} />
   );
 
   // wait for profiles to load
@@ -74,9 +69,6 @@ describe("SummaryInvoiceDialog", () => {
       });
     });
 
-    expect(PDFsService.createPdfForSummaryInvoice).toHaveBeenCalledWith(
-      99,
-      "Finanzamt Mustermann"
-    );
+    expect(PDFsService.createPdfForSummaryInvoice).toHaveBeenCalledWith(99, "Finanzamt Mustermann");
   });
 });

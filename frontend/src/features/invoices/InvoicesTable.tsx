@@ -65,7 +65,9 @@ export const InvoicesTable: React.FC<InvoicesTableProps> = ({
         <div className="h-full overflow-auto">
           <Table>
             <TableCaption>
-              {hasData ? `${invoices.length} Rechnung(en)` : emptyMessage ?? "Keine Rechnungen gefunden"}
+              {hasData
+                ? `${invoices.length} Rechnung(en)`
+                : (emptyMessage ?? "Keine Rechnungen gefunden")}
             </TableCaption>
             <TableHeader>
               <TableRow>

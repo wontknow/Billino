@@ -50,9 +50,8 @@ export const InvoicesContainer: React.FC<InvoicesContainerProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<TabKey>("invoices");
   const [invoicesState, setInvoicesState] = useState<Invoice[]>(invoices);
-  const [summaryInvoicesState, setSummaryInvoicesState] = useState<SummaryInvoiceCompact[]>(
-    summaryInvoices
-  );
+  const [summaryInvoicesState, setSummaryInvoicesState] =
+    useState<SummaryInvoiceCompact[]>(summaryInvoices);
   const [isPdfOpen, setIsPdfOpen] = useState(false);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [pdfFilename, setPdfFilename] = useState("document.pdf");
@@ -107,7 +106,7 @@ export const InvoicesContainer: React.FC<InvoicesContainerProps> = ({
         setPdfBlob(normalized.blob);
         setPdfFilename(normalized.filename);
         setIsPdfOpen(true);
-      } catch (error) {
+      } catch {
         setErrorMessage("PDF konnte nicht geladen werden (ggf. noch nicht erzeugt).");
       } finally {
         setIsPdfLoading(false);
@@ -126,7 +125,7 @@ export const InvoicesContainer: React.FC<InvoicesContainerProps> = ({
         setPdfBlob(normalized.blob);
         setPdfFilename(normalized.filename);
         setIsPdfOpen(true);
-      } catch (error) {
+      } catch {
         setErrorMessage("Sammelrechnungs-PDF konnte nicht geladen werden.");
       } finally {
         setIsPdfLoading(false);

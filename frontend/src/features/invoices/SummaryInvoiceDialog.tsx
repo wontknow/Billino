@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,7 +15,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import type { Invoice } from "@/types/invoice";
 import type { Profile } from "@/types/profile";
@@ -127,12 +132,11 @@ export const SummaryInvoiceDialog: React.FC<SummaryInvoiceDialogProps> = ({
       });
 
       // Fire-and-forget PDF generation
-      PDFsService.createPdfForSummaryInvoice(
-        summary.id,
-        recipientName || undefined
-      ).catch((error) => {
-        log.warn("PDF creation failed (non-blocking)", error);
-      });
+      PDFsService.createPdfForSummaryInvoice(summary.id, recipientName || undefined).catch(
+        (error) => {
+          log.warn("PDF creation failed (non-blocking)", error);
+        }
+      );
 
       setAlert({ type: "success", message: "Sammelrechnung erstellt." });
       onSuccess?.(summary.id);
@@ -224,7 +228,8 @@ export const SummaryInvoiceDialog: React.FC<SummaryInvoiceDialogProps> = ({
               ) : (
                 <ul className="divide-y">
                   {filteredInvoices.map((invoice) => {
-                    const numericId = typeof invoice.id === "string" ? Number(invoice.id) : invoice.id;
+                    const numericId =
+                      typeof invoice.id === "string" ? Number(invoice.id) : invoice.id;
                     const checked = selectedInvoiceIds.includes(Number(numericId));
                     return (
                       <li

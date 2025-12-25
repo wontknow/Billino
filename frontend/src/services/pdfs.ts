@@ -80,7 +80,10 @@ export class PDFsService {
   static async createPdfForA6Invoices(invoiceList: number[]): Promise<PdfBlob> {
     log.info(`Creating A6 PDF for Invoices: ${invoiceList.join(", ")}`);
     // Backend expects a bare array body and no trailing slash on the endpoint
-    const pdfResponse: StoredPDF = await ApiClient.post<StoredPDF>(`/pdfs/a6-invoices`, invoiceList);
+    const pdfResponse: StoredPDF = await ApiClient.post<StoredPDF>(
+      `/pdfs/a6-invoices`,
+      invoiceList
+    );
     log.info(`A6 PDF created for Invoices: ${invoiceList.join(", ")}, PDF ID: ${pdfResponse.id}`);
     return PDFsService.convertBase64ToPdfBlob(pdfResponse);
   }

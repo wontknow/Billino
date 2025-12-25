@@ -40,16 +40,25 @@ const useObjectUrl = (blob: Blob | null) => {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!blob) {
-      setObjectUrl(null);
-      return;
+    // Clean up previous URL
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl);
     }
-    const url = URL.createObjectURL(blob);
-    setObjectUrl(url);
-    return () => {
-      URL.revokeObjectURL(url);
+
+    // Create new URL if blob exists
+    if (blob) {
+      const url = URL.createObjectURL(blob);
+      setObjectUrl(url);
+    } else {
       setObjectUrl(null);
+    }
+
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blob]);
 
   return objectUrl;
@@ -68,10 +77,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
 }) => {
   const objectUrl = useObjectUrl(blob);
 
-  const effectiveFilename = useMemo(
-    () => filename?.trim() || "document.pdf",
-    [filename]
-  );
+  const effectiveFilename = useMemo(() => filename?.trim() || "document.pdf", [filename]);
 
   const handleDownload = () => {
     if (!objectUrl) return;
@@ -111,8 +117,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
       aria-modal="true"
       aria-label={effectiveFilename}
       className={
-        className?.backdrop ??
-        "fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+        className?.backdrop ?? "fixed inset-0 z-50 flex items-center justify-center bg-black/70"
       }
     >
       <div
@@ -122,24 +127,13 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
         }
       >
         <header
-          className={
-            className?.header ??
-            "flex items-center justify-between border-b px-4 py-3"
-          }
+          className={className?.header ?? "flex items-center justify-between border-b px-4 py-3"}
         >
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-gray-800">
-              {effectiveFilename}
-            </span>
-            {isLoading && (
-              <span className="text-xs text-gray-500">{t.loading}</span>
-            )}
+            <span className="font-semibold text-gray-800">{effectiveFilename}</span>
+            {isLoading && <span className="text-xs text-gray-500">{t.loading}</span>}
           </div>
-          <div
-            className={
-              className?.actions ?? "flex items-center gap-2"
-            }
-          >
+          <div className={className?.actions ?? "flex items-center gap-2"}>
             <button
               type="button"
               onClick={handleOpenExternal}
@@ -166,11 +160,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
           </div>
         </header>
 
-        <div
-          className={
-            className?.body ?? "relative flex-1 bg-gray-100"
-          }
-        >
+        <div className={className?.body ?? "relative flex-1 bg-gray-100"}>
           {isLoading && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70">
               <span className="text-sm text-gray-600">{t.loading}</span>
