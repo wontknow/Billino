@@ -17,16 +17,45 @@ import type { Invoice } from "@/types/invoice";
 
 interface InvoicesTableProps {
   invoices: Invoice[];
+  onInvoiceSelect?: (invoiceId: Invoice["id"]) => void;
+  onRefresh?: () => void | Promise<void>;
+  onCreateA6Pdf?: () => void;
+  isRefreshing?: boolean;
   emptyMessage?: React.ReactNode;
 }
 
-export const InvoicesTable: React.FC<InvoicesTableProps> = ({ invoices, emptyMessage }) => {
+export const InvoicesTable: React.FC<InvoicesTableProps> = ({
+  invoices,
+  emptyMessage,
+  onInvoiceSelect,
+  onRefresh,
+  onCreateA6Pdf,
+  isRefreshing,
+}) => {
   const hasData = invoices.length > 0;
+
+  const handleRowClick = (id: Invoice["id"]) => {
+    if (!onInvoiceSelect) return;
+    onInvoiceSelect(id);
+  };
+
   return (
     <Card className="w-full mx-auto flex flex-col overflow-hidden max-w-screen-lg md:max-w-screen-xl 2xl:max-w-screen-2xl h-[70vh] md:h-[75vh] lg:h-[80vh]">
-      <CardHeader>
-        <CardTitle>Rechnungen</CardTitle>
-        <CardAction>
+      <CardHeader className="flex flex-row items-center justify-between gap-3">
+        <div className="space-y-1">
+          <CardTitle>Rechnungen</CardTitle>
+        </div>
+        <CardAction className="flex gap-2">
+          {onRefresh && (
+            <Button variant="outline" onClick={onRefresh} disabled={isRefreshing}>
+              {isRefreshing ? "Aktualisiert…" : "Aktualisieren"}
+            </Button>
+          )}
+          {onCreateA6Pdf && (
+            <Button variant="outline" onClick={onCreateA6Pdf}>
+              A6 PDF
+            </Button>
+          )}
           <Button asChild>
             <Link href="/invoices/create">Neue Rechnung</Link>
           </Button>
@@ -36,9 +65,7 @@ export const InvoicesTable: React.FC<InvoicesTableProps> = ({ invoices, emptyMes
         <div className="h-full overflow-auto">
           <Table>
             <TableCaption>
-              {hasData
-                ? `${invoices.length} Rechnung(en)`
-                : (emptyMessage ?? "Keine Rechnungen gefunden")}
+              {hasData ? `${invoices.length} Rechnung(en)` : emptyMessage ?? "Keine Rechnungen gefunden"}
             </TableCaption>
             <TableHeader>
               <TableRow>
@@ -49,7 +76,19 @@ export const InvoicesTable: React.FC<InvoicesTableProps> = ({ invoices, emptyMes
             </TableHeader>
             <TableBody>
               {invoices.map((inv) => (
-                <TableRow key={inv.id}>
+                <TableRow
+                  key={inv.id}
+                  role={onInvoiceSelect ? "button" : undefined}
+                  className={onInvoiceSelect ? "cursor-pointer" : undefined}
+                  tabIndex={onInvoiceSelect ? 0 : -1}
+                  onClick={() => handleRowClick(inv.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleRowClick(inv.id);
+                    }
+                  }}
+                >
                   <TableCell className="font-medium">{inv.number}</TableCell>
                   <TableCell>{formatDate(inv.date)}</TableCell>
                   <TableCell>{formatAmount(inv.total_amount)}</TableCell>
