@@ -85,31 +85,22 @@ See the individual endpoint documentation for specific error responses.
     """,
     lifespan=lifespan,
     openapi_tags=[
-        {
-            "name": "health",
-            "description": "Health check endpoints"
-        },
-        {
-            "name": "customers",
-            "description": "Manage customers/invoice recipients"
-        },
+        {"name": "health", "description": "Health check endpoints"},
+        {"name": "customers", "description": "Manage customers/invoice recipients"},
         {
             "name": "profiles",
-            "description": "Manage seller/company profiles with tax settings"
+            "description": "Manage seller/company profiles with tax settings",
         },
-        {
-            "name": "invoices",
-            "description": "Create and manage individual invoices"
-        },
+        {"name": "invoices", "description": "Create and manage individual invoices"},
         {
             "name": "summary_invoices",
-            "description": "Create and manage summary invoices (Sammelrechnungen)"
+            "description": "Create and manage summary invoices (Sammelrechnungen)",
         },
         {
             "name": "PDFs",
-            "description": "Generate and manage PDF representations of invoices"
-        }
-    ]
+            "description": "Generate and manage PDF representations of invoices",
+        },
+    ],
 )
 
 # CORS – alles über .env steuern

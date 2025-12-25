@@ -23,16 +23,16 @@ router = APIRouter(prefix="/pdfs", tags=["PDFs"])
 def create_invoice_pdf(invoice_id: int, session: Session = Depends(get_session)):
     """
     Generate and store PDF for a single invoice.
-    
+
     Creates a PDF representation of an invoice and stores it in the database.
     The PDF is returned as base64-encoded content.
-    
+
     **Path Parameters:**
     - `invoice_id` (integer, required): ID of the invoice to convert to PDF
-    
+
     **Returns:**
     - StoredPDFRead object with base64-encoded PDF content
-    
+
     **Example Response (201):**
     ```json
     {
@@ -44,7 +44,7 @@ def create_invoice_pdf(invoice_id: int, session: Session = Depends(get_session))
         "summary_invoice_id": null
     }
     ```
-    
+
     **Note:** The PDF content is base64-encoded. Decode before saving to file.
     """
     # Check if invoice exists
@@ -101,27 +101,27 @@ def create_summary_invoice_pdf(
 ):
     """
     Generate and store PDF for a summary invoice.
-    
+
     Creates a PDF representation of a summary invoice (Sammelrechnung) and stores it in the database.
     Optionally accepts a recipient name to be displayed in the PDF.
-    
+
     **Path Parameters:**
     - `summary_invoice_id` (integer, required): ID of the summary invoice to convert to PDF
-    
+
     **Request Body (optional):**
     - `recipient_data` (object, optional): Optional recipient information
         - `recipient_name` (string, optional): Name to display as recipient in PDF
-    
+
     **Returns:**
     - StoredPDFRead object with base64-encoded PDF content
-    
+
     **Example Request Body (optional):**
     ```json
     {
         "recipient_name": "Tax Authority"
     }
     ```
-    
+
     **Example Response (201):**
     ```json
     {
@@ -133,7 +133,7 @@ def create_summary_invoice_pdf(
         "summary_invoice_id": 1
     }
     ```
-    
+
     **Note:** The PDF content is base64-encoded. Decode before saving to file.
     """
     # Check if summary invoice exists
@@ -196,19 +196,19 @@ def create_a6_invoices_pdf(
 ):
     """
     Generate and store PDF with multiple invoices in A6 format on A4 pages.
-    
+
     Creates a multi-page PDF with multiple invoices formatted on A4 pages
     (A6 format allows ~4 invoices per page). Useful for batch printing.
-    
+
     **Request Body:**
     ```json
     [1, 2, 3, 4, 5]
     ```
     Or as form data: `invoice_ids=1&invoice_ids=2&invoice_ids=3`
-    
+
     **Returns:**
     - StoredPDFRead object with base64-encoded PDF content
-    
+
     **Example Response (201):**
     ```json
     {
@@ -220,7 +220,7 @@ def create_a6_invoices_pdf(
         "summary_invoice_id": null
     }
     ```
-    
+
     **Note:** The PDF content is base64-encoded. Decode before saving to file.
     """
     if not invoice_ids:
@@ -278,12 +278,12 @@ def create_a6_invoices_pdf(
 def get_all_pdfs(session: Session = Depends(get_session)):
     """
     List all stored PDFs.
-    
+
     Retrieves a list of all PDF records stored in the database.
-    
+
     **Returns:**
     - List of StoredPDFRead objects
-    
+
     **Example Response (200):**
     ```json
     [
@@ -315,12 +315,12 @@ def get_all_pdfs(session: Session = Depends(get_session)):
 def get_a6_pdfs(session: Session = Depends(get_session)):
     """
     List all A6 batch PDFs.
-    
+
     Retrieves only PDFs of type 'a6_invoices' (batch invoice PDFs).
-    
+
     **Returns:**
     - List of StoredPDFRead objects with type 'a6_invoices'
-    
+
     **Example Response (200):**
     ```json
     [
@@ -344,15 +344,15 @@ def get_a6_pdfs(session: Session = Depends(get_session)):
 def get_pdf_by_invoice_id(invoice_id: int, session: Session = Depends(get_session)):
     """
     Get PDF by invoice ID.
-    
+
     Retrieves the PDF associated with a specific invoice.
-    
+
     **Path Parameters:**
     - `invoice_id` (integer, required): ID of the invoice
-    
+
     **Returns:**
     - StoredPDFRead object
-    
+
     **Example Response (200):**
     ```json
     {
@@ -371,7 +371,7 @@ def get_pdf_by_invoice_id(invoice_id: int, session: Session = Depends(get_sessio
     if not pdf:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No PDF found for invoice ID {invoice_id}"
+            detail=f"No PDF found for invoice ID {invoice_id}",
         )
     return pdf
 
@@ -382,15 +382,15 @@ def get_pdf_by_summary_invoice_id(
 ):
     """
     Get PDF by summary invoice ID.
-    
+
     Retrieves the PDF associated with a specific summary invoice.
-    
+
     **Path Parameters:**
     - `summary_invoice_id` (integer, required): ID of the summary invoice
-    
+
     **Returns:**
     - StoredPDFRead object
-    
+
     **Example Response (200):**
     ```json
     {
@@ -409,7 +409,7 @@ def get_pdf_by_summary_invoice_id(
     if not pdf:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No PDF found for summary invoice ID {summary_invoice_id}"
+            detail=f"No PDF found for summary invoice ID {summary_invoice_id}",
         )
     return pdf
 
@@ -418,15 +418,15 @@ def get_pdf_by_summary_invoice_id(
 def get_pdf_by_id(pdf_id: int, session: Session = Depends(get_session)):
     """
     Get a single PDF by ID.
-    
+
     Retrieves a specific PDF record with its base64-encoded content.
-    
+
     **Path Parameters:**
     - `pdf_id` (integer, required): ID of the PDF to retrieve
-    
+
     **Returns:**
     - StoredPDFRead object
-    
+
     **Example Response (200):**
     ```json
     {
@@ -451,12 +451,12 @@ def get_pdf_by_id(pdf_id: int, session: Session = Depends(get_session)):
 def delete_pdf(pdf_id: int, session: Session = Depends(get_session)):
     """
     Delete a PDF by ID.
-    
+
     Removes a PDF record from the database. The associated invoice/summary invoice is NOT deleted.
-    
+
     **Path Parameters:**
     - `pdf_id` (integer, required): ID of the PDF to delete
-    
+
     **Returns:**
     - No content (HTTP 204)
     """

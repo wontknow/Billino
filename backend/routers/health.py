@@ -10,12 +10,12 @@ router = APIRouter()
 def health():
     """
     Health check endpoint.
-    
+
     Returns the current status of the API.
-    
+
     **Returns:**
     - `status` (string): API status ("ok" if healthy)
-    
+
     **Example Response:**
     ```json
     {

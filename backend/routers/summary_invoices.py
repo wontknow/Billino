@@ -23,17 +23,17 @@ def create_summary(
 ):
     """
     Create a new summary invoice (Sammelrechnung).
-    
+
     Combines multiple regular invoices into a single summary invoice.
     All invoices must belong to the same profile.
-    
+
     **Request Body:**
     - `profile_id` (integer, required): ID of the seller profile
     - `invoice_ids` (array of integers, required): IDs of invoices to include (at least one)
-    
+
     **Returns:**
     - SummaryInvoiceRead object with calculated totals
-    
+
     **Example Request:**
     ```json
     {
@@ -41,7 +41,7 @@ def create_summary(
         "invoice_ids": [1, 2, 3]
     }
     ```
-    
+
     **Example Response (201):**
     ```json
     {
@@ -71,12 +71,12 @@ def create_summary(
 def list_summaries(session: Session = Depends(get_session)):
     """
     List all summary invoices.
-    
+
     Retrieves a list of all summary invoices with their associated regular invoice IDs.
-    
+
     **Returns:**
     - List of SummaryInvoiceRead objects
-    
+
     **Example Response (200):**
     ```json
     [
@@ -125,15 +125,15 @@ def list_summaries(session: Session = Depends(get_session)):
 def list_summaries_by_profile(profile_id: int, session: Session = Depends(get_session)):
     """
     List all summary invoices for a specific profile.
-    
+
     Retrieves all summary invoices created for a given seller profile.
-    
+
     **Path Parameters:**
     - `profile_id` (integer, required): ID of the seller profile
-    
+
     **Returns:**
     - List of SummaryInvoiceRead objects for the specified profile
-    
+
     **Example Response (200):**
     ```json
     [
@@ -183,15 +183,15 @@ def list_summaries_by_profile(profile_id: int, session: Session = Depends(get_se
 def read_summary(summary_id: int, session: Session = Depends(get_session)):
     """
     Get a single summary invoice by ID.
-    
+
     Retrieves detailed information about a specific summary invoice including its associated invoice IDs.
-    
+
     **Path Parameters:**
     - `summary_id` (integer, required): ID of the summary invoice to retrieve
-    
+
     **Returns:**
     - SummaryInvoiceRead object
-    
+
     **Example Response (200):**
     ```json
     {
@@ -244,13 +244,13 @@ def read_summary(summary_id: int, session: Session = Depends(get_session)):
 def delete_summary(summary_id: int, session: Session = Depends(get_session)):
     """
     Delete a summary invoice.
-    
+
     Removes a summary invoice and all its associated links to regular invoices.
     Note: The regular invoices themselves are NOT deleted.
-    
+
     **Path Parameters:**
     - `summary_id` (integer, required): ID of the summary invoice to delete
-    
+
     **Returns:**
     - No content (HTTP 204)
     """

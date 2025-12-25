@@ -12,9 +12,9 @@ router = APIRouter(prefix="/profiles", tags=["profiles"])
 def create_profile(profile: Profile, session: Session = Depends(get_session)):
     """
     Create a new profile.
-    
+
     Creates a new company/seller profile. Required for creating invoices.
-    
+
     **Request Body:**
     - `name` (string, required): Company/profile name
     - `address` (string, required): Company address
@@ -23,10 +23,10 @@ def create_profile(profile: Profile, session: Session = Depends(get_session)):
     - `tax_number` (string, optional): Tax/VAT number
     - `include_tax` (boolean, optional): Whether to include VAT (default: true)
     - `default_tax_rate` (float, optional): Default VAT rate as decimal (default: 0.19)
-    
+
     **Returns:**
     - Profile object with assigned ID
-    
+
     **Example Request:**
     ```json
     {
@@ -39,7 +39,7 @@ def create_profile(profile: Profile, session: Session = Depends(get_session)):
         "default_tax_rate": 0.19
     }
     ```
-    
+
     **Example Response (201):**
     ```json
     {
@@ -69,12 +69,12 @@ def create_profile(profile: Profile, session: Session = Depends(get_session)):
 def list_profiles(session: Session = Depends(get_session)):
     """
     List all profiles.
-    
+
     Retrieves a list of all company/seller profiles.
-    
+
     **Returns:**
     - List of Profile objects
-    
+
     **Example Response (200):**
     ```json
     [
@@ -105,21 +105,21 @@ def search_profiles(
 ):
     """
     Search for profiles by name (case-insensitive substring match).
-    
+
     Performs a case-insensitive substring search on profile names.
-    
+
     **Query Parameters:**
     - `q` (string, required): Search query (minimum 2 characters)
     - `limit` (integer, optional): Maximum number of results (default=10, max=50)
-    
+
     **Returns:**
     - List of matching Profile objects (limited to max results)
-    
+
     **Example Request:**
     ```
     GET /profiles/search?q=tech&limit=5
     ```
-    
+
     **Example Response (200):**
     ```json
     [
@@ -153,15 +153,15 @@ def search_profiles(
 def get_profile(profile_id: int, session: Session = Depends(get_session)):
     """
     Get a single profile by ID.
-    
+
     Retrieves detailed information about a specific profile.
-    
+
     **Path Parameters:**
     - `profile_id` (integer, required): ID of the profile to retrieve
-    
+
     **Returns:**
     - Profile object
-    
+
     **Example Response (200):**
     ```json
     {
@@ -193,12 +193,12 @@ def update_profile(
 ):
     """
     Update an existing profile.
-    
+
     Updates the profile record with the provided data.
-    
+
     **Path Parameters:**
     - `profile_id` (integer, required): ID of the profile to update
-    
+
     **Request Body:**
     - `name` (string, required): Company/profile name
     - `address` (string, required): Company address
@@ -207,10 +207,10 @@ def update_profile(
     - `tax_number` (string, optional): Tax/VAT number
     - `include_tax` (boolean, optional): Whether to include VAT
     - `default_tax_rate` (float, optional): Default VAT rate as decimal
-    
+
     **Returns:**
     - Updated Profile object
-    
+
     **Example Request:**
     ```json
     {
@@ -245,12 +245,12 @@ def update_profile(
 def delete_profile(profile_id: int, session: Session = Depends(get_session)):
     """
     Delete a profile.
-    
+
     Removes a profile record from the database. All related invoices must be deleted first.
-    
+
     **Path Parameters:**
     - `profile_id` (integer, required): ID of the profile to delete
-    
+
     **Returns:**
     - No content (HTTP 204)
     """

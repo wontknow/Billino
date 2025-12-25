@@ -12,17 +12,17 @@ router = APIRouter(prefix="/customers", tags=["customers"])
 def create_customer(customer: Customer, session: Session = Depends(get_session)):
     """
     Create a new customer.
-    
+
     Creates a new customer record in the database.
-    
+
     **Request Body:**
     - `name` (string, required): Customer name (must not be empty)
     - `address` (string, optional): Customer address
     - `city` (string, optional): Customer city
-    
+
     **Returns:**
     - Customer object with assigned ID
-    
+
     **Example Request:**
     ```json
     {
@@ -31,7 +31,7 @@ def create_customer(customer: Customer, session: Session = Depends(get_session))
         "city": "Berlin"
     }
     ```
-    
+
     **Example Response (201):**
     ```json
     {
@@ -60,12 +60,12 @@ def create_customer(customer: Customer, session: Session = Depends(get_session))
 def list_customers(session: Session = Depends(get_session)):
     """
     List all customers.
-    
+
     Retrieves a list of all customers in the database.
-    
+
     **Returns:**
     - List of Customer objects
-    
+
     **Example Response (200):**
     ```json
     [
@@ -98,21 +98,21 @@ def search_customers(
 ):
     """
     Search for customers by name (case-insensitive substring match).
-    
+
     Performs a case-insensitive substring search on customer names.
-    
+
     **Query Parameters:**
     - `q` (string, required): Search query (minimum 2 characters)
     - `limit` (integer, optional): Maximum number of results (default=10, max=50)
-    
+
     **Returns:**
     - List of matching Customer objects (limited to max results)
-    
+
     **Example Request:**
     ```
     GET /customers/search?q=john&limit=5
     ```
-    
+
     **Example Response (200):**
     ```json
     [
@@ -146,20 +146,20 @@ def update_customer(
 ):
     """
     Update an existing customer.
-    
+
     Updates the customer record with the provided data. Only provided fields are updated.
-    
+
     **Path Parameters:**
     - `customer_id` (integer, required): ID of the customer to update
-    
+
     **Request Body:**
     - `name` (string, optional): Customer name
     - `address` (string, optional): Customer address
     - `city` (string, optional): Customer city
-    
+
     **Returns:**
     - Updated Customer object
-    
+
     **Example Request:**
     ```json
     {
@@ -168,7 +168,7 @@ def update_customer(
         "city": "Hamburg"
     }
     ```
-    
+
     **Example Response (200):**
     ```json
     {
@@ -201,15 +201,15 @@ def update_customer(
 def delete_customer(customer_id: int, session: Session = Depends(get_session)):
     """
     Delete a customer.
-    
+
     Removes the customer record from the database.
-    
+
     **Path Parameters:**
     - `customer_id` (integer, required): ID of the customer to delete
-    
+
     **Returns:**
     - No content (HTTP 204)
-    
+
     **Example Response:**
     - Empty response body
     """

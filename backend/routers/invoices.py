@@ -27,16 +27,16 @@ router = APIRouter(prefix="/invoices", tags=["invoices"])
 def get_invoice_number_preview(session: Session = Depends(get_session)):
     """
     Get a preview of the next invoice number.
-    
+
     Returns what the next automatically generated invoice number will be.
     Useful for frontend to show users what number their invoice will get.
-    
+
     Note: Invoice numbers are sequential across all profiles (German tax law compliance).
     Format: "YY | NNN" (e.g., "25 | 001")
-    
+
     **Returns:**
     - `preview_number` (string): The next invoice number in format "YY | NNN"
-    
+
     **Example Response (200):**
     ```json
     {
@@ -54,10 +54,10 @@ def get_invoice_number_preview(session: Session = Depends(get_session)):
 def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_session)):
     """
     Create a new invoice.
-    
+
     Creates a new invoice with automatic invoice number generation. The request must include
     at least one invoice item. The sum of invoice items must match the total_amount (within 0.01 tolerance).
-    
+
     **Request Body:**
     - `date` (string, required): Invoice date (format: "YYYY-MM-DD")
     - `customer_id` (integer, required): ID of the customer
@@ -71,10 +71,10 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
     - `include_tax` (boolean, optional): Whether to include VAT. If not provided, inherits from profile
     - `tax_rate` (float, optional): VAT rate as decimal (0.19 for 19%). Required if include_tax=true
     - `is_gross_amount` (boolean, optional): Whether total_amount is gross or net (default: false = net)
-    
+
     **Returns:**
     - InvoiceRead object with assigned invoice number and ID
-    
+
     **Example Request:**
     ```json
     {
@@ -94,7 +94,7 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
         "is_gross_amount": true
     }
     ```
-    
+
     **Example Response (201):**
     ```json
     {
@@ -263,12 +263,12 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
 def read_invoices(session: Session = Depends(get_session)):
     """
     List all invoices.
-    
+
     Retrieves a list of all invoices in the database with their line items.
-    
+
     **Returns:**
     - List of InvoiceRead objects with all related invoice items
-    
+
     **Example Response (200):**
     ```json
     [
@@ -332,15 +332,15 @@ def read_invoices(session: Session = Depends(get_session)):
 def read_invoice(invoice_id: int, session: Session = Depends(get_session)):
     """
     Get a single invoice by ID.
-    
+
     Retrieves detailed information about a specific invoice including all line items.
-    
+
     **Path Parameters:**
     - `invoice_id` (integer, required): ID of the invoice to retrieve
-    
+
     **Returns:**
     - InvoiceRead object with all related invoice items
-    
+
     **Example Response (200):**
     ```json
     {
@@ -409,15 +409,15 @@ def read_invoice(invoice_id: int, session: Session = Depends(get_session)):
 def delete_invoice(invoice_id: int, session: Session = Depends(get_session)):
     """
     Delete an invoice.
-    
+
     Removes an invoice and all its related line items from the database.
-    
+
     **Path Parameters:**
     - `invoice_id` (integer, required): ID of the invoice to delete
-    
+
     **Returns:**
     - No content (HTTP 204)
-    
+
     **Note:** Deleting an invoice will also remove all associated invoice items.
     """
     logger.info(f"🗑️ DELETE /invoices/{invoice_id} - Deleting invoice")
