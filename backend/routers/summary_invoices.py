@@ -2,6 +2,7 @@
 # Create, Read (list), Read (single), Delete
 
 import os
+import threading
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -15,6 +16,7 @@ from models import (
     SummaryInvoiceRead,
 )
 from services import create_summary_invoice
+from services.pdf_generation_service import generate_pdf_for_summary_invoice
 from utils import logger
 
 LOG_DEV = os.getenv("ENV", "dev").lower() != "prod"
@@ -86,6 +88,45 @@ def create_summary(
             "invoice_count": len(summary.invoice_ids),
         },
     )
+
+    # Trigger PDF generation asynchronously in background thread
+    logger.debug(
+        f"🖨️ Starting background thread for PDF generation (summary {summary_invoice.id})..."
+    )
+
+    def generate_pdf_background():
+        from sqlmodel import Session
+
+        from database import get_engine
+
+        engine = get_engine()
+        bg_session = Session(engine)
+        try:
+            logger.debug(
+                f"🖨️ [THREAD] Generating PDF for summary invoice {summary_invoice.id} in background..."
+            )
+            recipient_name = getattr(summary, "recipient_name", None)
+            result = generate_pdf_for_summary_invoice(
+                bg_session, summary_invoice.id, recipient_name
+            )
+            logger.info(f"✅ [THREAD] PDF generation result: {result}")
+        except Exception as e:
+            logger.error(
+                f"❌ [THREAD] Background PDF generation failed for summary invoice {summary_invoice.id}: {str(e)}",
+                exc_info=True,
+            )
+        finally:
+            bg_session.close()
+
+    pdf_thread = threading.Thread(
+        target=generate_pdf_background,
+        daemon=True,
+        name=f"PDF-Summary-{summary_invoice.id}",
+    )
+    logger.debug(f"🖨️ Thread created: {pdf_thread.name}")
+    pdf_thread.start()
+    logger.debug(f"🖨️ Thread started")
+
     return summary_invoice
 
 

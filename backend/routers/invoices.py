@@ -1,3 +1,5 @@
+import threading
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
@@ -18,6 +20,7 @@ from services import (
     generate_next_invoice_number,
     get_preview_invoice_number,
 )
+from services.pdf_generation_service import generate_pdf_for_invoice
 from utils import logger
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
@@ -235,6 +238,39 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
     logger.info(
         f"✅ Invoice {invoice_number} created successfully (id={db_invoice.id})"
     )
+
+    # Trigger PDF generation asynchronously in background thread
+    logger.debug(
+        f"🖨️ Starting background thread for PDF generation (invoice {db_invoice.id})..."
+    )
+
+    def generate_pdf_background():
+        from sqlmodel import Session
+
+        from database import get_engine
+
+        engine = get_engine()
+        bg_session = Session(engine)
+        try:
+            logger.debug(
+                f"🖨️ [THREAD] Generating PDF for invoice {db_invoice.id} in background..."
+            )
+            result = generate_pdf_for_invoice(bg_session, db_invoice.id)
+            logger.info(f"✅ [THREAD] PDF generation result: {result}")
+        except Exception as e:
+            logger.error(
+                f"❌ [THREAD] Background PDF generation failed for invoice {db_invoice.id}: {str(e)}",
+                exc_info=True,
+            )
+        finally:
+            bg_session.close()
+
+    pdf_thread = threading.Thread(
+        target=generate_pdf_background, daemon=True, name=f"PDF-{db_invoice.id}"
+    )
+    logger.debug(f"🖨️ Thread created: {pdf_thread.name}")
+    pdf_thread.start()
+    logger.debug(f"🖨️ Thread started")
 
     return InvoiceRead(
         id=db_invoice.id,
