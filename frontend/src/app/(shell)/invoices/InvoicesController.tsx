@@ -1,29 +1,24 @@
 import { InvoicesService } from "@/services/invoices";
-import { InvoicesTable } from "@/features/invoices/InvoicesTable";
+import { SummaryInvoicesService } from "@/services/summaryInvoices";
+import { InvoicesContainer } from "@/features/invoices/InvoicesContainer";
+import type { Invoice } from "@/types/invoice";
+import type { SummaryInvoiceCompact } from "@/types/summaryInvoices";
 
 export default async function InvoicesController() {
-  let error: string | null = null;
-  let invoices = [] as Awaited<ReturnType<typeof InvoicesService.list>>;
+  let invoices: Invoice[] = [];
+  let summaryInvoices: SummaryInvoiceCompact[] = [];
+
   try {
     invoices = await InvoicesService.list();
-  } catch (err) {
-    error = err instanceof Error ? err.message : "Unbekannter Fehler";
+  } catch {
+    // fall back to empty list; container shows empty state
   }
 
-  if (error) {
-    return (
-      <InvoicesTable
-        invoices={[]}
-        emptyMessage={
-          <>
-            <span>Fehler beim Laden - Keine Rechnungen gefunden</span>
-            <br />
-            <span className="text-muted-foreground">failed request</span>
-          </>
-        }
-      />
-    );
+  try {
+    summaryInvoices = await SummaryInvoicesService.getSummaryInvoiceList();
+  } catch {
+    // optional: ignore and keep empty list
   }
 
-  return <InvoicesTable invoices={invoices} />;
+  return <InvoicesContainer invoices={invoices} summaryInvoices={summaryInvoices} />;
 }

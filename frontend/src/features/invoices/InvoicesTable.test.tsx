@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { InvoicesTable } from "./InvoicesTable";
 import type { Invoice } from "@/types/invoice";
 
@@ -118,5 +118,28 @@ describe("InvoicesTable", () => {
     render(<InvoicesTable invoices={invoiceUndefined} />);
     // formatAmount should handle undefined and show "—"
     expect(screen.getByText("—")).toBeInTheDocument();
+  });
+
+  it("ruft onInvoiceSelect beim Zeilenklick auf", () => {
+    const onInvoiceSelect = jest.fn();
+    render(<InvoicesTable invoices={sampleInvoices} onInvoiceSelect={onInvoiceSelect} />);
+
+    fireEvent.click(screen.getByText("RE-2025-001"));
+    expect(onInvoiceSelect).toHaveBeenCalledWith(1);
+  });
+
+  it("zeigt Refresh- und A6-Buttons wenn Handler gesetzt sind", () => {
+    render(
+      <InvoicesTable
+        invoices={sampleInvoices}
+        onRefresh={() => {}}
+        onCreateA6Pdf={() => {}}
+        isRefreshing={false}
+      />
+    );
+
+    screen.getByRole("button", { name: "Aktualisieren" });
+    screen.getByRole("button", { name: "A6 PDF" });
+    screen.getByRole("link", { name: "Neue Rechnung" });
   });
 });
