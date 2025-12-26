@@ -50,6 +50,7 @@ class BackgroundPDFGenerator:
                 entity_type="invoice",
             )
         """
+
         def generate_pdf_background():
             """Nested function that runs in the background thread"""
             engine = get_engine()
