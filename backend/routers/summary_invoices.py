@@ -2,7 +2,6 @@
 # Create, Read (list), Read (single), Delete
 
 import os
-import threading
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -16,6 +15,7 @@ from models import (
     SummaryInvoiceRead,
 )
 from services import create_summary_invoice
+from services.background_pdf_generator import BackgroundPDFGenerator
 from services.pdf_generation_service import generate_pdf_for_summary_invoice
 from utils import logger
 
@@ -94,38 +94,14 @@ def create_summary(
         f"🖨️ Starting background thread for PDF generation (summary {summary_invoice.id})..."
     )
 
-    def generate_pdf_background():
-        from sqlmodel import Session
-
-        from database import get_engine
-
-        engine = get_engine()
-        bg_session = Session(engine)
-        try:
-            logger.debug(
-                f"🖨️ [THREAD] Generating PDF for summary invoice {summary_invoice.id} in background..."
-            )
-            recipient_name = getattr(summary, "recipient_name", None)
-            result = generate_pdf_for_summary_invoice(
-                bg_session, summary_invoice.id, recipient_name
-            )
-            logger.info(f"✅ [THREAD] PDF generation result: {result}")
-        except Exception as e:
-            logger.error(
-                f"❌ [THREAD] Background PDF generation failed for summary invoice {summary_invoice.id}: {str(e)}",
-                exc_info=True,
-            )
-        finally:
-            bg_session.close()
-
-    pdf_thread = threading.Thread(
-        target=generate_pdf_background,
-        daemon=True,
-        name=f"PDF-Summary-{summary_invoice.id}",
+    recipient_name = getattr(summary, "recipient_name", None)
+    BackgroundPDFGenerator.generate_in_background(
+        pdf_generation_func=generate_pdf_for_summary_invoice,
+        entity_id=summary_invoice.id,
+        entity_type="summary invoice",
+        thread_name_prefix="PDF-Summary",
+        recipient_name=recipient_name,
     )
-    logger.debug(f"🖨️ Thread created: {pdf_thread.name}")
-    pdf_thread.start()
-    logger.debug(f"🖨️ Thread started")
 
     return summary_invoice
 
