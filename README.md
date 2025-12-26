@@ -31,9 +31,9 @@
 
 
 
-Ein **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trennung – entwickelt für den Einsatz ohne Cloud, aber mit professioneller Architektur und Möglichkeit zur späteren Erweiterung (Hosting, Multi-User, Cloud-Sync).
+Ein over-engineered **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trennung – entwickelt für den Einsatz ohne Cloud, aber mit Möglichkeit zur späteren Erweiterung (Hosting, Multi-User, Cloud-Sync).
 
-**
+
 
 ---
 
