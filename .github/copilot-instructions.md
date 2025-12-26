@@ -34,7 +34,7 @@ Billino is an **over-engineered, offline-capable invoicing application** with cl
    - Use separate read/create models (e.g., `InvoiceRead`, `InvoiceCreate`)
 
 5. **Dependency Inversion Principle (DIP)**
-   - Depend on abstractions (Session) not concrete implementations
+   - Depend on abstractions (SQLModel Session) not concrete implementations
    - Use FastAPI's dependency injection (`Depends(get_session)`)
    - Services should be injected, not instantiated directly in routes
 
