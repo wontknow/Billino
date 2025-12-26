@@ -1,7 +1,29 @@
 import { PDFsService } from "./pdfs";
-import { ApiClient } from "./base";
+import { ApiClient, ApiError } from "./base";
 
-jest.mock("./base");
+// Mock only the ApiClient methods, not the entire module
+jest.mock("./base", () => {
+  const actual = jest.requireActual("./base");
+  return {
+    ...actual,
+    ApiClient: {
+      ...actual.ApiClient,
+      get: jest.fn(),
+      post: jest.fn(),
+    },
+  };
+});
+
+jest.mock("@/lib/logger", () => ({
+  logger: {
+    createScoped: () => ({
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    }),
+  },
+}));
 
 const toBase64 = (input: string) => Buffer.from(input, "utf8").toString("base64");
 
@@ -85,5 +107,145 @@ describe("PDFsService", () => {
     });
     expect(result.filename).toBe("summaryInvoice-55.pdf");
     expect(result.type).toBe("summary_invoice");
+  });
+
+  describe("getPdfByInvoiceIdWithFallback", () => {
+    it("returns PDF successfully when it exists", async () => {
+      const storedPdf = createStoredPdf({ id: 10, invoice_id: 100 });
+      (ApiClient.get as jest.Mock).mockResolvedValueOnce(storedPdf);
+
+      const result = await PDFsService.getPdfByInvoiceIdWithFallback(100);
+
+      expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-invoice/100");
+      expect(result.blob).toBeInstanceOf(Blob);
+      expect(result.filename).toBe("invoice-100.pdf");
+      expect(ApiClient.post).not.toHaveBeenCalled();
+    });
+
+    it("triggers PDF creation when 404 ApiError is returned", async () => {
+      const error = new ApiError(404, "Not Found", { detail: "PDF not found" }, "PDF not found");
+      const createdPdf = createStoredPdf({ id: 11, invoice_id: 100 });
+
+      (ApiClient.get as jest.Mock).mockRejectedValueOnce(error);
+      (ApiClient.post as jest.Mock).mockResolvedValueOnce(createdPdf);
+
+      const result = await PDFsService.getPdfByInvoiceIdWithFallback(100);
+
+      expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-invoice/100");
+      expect(ApiClient.post).toHaveBeenCalledWith("/pdfs/invoices/100", {});
+      expect(result.blob).toBeInstanceOf(Blob);
+      expect(result.filename).toBe("invoice-100.pdf");
+    });
+
+    it("propagates non-404 ApiError without triggering PDF creation", async () => {
+      const error = new ApiError(
+        500,
+        "Internal Server Error",
+        { detail: "Server error" },
+        "Server error"
+      );
+
+      (ApiClient.get as jest.Mock).mockRejectedValueOnce(error);
+
+      await expect(PDFsService.getPdfByInvoiceIdWithFallback(100)).rejects.toThrow(error);
+      expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-invoice/100");
+      expect(ApiClient.post).not.toHaveBeenCalled();
+    });
+
+    it("propagates non-ApiError without triggering PDF creation", async () => {
+      const error = new Error("Network error");
+
+      (ApiClient.get as jest.Mock).mockRejectedValueOnce(error);
+
+      await expect(PDFsService.getPdfByInvoiceIdWithFallback(100)).rejects.toThrow(error);
+      expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-invoice/100");
+      expect(ApiClient.post).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("getPdfBySummaryInvoiceIdWithFallback", () => {
+    it("returns PDF successfully when it exists", async () => {
+      const storedPdf = createStoredPdf({
+        id: 12,
+        type: "summary_invoice",
+        summary_invoice_id: 200,
+        invoice_id: null,
+      });
+      (ApiClient.get as jest.Mock).mockResolvedValueOnce(storedPdf);
+
+      const result = await PDFsService.getPdfBySummaryInvoiceIdWithFallback(200);
+
+      expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-summary/200");
+      expect(result.blob).toBeInstanceOf(Blob);
+      expect(result.filename).toBe("summaryInvoice-200.pdf");
+      expect(ApiClient.post).not.toHaveBeenCalled();
+    });
+
+    it("triggers PDF creation when 404 ApiError is returned", async () => {
+      const error = new ApiError(404, "Not Found", { detail: "PDF not found" }, "PDF not found");
+      const createdPdf = createStoredPdf({
+        id: 13,
+        type: "summary_invoice",
+        summary_invoice_id: 200,
+        invoice_id: null,
+      });
+
+      (ApiClient.get as jest.Mock).mockRejectedValueOnce(error);
+      (ApiClient.post as jest.Mock).mockResolvedValueOnce(createdPdf);
+
+      const result = await PDFsService.getPdfBySummaryInvoiceIdWithFallback(200);
+
+      expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-summary/200");
+      expect(ApiClient.post).toHaveBeenCalledWith("/pdfs/summary-invoices/200", {});
+      expect(result.blob).toBeInstanceOf(Blob);
+      expect(result.filename).toBe("summaryInvoice-200.pdf");
+    });
+
+    it("triggers PDF creation with recipient_name when provided", async () => {
+      const error = new ApiError(404, "Not Found", { detail: "PDF not found" }, "PDF not found");
+      const createdPdf = createStoredPdf({
+        id: 14,
+        type: "summary_invoice",
+        summary_invoice_id: 200,
+        invoice_id: null,
+      });
+
+      (ApiClient.get as jest.Mock).mockRejectedValueOnce(error);
+      (ApiClient.post as jest.Mock).mockResolvedValueOnce(createdPdf);
+
+      const result = await PDFsService.getPdfBySummaryInvoiceIdWithFallback(200, "Test Company");
+
+      expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-summary/200");
+      expect(ApiClient.post).toHaveBeenCalledWith("/pdfs/summary-invoices/200", {
+        recipient_name: "Test Company",
+      });
+      expect(result.blob).toBeInstanceOf(Blob);
+      expect(result.filename).toBe("summaryInvoice-200.pdf");
+    });
+
+    it("propagates non-404 ApiError without triggering PDF creation", async () => {
+      const error = new ApiError(
+        500,
+        "Internal Server Error",
+        { detail: "Server error" },
+        "Server error"
+      );
+
+      (ApiClient.get as jest.Mock).mockRejectedValueOnce(error);
+
+      await expect(PDFsService.getPdfBySummaryInvoiceIdWithFallback(200)).rejects.toThrow(error);
+      expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-summary/200");
+      expect(ApiClient.post).not.toHaveBeenCalled();
+    });
+
+    it("propagates non-ApiError without triggering PDF creation", async () => {
+      const error = new Error("Network error");
+
+      (ApiClient.get as jest.Mock).mockRejectedValueOnce(error);
+
+      await expect(PDFsService.getPdfBySummaryInvoiceIdWithFallback(200)).rejects.toThrow(error);
+      expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-summary/200");
+      expect(ApiClient.post).not.toHaveBeenCalled();
+    });
   });
 });
