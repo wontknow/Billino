@@ -24,7 +24,7 @@ class BackgroundPDFGenerator:
 
     @staticmethod
     def generate_in_background(
-        pdf_generation_func: Callable[[Session, int], bool],
+        pdf_generation_func: Callable[..., bool],
         entity_id: int,
         entity_type: str,
         thread_name_prefix: str = "PDF",
@@ -33,26 +33,23 @@ class BackgroundPDFGenerator:
         """
         Execute a PDF generation function in a background daemon thread.
 
-        **Args:**
-        - pdf_generation_func: Function that takes (session, entity_id, **kwargs) and returns bool
-        - entity_id: ID of the invoice/summary invoice to generate PDF for
-        - entity_type: Type of entity (e.g., "invoice", "summary invoice") for logging
-        - thread_name_prefix: Prefix for the thread name (default: "PDF")
-        - **kwargs: Additional keyword arguments to pass to pdf_generation_func
+        Args:
+            pdf_generation_func: Function that takes (session, entity_id, **kwargs) and returns bool.
+            entity_id: ID of the invoice/summary invoice to generate a PDF for.
+            entity_type: Type of entity (e.g., "invoice", "summary invoice") for logging.
+            thread_name_prefix: Prefix for the thread name (default: "PDF").
+            **kwargs: Additional keyword arguments to pass to pdf_generation_func.
 
-        **Returns:**
-        - threading.Thread: The started daemon thread (for testing purposes)
+        Returns:
+            threading.Thread: The started daemon thread (for testing purposes).
 
-        **Example:**
-        ```python
-        BackgroundPDFGenerator.generate_in_background(
-            pdf_generation_func=generate_pdf_for_invoice,
-            entity_id=invoice.id,
-            entity_type="invoice"
-        )
-        ```
+        Example:
+            BackgroundPDFGenerator.generate_in_background(
+                pdf_generation_func=generate_pdf_for_invoice,
+                entity_id=invoice.id,
+                entity_type="invoice",
+            )
         """
-
         def generate_pdf_background():
             """Nested function that runs in the background thread"""
             engine = get_engine()

@@ -4,8 +4,7 @@ Tests the background PDF generation threading logic.
 """
 
 import threading
-import time
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy.pool import StaticPool
@@ -359,7 +358,7 @@ class TestBackgroundPDFGenerator:
 
         # Verify PDFs were created for all invoices
         for invoice in invoices:
-            stored_pdf = session.exec(
+            session.exec(
                 select(StoredPDF).where(StoredPDF.invoice_id == invoice.id)
             ).first()
             # At least some should succeed (race condition handling means not all may succeed)
