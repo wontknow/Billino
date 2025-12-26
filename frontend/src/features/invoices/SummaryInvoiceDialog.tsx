@@ -125,9 +125,11 @@ export const SummaryInvoiceDialog: React.FC<SummaryInvoiceDialogProps> = ({
         recipient_name: recipientName || undefined,
       });
 
-      // PDF will be generated automatically in the backend
-      // No need for explicit PDF creation anymore
-      log.debug("Summary invoice created, PDF will be generated automatically in background");
+      // PDF will be generated automatically in the backend in an asynchronous/background process.
+      // It may not be immediately available after the summary invoice has been created.
+      log.debug(
+        "Summary invoice created; PDF generation has been triggered in the backend and will complete asynchronously (it may not be immediately available).",
+      );
 
       setAlert({ type: "success", message: "Sammelrechnung erstellt." });
       onSuccess?.(summary.id);
