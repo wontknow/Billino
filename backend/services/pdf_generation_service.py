@@ -4,6 +4,7 @@ Handles asynchronous PDF creation after invoice/summary invoice creation.
 """
 
 import base64
+from typing import Optional
 
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
@@ -101,7 +102,7 @@ def generate_pdf_for_invoice(session: Session, invoice_id: int) -> bool:
 
 
 def generate_pdf_for_summary_invoice(
-    session: Session, summary_invoice_id: int, recipient_name: str = None
+    session: Session, summary_invoice_id: int, recipient_name: Optional[str] = None
 ) -> bool:
     """
     Generate and store PDF for a summary invoice asynchronously.

@@ -32,6 +32,13 @@ class StoredPDF(StoredPDFBase, table=True):
     - Multiple NULL values are allowed in a unique column
     - The constraint only prevents duplicate non-NULL values
     - This allows multiple "other" PDFs while preventing duplicates for specific invoices
+
+    Migration for existing databases:
+    - If deploying to production with existing data, run the deduplication migration first:
+      python backend/scripts/migrate_deduplicate_pdfs.py --dry-run  # Preview changes
+      python backend/scripts/migrate_deduplicate_pdfs.py            # Apply changes
+    - This will keep the most recent PDF and remove older duplicates
+    - After migration, the unique constraints can be safely applied
     """
 
     __tablename__ = "stored_pdfs"

@@ -1,10 +1,17 @@
 """
 Helper class for background PDF generation using daemon threads.
 Centralizes the threading logic for async PDF generation after invoice creation.
+
+Note on daemon threads:
+- Daemon threads are terminated immediately when the main process exits
+- This means PDFs may not complete during server shutdown/restart
+- PDFs can be regenerated on-demand via the lazy-load fallback mechanism
+- For production deployments, consider using a proper task queue (Celery, RQ, etc.)
 """
 
+import atexit
 import threading
-from typing import Callable
+from typing import Callable, Set
 
 from sqlmodel import Session
 
@@ -20,10 +27,21 @@ class BackgroundPDFGenerator:
     1. Creating a new database session in a background thread
     2. Executing PDF generation function with proper error handling
     3. Ensuring session cleanup in all cases
+    4. Tracking active threads for graceful shutdown
+
+    Graceful shutdown behavior:
+    - Tracks all active PDF generation threads
+    - Provides a method to wait for in-flight generations during shutdown
+    - Automatically registered with atexit for process termination
     """
 
-    @staticmethod
+    _active_threads: Set[threading.Thread] = set()
+    _lock = threading.Lock()
+    _shutdown_timeout = 5.0  # Maximum seconds to wait for threads during shutdown
+
+    @classmethod
     def generate_in_background(
+        cls,
         pdf_generation_func: Callable[..., bool],
         entity_id: int,
         entity_type: str,
@@ -68,6 +86,9 @@ class BackgroundPDFGenerator:
                 )
             finally:
                 bg_session.close()
+                # Remove thread from active set when complete
+                with cls._lock:
+                    cls._active_threads.discard(pdf_thread)
 
         # Create and start the daemon thread
         pdf_thread = threading.Thread(
@@ -76,7 +97,67 @@ class BackgroundPDFGenerator:
             name=f"{thread_name_prefix}-{entity_id}",
         )
         logger.debug(f"🖨️ Thread created: {pdf_thread.name}")
+
+        # Track thread in active set
+        with cls._lock:
+            cls._active_threads.add(pdf_thread)
+
         pdf_thread.start()
         logger.debug(f"🖨️ Thread started")
 
         return pdf_thread
+
+    @classmethod
+    def wait_for_active_threads(cls, timeout: float = None) -> bool:
+        """
+        Wait for all active PDF generation threads to complete.
+
+        This method should be called during graceful shutdown to ensure
+        in-flight PDF generations have a chance to complete before the
+        process terminates.
+
+        Args:
+            timeout: Maximum time to wait in seconds. Uses class default if None.
+
+        Returns:
+            bool: True if all threads completed within timeout, False otherwise.
+        """
+        if timeout is None:
+            timeout = cls._shutdown_timeout
+
+        logger.info(f"⏳ Waiting for {len(cls._active_threads)} PDF generation threads...")
+
+        # Get a snapshot of active threads
+        with cls._lock:
+            threads = list(cls._active_threads)
+
+        # Wait for each thread with proportional timeout
+        thread_timeout = timeout / len(threads) if threads else 0
+        for thread in threads:
+            thread.join(timeout=thread_timeout)
+            if thread.is_alive():
+                logger.warning(
+                    f"⚠️ Thread {thread.name} did not complete within timeout"
+                )
+
+        # Check if any threads are still alive
+        remaining = sum(1 for t in threads if t.is_alive())
+        if remaining > 0:
+            logger.warning(
+                f"⚠️ {remaining} PDF generation thread(s) incomplete after {timeout}s timeout"
+            )
+            return False
+
+        logger.info("✅ All PDF generation threads completed")
+        return True
+
+    @classmethod
+    def _shutdown_handler(cls):
+        """Handler called on process exit to wait for active threads."""
+        if cls._active_threads:
+            logger.info("🛑 Shutdown detected - waiting for PDF generation threads...")
+            cls.wait_for_active_threads()
+
+
+# Register shutdown handler to wait for threads on process exit
+atexit.register(BackgroundPDFGenerator._shutdown_handler)

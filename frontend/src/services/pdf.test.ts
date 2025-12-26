@@ -161,6 +161,31 @@ describe("PDFsService", () => {
       expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-invoice/100");
       expect(ApiClient.post).not.toHaveBeenCalled();
     });
+
+    it("handles race condition: retries GET when POST returns 400", async () => {
+      const getError = new ApiError(404, "Not Found", { detail: "PDF not found" }, "PDF not found");
+      const postError = new ApiError(
+        400,
+        "Bad Request",
+        { detail: "PDF already exists" },
+        "PDF already exists"
+      );
+      const retryPdf = createStoredPdf({ id: 12, invoice_id: 100 });
+
+      (ApiClient.get as jest.Mock)
+        .mockRejectedValueOnce(getError) // Initial GET fails with 404
+        .mockResolvedValueOnce(retryPdf); // Retry GET succeeds
+      (ApiClient.post as jest.Mock).mockRejectedValueOnce(postError); // POST fails with 400
+
+      const result = await PDFsService.getPdfByInvoiceIdWithFallback(100);
+
+      expect(ApiClient.get).toHaveBeenCalledTimes(2);
+      expect(ApiClient.get).toHaveBeenNthCalledWith(1, "/pdfs/by-invoice/100");
+      expect(ApiClient.post).toHaveBeenCalledWith("/pdfs/invoices/100", {});
+      expect(ApiClient.get).toHaveBeenNthCalledWith(2, "/pdfs/by-invoice/100");
+      expect(result.blob).toBeInstanceOf(Blob);
+      expect(result.filename).toBe("invoice-100.pdf");
+    });
   });
 
   describe("getPdfBySummaryInvoiceIdWithFallback", () => {
@@ -246,6 +271,36 @@ describe("PDFsService", () => {
       await expect(PDFsService.getPdfBySummaryInvoiceIdWithFallback(200)).rejects.toThrow(error);
       expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-summary/200");
       expect(ApiClient.post).not.toHaveBeenCalled();
+    });
+
+    it("handles race condition: retries GET when POST returns 400", async () => {
+      const getError = new ApiError(404, "Not Found", { detail: "PDF not found" }, "PDF not found");
+      const postError = new ApiError(
+        400,
+        "Bad Request",
+        { detail: "PDF already exists" },
+        "PDF already exists"
+      );
+      const retryPdf = createStoredPdf({
+        id: 15,
+        type: "summary_invoice",
+        summary_invoice_id: 200,
+        invoice_id: null,
+      });
+
+      (ApiClient.get as jest.Mock)
+        .mockRejectedValueOnce(getError) // Initial GET fails with 404
+        .mockResolvedValueOnce(retryPdf); // Retry GET succeeds
+      (ApiClient.post as jest.Mock).mockRejectedValueOnce(postError); // POST fails with 400
+
+      const result = await PDFsService.getPdfBySummaryInvoiceIdWithFallback(200);
+
+      expect(ApiClient.get).toHaveBeenCalledTimes(2);
+      expect(ApiClient.get).toHaveBeenNthCalledWith(1, "/pdfs/by-summary/200");
+      expect(ApiClient.post).toHaveBeenCalledWith("/pdfs/summary-invoices/200", {});
+      expect(ApiClient.get).toHaveBeenNthCalledWith(2, "/pdfs/by-summary/200");
+      expect(result.blob).toBeInstanceOf(Blob);
+      expect(result.filename).toBe("summaryInvoice-200.pdf");
     });
   });
 });
