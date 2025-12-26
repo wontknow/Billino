@@ -71,6 +71,7 @@ def generate_pdf_for_invoice(session: Session, invoice_id: int) -> bool:
         return True
 
     except Exception as e:
+        session.rollback()
         logger.error(
             f"❌ Failed to generate PDF for invoice {invoice_id}: {str(e)}",
             exc_info=True,
@@ -147,6 +148,7 @@ def generate_pdf_for_summary_invoice(
         return True
 
     except Exception as e:
+        session.rollback()
         logger.error(
             f"❌ Failed to generate PDF for summary invoice {summary_invoice_id}: {str(e)}",
             exc_info=True,
