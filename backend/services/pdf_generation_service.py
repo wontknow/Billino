@@ -38,9 +38,15 @@ def generate_pdf_for_invoice(session: Session, invoice_id: int) -> bool:
             return False
 
         # Early check if PDF already exists (optimization to avoid expensive PDF generation)
-        # Note: This check is kept as an optimization to avoid generating the PDF
-        # if we already know one exists. The unique constraint on invoice_id provides
-        # the definitive protection against duplicates during concurrent requests.
+        # Note: There is a small race window between this check and the final commit where
+        # another thread could create the PDF, causing unnecessary generation work. This is
+        # acceptable because:
+        # 1. The unique constraint prevents duplicate PDFs (functionally correct)
+        # 2. PDF generation is async background work (not user-facing)
+        # 3. The race window is small in practice
+        # 4. IntegrityError pattern is simpler than SELECT FOR UPDATE locking
+        # Alternative: Use SELECT FOR UPDATE or advisory locks, but this adds complexity
+        # and potential deadlock scenarios without significant benefit for this use case.
         existing_pdf = session.exec(
             select(StoredPDF).where(StoredPDF.invoice_id == invoice_id)
         ).first()
@@ -129,9 +135,15 @@ def generate_pdf_for_summary_invoice(
             return False
 
         # Early check if PDF already exists (optimization to avoid expensive PDF generation)
-        # Note: This check is kept as an optimization to avoid generating the PDF
-        # if we already know one exists. The unique constraint on summary_invoice_id provides
-        # the definitive protection against duplicates during concurrent requests.
+        # Note: There is a small race window between this check and the final commit where
+        # another thread could create the PDF, causing unnecessary generation work. This is
+        # acceptable because:
+        # 1. The unique constraint prevents duplicate PDFs (functionally correct)
+        # 2. PDF generation is async background work (not user-facing)
+        # 3. The race window is small in practice
+        # 4. IntegrityError pattern is simpler than SELECT FOR UPDATE locking
+        # Alternative: Use SELECT FOR UPDATE or advisory locks, but this adds complexity
+        # and potential deadlock scenarios without significant benefit for this use case.
         existing_pdf = session.exec(
             select(StoredPDF).where(StoredPDF.summary_invoice_id == summary_invoice_id)
         ).first()
