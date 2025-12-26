@@ -53,7 +53,7 @@ export class ApiClient {
       }
 
       log.debug(`📥 RESPONSE: GET ${path} [${res.status}] ✅`);
-      const data = (await res.json()) as Promise<T>;
+      const data = (await res.json()) as T;
       return data;
     } catch (error) {
       if (error instanceof ApiError) {
@@ -91,7 +91,7 @@ export class ApiClient {
       }
 
       log.debug(`📥 RESPONSE: POST ${path} [${res.status}] ✅`);
-      const data = (await res.json()) as Promise<T>;
+      const data = (await res.json()) as T;
       return data;
     } catch (error) {
       if (error instanceof ApiError) {
