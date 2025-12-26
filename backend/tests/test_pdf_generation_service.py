@@ -22,6 +22,9 @@ from services.pdf_generation_service import (
 # Test database setup
 TEST_DB_URL = "sqlite:///:memory:"
 
+# Constants
+PDF_BASE64_HEADER = "JVBERi0"  # Base64 encoded PDF file signature "%PDF-"
+
 
 @pytest.fixture(scope="session")
 def engine():
@@ -55,7 +58,7 @@ def sample_invoice(session):
         name="Test Profile",
         address="Test Address",
         city="Test City",
-        bank_data="IBAN: DE89 3704 0044 0532 0130 00",
+        bank_data="TEST-IBAN-DE89370400440532013000",
         tax_number="123/456/78910",
         include_tax=True,
         default_tax_rate=0.19,
@@ -192,7 +195,7 @@ class TestGeneratePDFForInvoice:
         assert stored_pdf.type == "invoice"
         assert stored_pdf.invoice_id == sample_invoice.id
         assert len(stored_pdf.content) > 0
-        assert stored_pdf.content.startswith("JVBERi0")  # Base64 encoded PDF header
+        assert stored_pdf.content.startswith(PDF_BASE64_HEADER)
 
     def test_pdf_already_exists(self, session, sample_invoice):
         """Test that function returns False when PDF already exists without error"""
@@ -319,7 +322,7 @@ class TestGeneratePDFForSummaryInvoice:
         assert stored_pdf.type == "summary_invoice"
         assert stored_pdf.summary_invoice_id == sample_summary_invoice.id
         assert len(stored_pdf.content) > 0
-        assert stored_pdf.content.startswith("JVBERi0")  # Base64 encoded PDF header
+        assert stored_pdf.content.startswith(PDF_BASE64_HEADER)
 
     def test_successful_pdf_generation_without_recipient(
         self, session, sample_summary_invoice
@@ -431,7 +434,7 @@ class TestGeneratePDFForSummaryInvoice:
                     )
                     results.append(result)
                 else:
-                    # Invoice not found in this session (can happen with concurrency)
+                    # Summary invoice not found in this session (can happen with concurrency)
                     results.append(False)
 
         # Create multiple threads attempting to generate the same PDF
