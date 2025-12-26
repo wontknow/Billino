@@ -246,19 +246,17 @@ class TestGeneratePDFForInvoice:
     def test_concurrent_generation_attempts(self, session, sample_invoice):
         """Test race condition handling with concurrent generation attempts
 
-        Note: The pdf_generation_service uses a check-then-create pattern which has
-        a race condition window where multiple threads can pass the existence check
-        before any commit. Additionally, SQLAlchemy session objects in concurrent
-        threads can have detachment issues. The service handles both gracefully:
-        1. Returns False when the invoice is not found (either doesn't exist or session detached)
-        2. Returns False when PDF already exists
-        3. Returns True only when PDF is successfully created
-        4. All exceptions are caught and logged, returning False
+        This test verifies that the unique constraint on invoice_id prevents
+        duplicate PDFs from being created even when multiple threads attempt
+        to generate PDFs concurrently. The database-level unique constraint
+        ensures atomicity and prevents the race condition that could occur
+        with the check-then-create pattern.
 
         In this test, we verify that:
         - The function handles concurrent access gracefully (no unhandled exceptions)
-        - At least one PDF is successfully created
+        - Exactly one PDF is created (enforced by unique constraint)
         - All threads complete without crashing
+        - The IntegrityError from duplicate inserts is caught and handled
         """
         results = []
 
@@ -288,17 +286,19 @@ class TestGeneratePDFForInvoice:
         for thread in threads:
             thread.join()
 
-        # At least one thread should have succeeded
-        assert True in results
+        # Exactly one thread should have succeeded (due to unique constraint)
+        assert results.count(True) == 1
+        # The rest should have returned False (either duplicate or IntegrityError)
+        assert results.count(False) == 4
 
         # All threads should have completed (returned a result)
         assert len(results) == 5
 
-        # Verify at least one PDF was created
+        # Verify exactly one PDF was created (enforced by unique constraint)
         pdfs = session.exec(
             select(StoredPDF).where(StoredPDF.invoice_id == sample_invoice.id)
         ).all()
-        assert len(pdfs) >= 1
+        assert len(pdfs) == 1
 
 
 class TestGeneratePDFForSummaryInvoice:
@@ -404,19 +404,17 @@ class TestGeneratePDFForSummaryInvoice:
     def test_concurrent_generation_attempts(self, session, sample_summary_invoice):
         """Test race condition handling with concurrent generation attempts
 
-        Note: The pdf_generation_service uses a check-then-create pattern which has
-        a race condition window where multiple threads can pass the existence check
-        before any commit. Additionally, SQLAlchemy session objects in concurrent
-        threads can have detachment issues. The service handles both gracefully:
-        1. Returns False when the invoice is not found (either doesn't exist or session detached)
-        2. Returns False when PDF already exists
-        3. Returns True only when PDF is successfully created
-        4. All exceptions are caught and logged, returning False
+        This test verifies that the unique constraint on summary_invoice_id prevents
+        duplicate PDFs from being created even when multiple threads attempt
+        to generate PDFs concurrently. The database-level unique constraint
+        ensures atomicity and prevents the race condition that could occur
+        with the check-then-create pattern.
 
         In this test, we verify that:
         - The function handles concurrent access gracefully (no unhandled exceptions)
-        - At least one PDF is successfully created
+        - Exactly one PDF is created (enforced by unique constraint)
         - All threads complete without crashing
+        - The IntegrityError from duplicate inserts is caught and handled
         """
         results = []
 
@@ -452,16 +450,18 @@ class TestGeneratePDFForSummaryInvoice:
         for thread in threads:
             thread.join()
 
-        # At least one thread should have succeeded
-        assert True in results
+        # Exactly one thread should have succeeded (due to unique constraint)
+        assert results.count(True) == 1
+        # The rest should have returned False (either duplicate or IntegrityError)
+        assert results.count(False) == 4
 
         # All threads should have completed (returned a result)
         assert len(results) == 5
 
-        # Verify at least one PDF was created
+        # Verify exactly one PDF was created (enforced by unique constraint)
         pdfs = session.exec(
             select(StoredPDF).where(
                 StoredPDF.summary_invoice_id == sample_summary_invoice.id
             )
         ).all()
-        assert len(pdfs) >= 1
+        assert len(pdfs) == 1

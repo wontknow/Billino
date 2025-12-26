@@ -5,6 +5,7 @@ Handles asynchronous PDF creation after invoice/summary invoice creation.
 
 import base64
 
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from models.invoice import Invoice
@@ -62,13 +63,21 @@ def generate_pdf_for_invoice(session: Session, invoice_id: int) -> bool:
             type="invoice", content=pdf_base64, invoice_id=invoice_id
         )
         session.add(stored_pdf)
-        session.commit()
-        session.refresh(stored_pdf)
 
-        logger.info(
-            f"✅ PDF generated for invoice {invoice_id} (PDF ID: {stored_pdf.id}, size: {len(pdf_base64)} bytes)"
-        )
-        return True
+        try:
+            session.commit()
+            session.refresh(stored_pdf)
+            logger.info(
+                f"✅ PDF generated for invoice {invoice_id} (PDF ID: {stored_pdf.id}, size: {len(pdf_base64)} bytes)"
+            )
+            return True
+        except IntegrityError:
+            # Another thread/process created the PDF first
+            session.rollback()
+            logger.debug(
+                f"ℹ️ PDF for invoice {invoice_id} was created by another process"
+            )
+            return False
 
     except Exception as e:
         logger.error(
@@ -138,13 +147,21 @@ def generate_pdf_for_summary_invoice(
             summary_invoice_id=summary_invoice_id,
         )
         session.add(stored_pdf)
-        session.commit()
-        session.refresh(stored_pdf)
 
-        logger.info(
-            f"✅ PDF generated for summary invoice {summary_invoice_id} (PDF ID: {stored_pdf.id}, size: {len(pdf_base64)} bytes, recipient: {recipient_name or 'N/A'})"
-        )
-        return True
+        try:
+            session.commit()
+            session.refresh(stored_pdf)
+            logger.info(
+                f"✅ PDF generated for summary invoice {summary_invoice_id} (PDF ID: {stored_pdf.id}, size: {len(pdf_base64)} bytes, recipient: {recipient_name or 'N/A'})"
+            )
+            return True
+        except IntegrityError:
+            # Another thread/process created the PDF first
+            session.rollback()
+            logger.debug(
+                f"ℹ️ PDF for summary invoice {summary_invoice_id} was created by another process"
+            )
+            return False
 
     except Exception as e:
         logger.error(

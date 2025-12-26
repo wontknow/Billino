@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Index, SQLModel
 
 
 class StoredPDFBase(SQLModel):
@@ -17,9 +17,13 @@ class StoredPDFBase(SQLModel):
 
 
 class StoredPDF(StoredPDFBase, table=True):
-    """Database model for stored PDFs"""
+    """Database model for stored PDFs with unique constraints to prevent duplicates"""
 
     __tablename__ = "stored_pdfs"
+    __table_args__ = (
+        Index("ix_stored_pdfs_invoice_id", "invoice_id", unique=True),
+        Index("ix_stored_pdfs_summary_invoice_id", "summary_invoice_id", unique=True),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
 
