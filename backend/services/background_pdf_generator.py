@@ -4,7 +4,7 @@ Centralizes the threading logic for async PDF generation after invoice creation.
 """
 
 import threading
-from typing import Callable, Optional
+from typing import Callable
 
 from sqlmodel import Session
 
