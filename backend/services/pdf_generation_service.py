@@ -74,13 +74,22 @@ def generate_pdf_for_invoice(session: Session, invoice_id: int) -> bool:
                 f"✅ PDF generated for invoice {invoice_id} (PDF ID: {stored_pdf.id}, size: {len(pdf_base64)} bytes)"
             )
             return True
-        except IntegrityError:
+        except IntegrityError as e:
             # Another thread/process created the PDF first (caught by unique constraint)
+            # Check if this is a unique constraint violation on invoice_id
             session.rollback()
-            logger.debug(
-                f"ℹ️ PDF for invoice {invoice_id} was created by another process"
-            )
-            return False
+            error_msg = str(e).lower()
+            if "unique" in error_msg or "invoice_id" in error_msg:
+                logger.debug(
+                    f"ℹ️ PDF for invoice {invoice_id} was created by another process"
+                )
+                return False
+            else:
+                # Re-raise if it's a different integrity error
+                logger.error(
+                    f"❌ Unexpected IntegrityError for invoice {invoice_id}: {str(e)}"
+                )
+                raise
 
     except Exception as e:
         logger.error(
@@ -161,13 +170,22 @@ def generate_pdf_for_summary_invoice(
                 f"✅ PDF generated for summary invoice {summary_invoice_id} (PDF ID: {stored_pdf.id}, size: {len(pdf_base64)} bytes, recipient: {recipient_name or 'N/A'})"
             )
             return True
-        except IntegrityError:
+        except IntegrityError as e:
             # Another thread/process created the PDF first (caught by unique constraint)
+            # Check if this is a unique constraint violation on summary_invoice_id
             session.rollback()
-            logger.debug(
-                f"ℹ️ PDF for summary invoice {summary_invoice_id} was created by another process"
-            )
-            return False
+            error_msg = str(e).lower()
+            if "unique" in error_msg or "summary_invoice_id" in error_msg:
+                logger.debug(
+                    f"ℹ️ PDF for summary invoice {summary_invoice_id} was created by another process"
+                )
+                return False
+            else:
+                # Re-raise if it's a different integrity error
+                logger.error(
+                    f"❌ Unexpected IntegrityError for summary invoice {summary_invoice_id}: {str(e)}"
+                )
+                raise
 
     except Exception as e:
         logger.error(
