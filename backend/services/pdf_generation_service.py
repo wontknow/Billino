@@ -36,7 +36,10 @@ def generate_pdf_for_invoice(session: Session, invoice_id: int) -> bool:
             logger.error(f"❌ Invoice {invoice_id} not found for PDF generation")
             return False
 
-        # Check if PDF already exists
+        # Early check if PDF already exists (optimization to avoid expensive PDF generation)
+        # Note: This check is kept as an optimization to avoid generating the PDF
+        # if we already know one exists. The unique constraint on invoice_id provides
+        # the definitive protection against duplicates during concurrent requests.
         existing_pdf = session.exec(
             select(StoredPDF).where(StoredPDF.invoice_id == invoice_id)
         ).first()
@@ -72,7 +75,7 @@ def generate_pdf_for_invoice(session: Session, invoice_id: int) -> bool:
             )
             return True
         except IntegrityError:
-            # Another thread/process created the PDF first
+            # Another thread/process created the PDF first (caught by unique constraint)
             session.rollback()
             logger.debug(
                 f"ℹ️ PDF for invoice {invoice_id} was created by another process"
@@ -114,7 +117,10 @@ def generate_pdf_for_summary_invoice(
             )
             return False
 
-        # Check if PDF already exists
+        # Early check if PDF already exists (optimization to avoid expensive PDF generation)
+        # Note: This check is kept as an optimization to avoid generating the PDF
+        # if we already know one exists. The unique constraint on summary_invoice_id provides
+        # the definitive protection against duplicates during concurrent requests.
         existing_pdf = session.exec(
             select(StoredPDF).where(StoredPDF.summary_invoice_id == summary_invoice_id)
         ).first()
@@ -156,7 +162,7 @@ def generate_pdf_for_summary_invoice(
             )
             return True
         except IntegrityError:
-            # Another thread/process created the PDF first
+            # Another thread/process created the PDF first (caught by unique constraint)
             session.rollback()
             logger.debug(
                 f"ℹ️ PDF for summary invoice {summary_invoice_id} was created by another process"
