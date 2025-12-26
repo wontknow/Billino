@@ -5,6 +5,7 @@ Handles asynchronous PDF creation after invoice/summary invoice creation.
 
 import base64
 
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from models.invoice import Invoice
@@ -35,7 +36,10 @@ def generate_pdf_for_invoice(session: Session, invoice_id: int) -> bool:
             logger.error(f"❌ Invoice {invoice_id} not found for PDF generation")
             return False
 
-        # Check if PDF already exists
+        # Early check if PDF already exists (optimization to avoid expensive PDF generation)
+        # Note: This check is kept as an optimization to avoid generating the PDF
+        # if we already know one exists. The unique constraint on invoice_id provides
+        # the definitive protection against duplicates during concurrent requests.
         existing_pdf = session.exec(
             select(StoredPDF).where(StoredPDF.invoice_id == invoice_id)
         ).first()
@@ -62,13 +66,30 @@ def generate_pdf_for_invoice(session: Session, invoice_id: int) -> bool:
             type="invoice", content=pdf_base64, invoice_id=invoice_id
         )
         session.add(stored_pdf)
-        session.commit()
-        session.refresh(stored_pdf)
 
-        logger.info(
-            f"✅ PDF generated for invoice {invoice_id} (PDF ID: {stored_pdf.id}, size: {len(pdf_base64)} bytes)"
-        )
-        return True
+        try:
+            session.commit()
+            session.refresh(stored_pdf)
+            logger.info(
+                f"✅ PDF generated for invoice {invoice_id} (PDF ID: {stored_pdf.id}, size: {len(pdf_base64)} bytes)"
+            )
+            return True
+        except IntegrityError as e:
+            # Another thread/process created the PDF first (caught by unique constraint)
+            # Check if this is a unique constraint violation on invoice_id
+            session.rollback()
+            error_msg = str(e).lower()
+            if "unique" in error_msg or "invoice_id" in error_msg:
+                logger.debug(
+                    f"ℹ️ PDF for invoice {invoice_id} was created by another process"
+                )
+                return False
+            else:
+                # Re-raise if it's a different integrity error
+                logger.error(
+                    f"❌ Unexpected IntegrityError for invoice {invoice_id}: {str(e)}"
+                )
+                raise
 
     except Exception as e:
         session.rollback()
@@ -106,7 +127,10 @@ def generate_pdf_for_summary_invoice(
             )
             return False
 
-        # Check if PDF already exists
+        # Early check if PDF already exists (optimization to avoid expensive PDF generation)
+        # Note: This check is kept as an optimization to avoid generating the PDF
+        # if we already know one exists. The unique constraint on summary_invoice_id provides
+        # the definitive protection against duplicates during concurrent requests.
         existing_pdf = session.exec(
             select(StoredPDF).where(StoredPDF.summary_invoice_id == summary_invoice_id)
         ).first()
@@ -139,13 +163,30 @@ def generate_pdf_for_summary_invoice(
             summary_invoice_id=summary_invoice_id,
         )
         session.add(stored_pdf)
-        session.commit()
-        session.refresh(stored_pdf)
 
-        logger.info(
-            f"✅ PDF generated for summary invoice {summary_invoice_id} (PDF ID: {stored_pdf.id}, size: {len(pdf_base64)} bytes, recipient: {recipient_name or 'N/A'})"
-        )
-        return True
+        try:
+            session.commit()
+            session.refresh(stored_pdf)
+            logger.info(
+                f"✅ PDF generated for summary invoice {summary_invoice_id} (PDF ID: {stored_pdf.id}, size: {len(pdf_base64)} bytes, recipient: {recipient_name or 'N/A'})"
+            )
+            return True
+        except IntegrityError as e:
+            # Another thread/process created the PDF first (caught by unique constraint)
+            # Check if this is a unique constraint violation on summary_invoice_id
+            session.rollback()
+            error_msg = str(e).lower()
+            if "unique" in error_msg or "summary_invoice_id" in error_msg:
+                logger.debug(
+                    f"ℹ️ PDF for summary invoice {summary_invoice_id} was created by another process"
+                )
+                return False
+            else:
+                # Re-raise if it's a different integrity error
+                logger.error(
+                    f"❌ Unexpected IntegrityError for summary invoice {summary_invoice_id}: {str(e)}"
+                )
+                raise
 
     except Exception as e:
         session.rollback()
