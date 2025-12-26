@@ -38,4 +38,7 @@ docs/tickets/
 
 # Environment files
 .env
-.env.localfrontend/package-lock.json
+.env.local
+
+# Package manager lock files (auto-generated)
+frontend/package-lock.json
