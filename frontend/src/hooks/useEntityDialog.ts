@@ -5,7 +5,7 @@ type EntityDialogConfig<T> = {
   logScope: string;
   createFn: (payload: Partial<T>) => Promise<T>;
   updateFn: (id: number | string, payload: Partial<T>) => Promise<T>;
-  onSuccess: (entity: T) => void;
+  onSuccess: (entity: T) => void | Promise<void>;
   onClose: () => void;
 };
 
@@ -49,7 +49,7 @@ export function useEntityDialog<T extends { id?: number | string }>(config: Enti
         result = await config.createFn(payload);
       }
 
-      config.onSuccess(result);
+      await config.onSuccess(result);
       config.onClose();
       return true;
     } catch (error) {

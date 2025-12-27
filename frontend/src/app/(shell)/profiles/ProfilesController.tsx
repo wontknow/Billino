@@ -42,9 +42,9 @@ export default function ProfilesController() {
     setSelectedProfile(null);
   };
 
-  const handleDialogSuccess = () => {
+  const handleDialogSuccess = async () => {
     // Reload profiles after successful create/update
-    loadProfiles();
+    await loadProfiles();
   };
 
   if (error) {
