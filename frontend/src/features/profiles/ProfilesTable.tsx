@@ -33,9 +33,7 @@ export const ProfilesTable: React.FC<ProfilesTableProps> = ({
   return (
     <Card className="w-full mx-auto flex flex-col overflow-hidden max-w-screen-lg md:max-w-screen-xl 2xl:max-w-screen-2xl h-[70vh] md:h-[75vh] lg:h-[80vh]">
       <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <div className="space-y-1">
-          <CardTitle>Profile</CardTitle>
-        </div>
+        <CardTitle>Profile</CardTitle>
         {onCreateProfile && (
           <CardAction className="flex gap-2">
             <Button onClick={onCreateProfile}>Neues Profil</Button>
