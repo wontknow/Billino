@@ -45,6 +45,7 @@ export class PDFsService {
   /**
    * Get PDF for invoice with lazy loading fallback.
    * If PDF doesn't exist, it triggers generation and waits for it.
+   * Implements retry logic with exponential backoff to handle race conditions.
    */
   static async getPdfByInvoiceIdWithFallback(invoiceId: number): Promise<PdfBlob> {
     log.debug(`🔄 PDF Loading: Fetching PDF for invoice ${invoiceId}`);
@@ -58,7 +59,18 @@ export class PDFsService {
       if (error instanceof ApiError) {
         if (error.status === 404) {
           log.warn(`⚠️ PDF Not Found: Invoice ${invoiceId} - Triggering generation...`);
-          return PDFsService.createPdfForInvoice(invoiceId);
+          try {
+            return await PDFsService.createPdfForInvoice(invoiceId);
+          } catch (createError: unknown) {
+            // Handle race condition: background thread created PDF between GET and POST
+            if (createError instanceof ApiError && createError.status === 400) {
+              log.warn(
+                `⚠️ Race Condition Detected: Invoice ${invoiceId} - Retrying GET request...`
+              );
+              return await PDFsService.retryGetPdfByInvoiceId(invoiceId);
+            }
+            throw createError;
+          }
         }
         log.error(`❌ PDF Loading Error [${error.status}]: Invoice ${invoiceId}`, error.detail);
       }
@@ -69,6 +81,7 @@ export class PDFsService {
   /**
    * Get PDF for summary invoice with lazy loading fallback.
    * If PDF doesn't exist, it triggers generation and waits for it.
+   * Implements retry logic with exponential backoff to handle race conditions.
    */
   static async getPdfBySummaryInvoiceIdWithFallback(
     summaryInvoiceId: number,
@@ -87,7 +100,18 @@ export class PDFsService {
           log.warn(
             `⚠️ PDF Not Found: Summary invoice ${summaryInvoiceId} - Triggering generation...`
           );
-          return PDFsService.createPdfForSummaryInvoice(summaryInvoiceId, recipientName);
+          try {
+            return await PDFsService.createPdfForSummaryInvoice(summaryInvoiceId, recipientName);
+          } catch (createError: unknown) {
+            // Handle race condition: background thread created PDF between GET and POST
+            if (createError instanceof ApiError && createError.status === 400) {
+              log.warn(
+                `⚠️ Race Condition Detected: Summary invoice ${summaryInvoiceId} - Retrying GET request...`
+              );
+              return await PDFsService.retryGetPdfBySummaryInvoiceId(summaryInvoiceId);
+            }
+            throw createError;
+          }
         }
         log.error(
           `❌ PDF Loading Error [${error.status}]: Summary invoice ${summaryInvoiceId}`,
@@ -142,6 +166,70 @@ export class PDFsService {
     );
     log.info(`A6 PDF created for Invoices: ${invoiceList.join(", ")}, PDF ID: ${pdfResponse.id}`);
     return PDFsService.convertBase64ToPdfBlob(pdfResponse);
+  }
+
+  /**
+   * Retry fetching PDF by invoice ID with exponential backoff.
+   * Used to handle race conditions where PDF was created between GET and POST.
+   */
+  private static async retryGetPdfByInvoiceId(
+    invoiceId: number,
+    maxRetries: number = 3,
+    baseDelay: number = 100
+  ): Promise<PdfBlob> {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const delay = baseDelay * Math.pow(2, attempt);
+        log.debug(`🔄 Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+
+        const pdfResponse: StoredPDF = await ApiClient.get<StoredPDF>(
+          `/pdfs/by-invoice/${invoiceId}`
+        );
+        log.debug(`✅ PDF Retrieved: Invoice ${invoiceId} on retry ${attempt + 1}`);
+        return PDFsService.convertBase64ToPdfBlob(pdfResponse);
+      } catch (error: unknown) {
+        if (attempt === maxRetries - 1) {
+          log.error(`❌ All retry attempts exhausted for invoice ${invoiceId}`);
+          throw error;
+        }
+        log.debug(`⚠️ Retry ${attempt + 1} failed, continuing...`);
+      }
+    }
+    throw new Error(`Failed to fetch PDF for invoice ${invoiceId} after ${maxRetries} retries`);
+  }
+
+  /**
+   * Retry fetching PDF by summary invoice ID with exponential backoff.
+   * Used to handle race conditions where PDF was created between GET and POST.
+   */
+  private static async retryGetPdfBySummaryInvoiceId(
+    summaryInvoiceId: number,
+    maxRetries: number = 3,
+    baseDelay: number = 100
+  ): Promise<PdfBlob> {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const delay = baseDelay * Math.pow(2, attempt);
+        log.debug(`🔄 Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+
+        const pdfResponse: StoredPDF = await ApiClient.get<StoredPDF>(
+          `/pdfs/by-summary/${summaryInvoiceId}`
+        );
+        log.debug(`✅ PDF Retrieved: Summary invoice ${summaryInvoiceId} on retry ${attempt + 1}`);
+        return PDFsService.convertBase64ToPdfBlob(pdfResponse);
+      } catch (error: unknown) {
+        if (attempt === maxRetries - 1) {
+          log.error(`❌ All retry attempts exhausted for summary invoice ${summaryInvoiceId}`);
+          throw error;
+        }
+        log.debug(`⚠️ Retry ${attempt + 1} failed, continuing...`);
+      }
+    }
+    throw new Error(
+      `Failed to fetch PDF for summary invoice ${summaryInvoiceId} after ${maxRetries} retries`
+    );
   }
 
   private static generateFileName(storedPdf: StoredPDF): PdfFilename {
