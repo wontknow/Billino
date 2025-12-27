@@ -40,7 +40,7 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
     createFn: ProfilesService.create,
     updateFn: ProfilesService.update,
     onSuccess,
-    onClose: () => onClose(),
+    onClose,
   });
 
   // Initialize form when profile changes
