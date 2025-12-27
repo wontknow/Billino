@@ -6,11 +6,10 @@ Testet:
 - BackupScheduler: Initialisierung, Status, Trigger
 """
 
-import os
+import sqlite3
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -33,9 +32,13 @@ class TestBackupHandler:
             (data_dir / "pdfs" / "invoices").mkdir(parents=True)
             (data_dir / "pdfs" / "summary_invoices").mkdir(parents=True)
 
-            # Erstelle Test-DB Datei
+            # Erstelle echte SQLite-Datenbank für Tests
             db_file = data_dir / "billino.db"
-            db_file.write_text("SQLite format 3" + "\x00" * 100)
+            conn = sqlite3.connect(str(db_file))
+            conn.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, data TEXT)")
+            conn.execute("INSERT INTO test (data) VALUES ('test data')")
+            conn.commit()
+            conn.close()
 
             yield {
                 "tmpdir": tmpdir,
@@ -102,17 +105,17 @@ class TestBackupHandler:
 
         backup_path = handler.backup_database()
 
-        # Extrahiere Datum aus Dateinamen
-        filename = backup_path.name  # "billino_YYYY-MM-DD.db"
-        date_str = filename.replace("billino_", "").replace(".db", "")
+        # Extrahiere Datum aus Dateinamen (Format: billino_YYYY-MM-DD_HH-MM-SS.db)
+        filename = backup_path.name
+        date_str = filename.replace("billino_", "").split("_")[0]
 
         # Verifiziere Datums-Format
         date = datetime.strptime(date_str, "%Y-%m-%d")
 
-        # Sollte heute oder gestern sein (in Fall von Zeitzonen-Unterschied)
-        today = datetime.now()
-        delta = (today - date).days
-        assert delta in [0, 1]
+        # Datum sollte heute sein
+        today = datetime.now().date()
+        file_date = date.date()
+        assert file_date == today
 
     def test_database_backup_nonexistent_db(self, temp_dirs):
         """Test: Backup schlägt fehl, wenn DB nicht existiert."""
@@ -160,15 +163,19 @@ class TestBackupHandler:
             retention_days=5,
         )
 
-        # Erstelle "alte" Backup-Dateien (älter als 5 Tage)
+        # Erstelle "alte" Backup-Dateien (älter als 5 Tage) als echte SQLite DBs
         old_date = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
-        old_backup = handler.BACKUP_DAILY / f"billino_{old_date}.db"
-        old_backup.write_text("old backup")
+        old_backup = handler.BACKUP_DAILY / f"billino_{old_date}_00-00-00.db"
+        conn = sqlite3.connect(str(old_backup))
+        conn.execute("CREATE TABLE test (id INTEGER)")
+        conn.close()
 
-        # Erstelle "neue" Backup-Datei
+        # Erstelle "neue" Backup-Datei als echte SQLite DB
         new_date = datetime.now().strftime("%Y-%m-%d")
-        new_backup = handler.BACKUP_DAILY / f"billino_{new_date}.db"
-        new_backup.write_text("new backup")
+        new_backup = handler.BACKUP_DAILY / f"billino_{new_date}_00-00-00.db"
+        conn = sqlite3.connect(str(new_backup))
+        conn.execute("CREATE TABLE test (id INTEGER)")
+        conn.close()
 
         # Trigger Cleanup über backup_database()
         handler.backup_database()
@@ -267,62 +274,50 @@ class TestBackupScheduler:
 
     def test_scheduler_initialization(self):
         """Test: Scheduler wird korrekt initialisiert."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir = Path(tmpdir)
+        BackupScheduler.initialize(
+            backup_hour=3,
+            backup_minute=30,
+            retention_days=7,
+            tauri_enabled=False,
+        )
 
-            BackupScheduler.initialize(
-                backup_hour=3,
-                backup_minute=30,
-                retention_days=7,
-                tauri_enabled=False,
-            )
-
-            assert BackupScheduler._scheduler is not None
-            assert BackupScheduler._handler is not None
+        assert BackupScheduler._scheduler is not None
+        assert BackupScheduler._handler is not None
 
     def test_scheduler_start_stop(self):
         """Test: Scheduler kann gestartet und gestoppt werden."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir = Path(tmpdir)
+        BackupScheduler.initialize()
 
-            BackupScheduler.initialize()
+        BackupScheduler.start()
+        assert BackupScheduler._scheduler.running is True
 
-            BackupScheduler.start()
-            assert BackupScheduler._scheduler.running is True
-
-            BackupScheduler.stop()
-            # Nach shutdown kann running False sein
+        BackupScheduler.stop()
+        # Nach shutdown kann running False sein
 
     def test_scheduler_get_status(self):
         """Test: Scheduler-Status wird zurückgegeben."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir = Path(tmpdir)
+        BackupScheduler.initialize()
+        BackupScheduler.start()
 
-            BackupScheduler.initialize()
-            BackupScheduler.start()
+        status = BackupScheduler.get_status()
 
-            status = BackupScheduler.get_status()
+        assert "scheduler_running" in status
+        assert "backup_status" in status
+        assert status["scheduler_running"] is True
 
-            assert "scheduler_running" in status
-            assert "backup_status" in status
-            assert status["scheduler_running"] is True
-
-            BackupScheduler.stop()
+        BackupScheduler.stop()
 
     def test_scheduler_list_jobs(self):
         """Test: Registrierte Jobs werden aufgelistet."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir = Path(tmpdir)
+        BackupScheduler.initialize()
 
-            BackupScheduler.initialize()
+        jobs = BackupScheduler.list_jobs()
 
-            jobs = BackupScheduler.list_jobs()
-
-            assert len(jobs) >= 1
-            job = jobs[0]
-            assert "id" in job
-            assert "name" in job
-            assert job["id"] == "backup_database_daily"
+        assert len(jobs) >= 1
+        job = jobs[0]
+        assert "id" in job
+        assert "name" in job
+        assert job["id"] == "backup_database_daily"
 
     def test_scheduler_trigger_backup(self):
         """Test: Manuelles Backup kann getriggert werden."""
@@ -332,8 +327,13 @@ class TestBackupScheduler:
             (data_dir / "pdfs" / "invoices").mkdir(parents=True)
             (data_dir / "pdfs" / "summary_invoices").mkdir(parents=True)
 
+            # Erstelle echte SQLite-Datenbank
             db_file = data_dir / "billino.db"
-            db_file.write_text("SQLite format 3" + "\x00" * 100)
+            conn = sqlite3.connect(str(db_file))
+            conn.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, data TEXT)")
+            conn.execute("INSERT INTO test (data) VALUES ('test data')")
+            conn.commit()
+            conn.close()
 
             BackupScheduler.initialize()
 

@@ -162,6 +162,20 @@ class BackupScheduler:
 
         return jobs
 
+    @classmethod
+    def list_backups(cls) -> Optional[list[dict]]:
+        """
+        Liste alle verfügbaren Backups auf.
+
+        Returns:
+            Liste von Backup-Objekten oder None bei Fehler
+        """
+        if cls._handler is None:
+            logger.error("❌ BackupHandler nicht verfügbar")
+            return None
+
+        return cls._handler.list_backups()
+
     @staticmethod
     def _run_backup() -> None:
         """
