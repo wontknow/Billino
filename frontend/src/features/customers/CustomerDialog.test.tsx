@@ -146,4 +146,84 @@ describe("CustomerDialog", () => {
 
     expect(submitButton).not.toBeDisabled();
   });
+
+  describe("Error handling", () => {
+    beforeEach(() => {
+      // Mock window.alert
+      global.alert = jest.fn();
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("displays error alert when create fails", async () => {
+      const error = new Error("Network error");
+      (CustomersService.create as jest.Mock).mockRejectedValueOnce(error);
+
+      render(<CustomerDialog isOpen={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />);
+
+      fireEvent.change(screen.getByLabelText(/Name/), {
+        target: { value: "Test Customer" },
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /Erstellen/ }));
+
+      await waitFor(() => {
+        expect(global.alert).toHaveBeenCalledWith("Fehler beim Speichern: Network error");
+      });
+
+      expect(mockOnSuccess).not.toHaveBeenCalled();
+      expect(mockOnClose).not.toHaveBeenCalled();
+    });
+
+    it("displays error alert when update fails", async () => {
+      const customer: Customer = {
+        id: 1,
+        name: "Max Mustermann",
+        address: "Teststraße 123",
+        city: "12345 Berlin",
+      };
+
+      const error = new Error("Update failed");
+      (CustomersService.update as jest.Mock).mockRejectedValueOnce(error);
+
+      render(
+        <CustomerDialog
+          isOpen={true}
+          customer={customer}
+          onClose={mockOnClose}
+          onSuccess={mockOnSuccess}
+        />
+      );
+
+      fireEvent.change(screen.getByLabelText(/Name/), {
+        target: { value: "Updated Name" },
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /Speichern/ }));
+
+      await waitFor(() => {
+        expect(global.alert).toHaveBeenCalledWith("Fehler beim Speichern: Update failed");
+      });
+
+      expect(mockOnSuccess).not.toHaveBeenCalled();
+    });
+
+    it("displays generic error message for unknown errors", async () => {
+      (CustomersService.create as jest.Mock).mockRejectedValueOnce("Unknown error type");
+
+      render(<CustomerDialog isOpen={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />);
+
+      fireEvent.change(screen.getByLabelText(/Name/), {
+        target: { value: "Test Customer" },
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /Erstellen/ }));
+
+      await waitFor(() => {
+        expect(global.alert).toHaveBeenCalledWith("Fehler beim Speichern: Unbekannter Fehler");
+      });
+    });
+  });
 });

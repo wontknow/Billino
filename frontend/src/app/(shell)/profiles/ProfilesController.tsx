@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { ProfilesService } from "@/services/profiles";
 import { ProfilesTable } from "@/features/profiles/ProfilesTable";
 import { ProfileDialog } from "@/features/profiles/ProfileDialog";
@@ -12,7 +12,7 @@ export default function ProfilesController() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
 
-  const loadProfiles = async () => {
+  const loadProfiles = useCallback(async () => {
     setError(null);
     try {
       const data = await ProfilesService.list();
@@ -20,11 +20,11 @@ export default function ProfilesController() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unbekannter Fehler");
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadProfiles();
-  }, []);
+  }, [loadProfiles]);
 
   const handleProfileSelect = (profile: Profile) => {
     setSelectedProfile(profile);

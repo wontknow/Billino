@@ -12,8 +12,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { Profile } from "@/types/profile";
 import { ProfilesService } from "@/services/profiles";
+import { useEntityDialog } from "@/hooks/useEntityDialog";
 
 type Props = {
   isOpen: boolean;
@@ -30,9 +32,16 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
   const [taxNumber, setTaxNumber] = useState("");
   const [includeTax, setIncludeTax] = useState(true);
   const [defaultTaxRate, setDefaultTaxRate] = useState("19");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isEditMode = !!profile;
+
+  const { isSubmitting, handleSubmit } = useEntityDialog<Profile>({
+    logScope: "📋 ProfileDialog",
+    createFn: ProfilesService.create,
+    updateFn: ProfilesService.update,
+    onSuccess,
+    onClose: () => onClose(),
+  });
 
   // Initialize form when profile changes
   useEffect(() => {
@@ -55,49 +64,30 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
     }
   }, [profile]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name.trim() || !address.trim() || !city.trim()) {
+    if (!name.trim()) {
       return;
     }
 
-    setIsSubmitting(true);
+    // Helper to convert empty string to undefined
+    const toOptional = (value: string) => value.trim() || undefined;
 
-    try {
-      const payload = {
-        name: name.trim(),
-        address: address.trim(),
-        city: city.trim(),
-        bank_data: bankData.trim() || null,
-        tax_number: taxNumber.trim() || null,
-        include_tax: includeTax,
-        default_tax_rate: Number(defaultTaxRate) / 100,
-      };
+    const payload = {
+      name: name.trim(),
+      address: toOptional(address),
+      city: toOptional(city),
+      bank_data: bankData.trim() || null,
+      tax_number: taxNumber.trim() || null,
+      include_tax: includeTax,
+      default_tax_rate: Number(defaultTaxRate) / 100,
+    };
 
-      let result: Profile;
-
-      if (isEditMode && profile) {
-        // Update existing profile using service
-        result = await ProfilesService.update(Number(profile.id), payload);
-      } else {
-        // Create new profile using service
-        result = await ProfilesService.create(payload);
-      }
-
-      onSuccess(result);
-      handleClose();
-    } catch (error) {
-      console.error("Error saving profile:", error);
-      alert(
-        `Fehler beim Speichern: ${error instanceof Error ? error.message : "Unbekannter Fehler"}`
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+    await handleSubmit(profile, payload);
   };
 
-  const handleClose = () => {
+  function handleClose() {
     setName("");
     setAddress("");
     setCity("");
@@ -106,7 +96,7 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
     setIncludeTax(true);
     setDefaultTaxRate("19");
     onClose();
-  };
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -120,7 +110,7 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={onSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">
@@ -137,29 +127,23 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="address">
-                Adresse <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="address">Adresse</Label>
               <Input
                 id="address"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="z.B. Hauptstraße 123"
-                required
                 disabled={isSubmitting}
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="city">
-                Stadt <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="city">Stadt</Label>
               <Input
                 id="city"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 placeholder="z.B. 10115 Berlin"
-                required
                 disabled={isSubmitting}
               />
             </div>
@@ -187,13 +171,11 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
             </div>
 
             <div className="flex items-center space-x-3">
-              <input
+              <Checkbox
                 id="includeTax"
-                type="checkbox"
                 checked={includeTax}
-                onChange={(e) => setIncludeTax(e.target.checked)}
+                onCheckedChange={(checked) => setIncludeTax(checked === true)}
                 disabled={isSubmitting}
-                className="h-4 w-4 rounded border border-primary"
               />
               <Label htmlFor="includeTax" className="cursor-pointer font-normal">
                 Umsatzsteuer ausweisen
@@ -224,7 +206,7 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || !name.trim() || !address.trim() || !city.trim()}
+              disabled={isSubmitting || !name.trim()}
             >
               {isEditMode ? "Speichern" : "Erstellen"}
             </Button>

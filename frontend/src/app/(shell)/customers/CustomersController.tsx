@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { CustomersService } from "@/services/customers";
 import { CustomersTable } from "@/features/customers/CustomersTable";
 import { CustomerDialog } from "@/features/customers/CustomerDialog";
@@ -13,7 +13,7 @@ export default function CustomersController() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
-  const loadCustomers = async () => {
+  const loadCustomers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -24,11 +24,11 @@ export default function CustomersController() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadCustomers();
-  }, []);
+  }, [loadCustomers]);
 
   const handleCreateCustomer = () => {
     setSelectedCustomer(null);
