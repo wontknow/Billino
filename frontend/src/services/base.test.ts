@@ -32,7 +32,7 @@ describe("ApiClient", () => {
 
       const result = await ApiClient.get<typeof mockData>("/test");
 
-      expect(global.fetch).toHaveBeenCalledWith("http://localhost:8000/api/test", {
+      expect(global.fetch).toHaveBeenCalledWith("http://localhost:8000/test", {
         cache: "no-store",
       });
       expect(result).toEqual(mockData);

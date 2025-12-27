@@ -18,6 +18,8 @@ from services import (
     generate_next_invoice_number,
     get_preview_invoice_number,
 )
+from services.background_pdf_generator import BackgroundPDFGenerator
+from services.pdf_generation_service import generate_pdf_for_invoice
 from utils import logger
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
@@ -234,6 +236,16 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
 
     logger.info(
         f"✅ Invoice {invoice_number} created successfully (id={db_invoice.id})"
+    )
+
+    # Trigger PDF generation asynchronously in background thread
+    logger.debug(
+        f"🖨️ Starting background thread for PDF generation (invoice {db_invoice.id})..."
+    )
+    BackgroundPDFGenerator.generate_in_background(
+        pdf_generation_func=generate_pdf_for_invoice,
+        entity_id=db_invoice.id,
+        entity_type="invoice",
     )
 
     return InvoiceRead(

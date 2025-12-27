@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, UniqueConstraint
 
 
 class StoredPDFBase(SQLModel):
@@ -17,9 +17,35 @@ class StoredPDFBase(SQLModel):
 
 
 class StoredPDF(StoredPDFBase, table=True):
-    """Database model for stored PDFs"""
+    """Database model for stored PDFs with unique constraints to prevent duplicates
+
+    Unique constraints:
+    - invoice_id: Ensures each invoice can have at most one stored PDF
+    - summary_invoice_id: Ensures each summary invoice can have at most one stored PDF
+
+    Note: Both foreign keys are nullable to support different PDF types:
+    - Invoice PDFs: invoice_id is set, summary_invoice_id is NULL
+    - Summary invoice PDFs: summary_invoice_id is set, invoice_id is NULL
+    - Other PDF types (e.g., a6_invoices): both may be NULL
+
+    The unique constraints work correctly with NULLs in SQLite because:
+    - Multiple NULL values are allowed in a unique column
+    - The constraint only prevents duplicate non-NULL values
+    - This allows multiple "other" PDFs while preventing duplicates for specific invoices
+
+    Migration for existing databases:
+    - If deploying to production with existing data, run the deduplication migration first:
+      python backend/scripts/migrate_deduplicate_pdfs.py --dry-run  # Preview changes
+      python backend/scripts/migrate_deduplicate_pdfs.py            # Apply changes
+    - This will keep the most recent PDF and remove older duplicates
+    - After migration, the unique constraints can be safely applied
+    """
 
     __tablename__ = "stored_pdfs"
+    __table_args__ = (
+        UniqueConstraint("invoice_id"),
+        UniqueConstraint("summary_invoice_id"),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
 

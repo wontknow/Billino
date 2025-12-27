@@ -1,7 +1,30 @@
 import { PDFsService } from "./pdfs";
-import { ApiClient } from "./base";
+import { ApiClient, ApiError } from "./base";
 
-jest.mock("./base");
+// Mock only the ApiClient methods, not the entire module
+jest.mock("./base", () => {
+  const actual = jest.requireActual("./base");
+  return {
+    ...actual,
+    ApiClient: {
+      ...actual.ApiClient,
+      get: jest.fn(),
+      post: jest.fn(),
+    },
+  };
+});
+
+// Mock scoped logger to match actual usage in pdfs.ts
+jest.mock("@/lib/logger", () => ({
+  logger: {
+    createScoped: jest.fn(() => ({
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    })),
+  },
+}));
 
 const toBase64 = (input: string) => Buffer.from(input, "utf8").toString("base64");
 
@@ -85,5 +108,445 @@ describe("PDFsService", () => {
     });
     expect(result.filename).toBe("summaryInvoice-55.pdf");
     expect(result.type).toBe("summary_invoice");
+  });
+
+  describe("getPdfByInvoiceIdWithFallback", () => {
+    it("returns PDF successfully when it exists", async () => {
+      const storedPdf = createStoredPdf({ id: 10, invoice_id: 100 });
+      (ApiClient.get as jest.Mock).mockResolvedValueOnce(storedPdf);
+
+      const result = await PDFsService.getPdfByInvoiceIdWithFallback(100);
+
+      expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-invoice/100");
+      expect(result.blob).toBeInstanceOf(Blob);
+      expect(result.filename).toBe("invoice-100.pdf");
+      expect(ApiClient.post).not.toHaveBeenCalled();
+    });
+
+    it("triggers PDF creation when 404 ApiError is returned", async () => {
+      const error = new ApiError(404, "Not Found", { detail: "PDF not found" }, "PDF not found");
+      const createdPdf = createStoredPdf({ id: 11, invoice_id: 100 });
+
+      (ApiClient.get as jest.Mock).mockRejectedValueOnce(error);
+      (ApiClient.post as jest.Mock).mockResolvedValueOnce(createdPdf);
+
+      const result = await PDFsService.getPdfByInvoiceIdWithFallback(100);
+
+      expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-invoice/100");
+      expect(ApiClient.post).toHaveBeenCalledWith("/pdfs/invoices/100", {});
+      expect(result.blob).toBeInstanceOf(Blob);
+      expect(result.filename).toBe("invoice-100.pdf");
+    });
+
+    it("propagates non-404 ApiError without triggering PDF creation", async () => {
+      const error = new ApiError(
+        500,
+        "Internal Server Error",
+        { detail: "Server error" },
+        "Server error"
+      );
+
+      (ApiClient.get as jest.Mock).mockRejectedValueOnce(error);
+
+      await expect(PDFsService.getPdfByInvoiceIdWithFallback(100)).rejects.toThrow(error);
+      expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-invoice/100");
+      expect(ApiClient.post).not.toHaveBeenCalled();
+    });
+
+    it("propagates non-ApiError without triggering PDF creation", async () => {
+      const error = new Error("Network error");
+
+      (ApiClient.get as jest.Mock).mockRejectedValueOnce(error);
+
+      await expect(PDFsService.getPdfByInvoiceIdWithFallback(100)).rejects.toThrow(error);
+      expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-invoice/100");
+      expect(ApiClient.post).not.toHaveBeenCalled();
+    });
+
+    it("handles race condition: retries GET when POST returns 400", async () => {
+      const getError = new ApiError(404, "Not Found", { detail: "PDF not found" }, "PDF not found");
+      const postError = new ApiError(
+        400,
+        "Bad Request",
+        { detail: "PDF already exists" },
+        "PDF already exists"
+      );
+      const retryPdf = createStoredPdf({ id: 12, invoice_id: 100 });
+
+      (ApiClient.get as jest.Mock)
+        .mockRejectedValueOnce(getError) // Initial GET fails with 404
+        .mockResolvedValueOnce(retryPdf); // Retry GET succeeds
+      (ApiClient.post as jest.Mock).mockRejectedValueOnce(postError); // POST fails with 400
+
+      const result = await PDFsService.getPdfByInvoiceIdWithFallback(100);
+
+      expect(ApiClient.get).toHaveBeenCalledTimes(2);
+      expect(ApiClient.get).toHaveBeenNthCalledWith(1, "/pdfs/by-invoice/100");
+      expect(ApiClient.post).toHaveBeenCalledWith("/pdfs/invoices/100", {});
+      expect(ApiClient.get).toHaveBeenNthCalledWith(2, "/pdfs/by-invoice/100");
+      expect(result.blob).toBeInstanceOf(Blob);
+      expect(result.filename).toBe("invoice-100.pdf");
+    });
+  });
+
+  describe("getPdfBySummaryInvoiceIdWithFallback", () => {
+    it("returns PDF successfully when it exists", async () => {
+      const storedPdf = createStoredPdf({
+        id: 12,
+        type: "summary_invoice",
+        summary_invoice_id: 200,
+        invoice_id: null,
+      });
+      (ApiClient.get as jest.Mock).mockResolvedValueOnce(storedPdf);
+
+      const result = await PDFsService.getPdfBySummaryInvoiceIdWithFallback(200);
+
+      expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-summary/200");
+      expect(result.blob).toBeInstanceOf(Blob);
+      expect(result.filename).toBe("summaryInvoice-200.pdf");
+      expect(ApiClient.post).not.toHaveBeenCalled();
+    });
+
+    it("triggers PDF creation when 404 ApiError is returned", async () => {
+      const error = new ApiError(404, "Not Found", { detail: "PDF not found" }, "PDF not found");
+      const createdPdf = createStoredPdf({
+        id: 13,
+        type: "summary_invoice",
+        summary_invoice_id: 200,
+        invoice_id: null,
+      });
+
+      (ApiClient.get as jest.Mock).mockRejectedValueOnce(error);
+      (ApiClient.post as jest.Mock).mockResolvedValueOnce(createdPdf);
+
+      const result = await PDFsService.getPdfBySummaryInvoiceIdWithFallback(200);
+
+      expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-summary/200");
+      expect(ApiClient.post).toHaveBeenCalledWith("/pdfs/summary-invoices/200", {});
+      expect(result.blob).toBeInstanceOf(Blob);
+      expect(result.filename).toBe("summaryInvoice-200.pdf");
+    });
+
+    it("triggers PDF creation with recipient_name when provided", async () => {
+      const error = new ApiError(404, "Not Found", { detail: "PDF not found" }, "PDF not found");
+      const createdPdf = createStoredPdf({
+        id: 14,
+        type: "summary_invoice",
+        summary_invoice_id: 200,
+        invoice_id: null,
+      });
+
+      (ApiClient.get as jest.Mock).mockRejectedValueOnce(error);
+      (ApiClient.post as jest.Mock).mockResolvedValueOnce(createdPdf);
+
+      const result = await PDFsService.getPdfBySummaryInvoiceIdWithFallback(200, "Test Company");
+
+      expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-summary/200");
+      expect(ApiClient.post).toHaveBeenCalledWith("/pdfs/summary-invoices/200", {
+        recipient_name: "Test Company",
+      });
+      expect(result.blob).toBeInstanceOf(Blob);
+      expect(result.filename).toBe("summaryInvoice-200.pdf");
+    });
+
+    it("propagates non-404 ApiError without triggering PDF creation", async () => {
+      const error = new ApiError(
+        500,
+        "Internal Server Error",
+        { detail: "Server error" },
+        "Server error"
+      );
+
+      (ApiClient.get as jest.Mock).mockRejectedValueOnce(error);
+
+      await expect(PDFsService.getPdfBySummaryInvoiceIdWithFallback(200)).rejects.toThrow(error);
+      expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-summary/200");
+      expect(ApiClient.post).not.toHaveBeenCalled();
+    });
+
+    it("propagates non-ApiError without triggering PDF creation", async () => {
+      const error = new Error("Network error");
+
+      (ApiClient.get as jest.Mock).mockRejectedValueOnce(error);
+
+      await expect(PDFsService.getPdfBySummaryInvoiceIdWithFallback(200)).rejects.toThrow(error);
+      expect(ApiClient.get).toHaveBeenCalledWith("/pdfs/by-summary/200");
+      expect(ApiClient.post).not.toHaveBeenCalled();
+    });
+
+    it("handles race condition: retries GET when POST returns 400", async () => {
+      const getError = new ApiError(404, "Not Found", { detail: "PDF not found" }, "PDF not found");
+      const postError = new ApiError(
+        400,
+        "Bad Request",
+        { detail: "PDF already exists" },
+        "PDF already exists"
+      );
+      const retryPdf = createStoredPdf({
+        id: 15,
+        type: "summary_invoice",
+        summary_invoice_id: 200,
+        invoice_id: null,
+      });
+
+      (ApiClient.get as jest.Mock)
+        .mockRejectedValueOnce(getError) // Initial GET fails with 404
+        .mockResolvedValueOnce(retryPdf); // Retry GET succeeds
+      (ApiClient.post as jest.Mock).mockRejectedValueOnce(postError); // POST fails with 400
+
+      const result = await PDFsService.getPdfBySummaryInvoiceIdWithFallback(200);
+
+      expect(ApiClient.get).toHaveBeenCalledTimes(2);
+      expect(ApiClient.get).toHaveBeenNthCalledWith(1, "/pdfs/by-summary/200");
+      expect(ApiClient.post).toHaveBeenCalledWith("/pdfs/summary-invoices/200", {});
+      expect(ApiClient.get).toHaveBeenNthCalledWith(2, "/pdfs/by-summary/200");
+      expect(result.blob).toBeInstanceOf(Blob);
+      expect(result.filename).toBe("summaryInvoice-200.pdf");
+    });
+  });
+
+  describe("Retry mechanism error discrimination", () => {
+    describe("retryGetPdfByInvoiceId (via race condition path)", () => {
+      it("succeeds when 404 is eventually resolved on retry", async () => {
+        const getError = new ApiError(
+          404,
+          "Not Found",
+          { detail: "PDF not found" },
+          "PDF not found"
+        );
+        const postError = new ApiError(
+          400,
+          "Bad Request",
+          { detail: "PDF already exists" },
+          "PDF already exists"
+        );
+        const retryPdf = createStoredPdf({ id: 12, invoice_id: 100 });
+
+        // Initial GET fails (404) -> POST triggers but fails (400 race condition) -> Retry GET succeeds
+        (ApiClient.get as jest.Mock)
+          .mockRejectedValueOnce(getError) // Initial GET: 404
+          .mockRejectedValueOnce(getError) // Retry attempt 1: 404
+          .mockResolvedValueOnce(retryPdf); // Retry attempt 2: success
+        (ApiClient.post as jest.Mock).mockRejectedValueOnce(postError);
+
+        const result = await PDFsService.getPdfByInvoiceIdWithFallback(100);
+
+        expect(result.blob).toBeInstanceOf(Blob);
+        expect(result.filename).toBe("invoice-100.pdf");
+        // Should have called GET 3 times: initial + 2 retries
+        expect(ApiClient.get).toHaveBeenCalledTimes(3);
+      });
+
+      it("fails fast on 500 error without exhausting retries", async () => {
+        const getError404 = new ApiError(
+          404,
+          "Not Found",
+          { detail: "PDF not found" },
+          "PDF not found"
+        );
+        const postError400 = new ApiError(
+          400,
+          "Bad Request",
+          { detail: "PDF already exists" },
+          "PDF already exists"
+        );
+        const getError500 = new ApiError(
+          500,
+          "Internal Server Error",
+          { detail: "Server error" },
+          "Server error"
+        );
+
+        // Initial GET fails (404) -> POST triggers but fails (400) -> Retry GET fails with 500
+        (ApiClient.get as jest.Mock)
+          .mockRejectedValueOnce(getError404) // Initial GET: 404
+          .mockRejectedValueOnce(getError500); // Retry attempt 1: 500 (should fail fast)
+        (ApiClient.post as jest.Mock).mockRejectedValueOnce(postError400);
+
+        await expect(PDFsService.getPdfByInvoiceIdWithFallback(100)).rejects.toThrow(getError500);
+
+        // Should only call GET twice: initial + 1 retry that failed with 500
+        // Should NOT exhaust all 3 retry attempts
+        expect(ApiClient.get).toHaveBeenCalledTimes(2);
+      });
+
+      it("fails fast on network error without exhausting retries", async () => {
+        const getError404 = new ApiError(
+          404,
+          "Not Found",
+          { detail: "PDF not found" },
+          "PDF not found"
+        );
+        const postError400 = new ApiError(
+          400,
+          "Bad Request",
+          { detail: "PDF already exists" },
+          "PDF already exists"
+        );
+        const networkError = new Error("Network error");
+
+        // Initial GET fails (404) -> POST triggers but fails (400) -> Retry GET fails with network error
+        (ApiClient.get as jest.Mock)
+          .mockRejectedValueOnce(getError404) // Initial GET: 404
+          .mockRejectedValueOnce(networkError); // Retry attempt 1: network error (should fail fast)
+        (ApiClient.post as jest.Mock).mockRejectedValueOnce(postError400);
+
+        await expect(PDFsService.getPdfByInvoiceIdWithFallback(100)).rejects.toThrow(networkError);
+
+        // Should only call GET twice: initial + 1 retry that failed with network error
+        expect(ApiClient.get).toHaveBeenCalledTimes(2);
+      });
+
+      it("exhausts all retries when getting consecutive 404 errors", async () => {
+        const getError404 = new ApiError(
+          404,
+          "Not Found",
+          { detail: "PDF not found" },
+          "PDF not found"
+        );
+        const postError400 = new ApiError(
+          400,
+          "Bad Request",
+          { detail: "PDF already exists" },
+          "PDF already exists"
+        );
+
+        // Initial GET fails (404) -> POST triggers but fails (400) -> All 3 retry attempts fail with 404
+        (ApiClient.get as jest.Mock)
+          .mockRejectedValueOnce(getError404) // Initial GET: 404
+          .mockRejectedValueOnce(getError404) // Retry attempt 1: 404
+          .mockRejectedValueOnce(getError404) // Retry attempt 2: 404
+          .mockRejectedValueOnce(getError404); // Retry attempt 3: 404
+        (ApiClient.post as jest.Mock).mockRejectedValueOnce(postError400);
+
+        await expect(PDFsService.getPdfByInvoiceIdWithFallback(100)).rejects.toThrow(getError404);
+
+        // Should call GET 4 times: initial + 3 retry attempts (maxRetries=3)
+        expect(ApiClient.get).toHaveBeenCalledTimes(4);
+      });
+    });
+
+    describe("retryGetPdfBySummaryInvoiceId (via race condition path)", () => {
+      it("succeeds when 404 is eventually resolved on retry", async () => {
+        const getError = new ApiError(
+          404,
+          "Not Found",
+          { detail: "PDF not found" },
+          "PDF not found"
+        );
+        const postError = new ApiError(
+          400,
+          "Bad Request",
+          { detail: "PDF already exists" },
+          "PDF already exists"
+        );
+        const retryPdf = createStoredPdf({
+          id: 15,
+          type: "summary_invoice",
+          summary_invoice_id: 200,
+          invoice_id: null,
+        });
+
+        // Initial GET fails (404) -> POST triggers but fails (400) -> Retry GET succeeds
+        (ApiClient.get as jest.Mock)
+          .mockRejectedValueOnce(getError) // Initial GET: 404
+          .mockRejectedValueOnce(getError) // Retry attempt 1: 404
+          .mockResolvedValueOnce(retryPdf); // Retry attempt 2: success
+        (ApiClient.post as jest.Mock).mockRejectedValueOnce(postError);
+
+        const result = await PDFsService.getPdfBySummaryInvoiceIdWithFallback(200);
+
+        expect(result.blob).toBeInstanceOf(Blob);
+        expect(result.filename).toBe("summaryInvoice-200.pdf");
+        expect(ApiClient.get).toHaveBeenCalledTimes(3);
+      });
+
+      it("fails fast on 500 error without exhausting retries", async () => {
+        const getError404 = new ApiError(
+          404,
+          "Not Found",
+          { detail: "PDF not found" },
+          "PDF not found"
+        );
+        const postError400 = new ApiError(
+          400,
+          "Bad Request",
+          { detail: "PDF already exists" },
+          "PDF already exists"
+        );
+        const getError500 = new ApiError(
+          500,
+          "Internal Server Error",
+          { detail: "Server error" },
+          "Server error"
+        );
+
+        (ApiClient.get as jest.Mock)
+          .mockRejectedValueOnce(getError404) // Initial GET: 404
+          .mockRejectedValueOnce(getError500); // Retry attempt 1: 500 (should fail fast)
+        (ApiClient.post as jest.Mock).mockRejectedValueOnce(postError400);
+
+        await expect(PDFsService.getPdfBySummaryInvoiceIdWithFallback(200)).rejects.toThrow(
+          getError500
+        );
+
+        expect(ApiClient.get).toHaveBeenCalledTimes(2);
+      });
+
+      it("fails fast on network error without exhausting retries", async () => {
+        const getError404 = new ApiError(
+          404,
+          "Not Found",
+          { detail: "PDF not found" },
+          "PDF not found"
+        );
+        const postError400 = new ApiError(
+          400,
+          "Bad Request",
+          { detail: "PDF already exists" },
+          "PDF already exists"
+        );
+        const networkError = new Error("Network error");
+
+        (ApiClient.get as jest.Mock)
+          .mockRejectedValueOnce(getError404) // Initial GET: 404
+          .mockRejectedValueOnce(networkError); // Retry attempt 1: network error (should fail fast)
+        (ApiClient.post as jest.Mock).mockRejectedValueOnce(postError400);
+
+        await expect(PDFsService.getPdfBySummaryInvoiceIdWithFallback(200)).rejects.toThrow(
+          networkError
+        );
+
+        expect(ApiClient.get).toHaveBeenCalledTimes(2);
+      });
+
+      it("exhausts all retries when getting consecutive 404 errors", async () => {
+        const getError404 = new ApiError(
+          404,
+          "Not Found",
+          { detail: "PDF not found" },
+          "PDF not found"
+        );
+        const postError400 = new ApiError(
+          400,
+          "Bad Request",
+          { detail: "PDF already exists" },
+          "PDF already exists"
+        );
+
+        (ApiClient.get as jest.Mock)
+          .mockRejectedValueOnce(getError404) // Initial GET: 404
+          .mockRejectedValueOnce(getError404) // Retry attempt 1: 404
+          .mockRejectedValueOnce(getError404) // Retry attempt 2: 404
+          .mockRejectedValueOnce(getError404); // Retry attempt 3: 404
+        (ApiClient.post as jest.Mock).mockRejectedValueOnce(postError400);
+
+        await expect(PDFsService.getPdfBySummaryInvoiceIdWithFallback(200)).rejects.toThrow(
+          getError404
+        );
+
+        expect(ApiClient.get).toHaveBeenCalledTimes(4);
+      });
+    });
   });
 });

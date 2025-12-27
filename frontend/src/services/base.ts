@@ -18,43 +18,88 @@ interface ApiErrorDetail {
       }>;
 }
 
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public statusText: string,
+    public detail: ApiErrorDetail,
+    message: string
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export class ApiClient {
   static baseUrl(): string {
     return process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || "http://localhost:8000";
   }
 
   static async get<T>(path: string, init?: RequestInit): Promise<T> {
-    log.debug(`GET ${path}`);
-    const res = await fetch(`${this.baseUrl()}${path}`, { cache: "no-store", ...init });
-    if (!res.ok) {
-      const errorDetail = await this.parseErrorResponse(res);
-      log.error(`GET ${path} [${res.status}]`, errorDetail);
-      const error = new Error(JSON.stringify(errorDetail));
+    const url = `${this.baseUrl()}${path}`;
+    log.debug(`📤 REQUEST: GET ${path}`);
+
+    try {
+      const res = await fetch(url, { cache: "no-store", ...init });
+
+      if (!res.ok) {
+        const errorDetail = await this.parseErrorResponse(res);
+        log.error(`📥 RESPONSE: GET ${path} [${res.status}]`, {
+          status: res.status,
+          statusText: res.statusText,
+          detail: errorDetail,
+        });
+        throw new ApiError(res.status, res.statusText, errorDetail, JSON.stringify(errorDetail));
+      }
+
+      log.debug(`📥 RESPONSE: GET ${path} [${res.status}] ✅`);
+      const data = (await res.json()) as T;
+      return data;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      log.error(`📥 RESPONSE: GET ${path} [NETWORK ERROR]`, { error });
       throw error;
     }
-    log.debug(`GET ${path} [${res.status}] ✅`);
-    return res.json() as Promise<T>;
   }
 
   static async post<T>(path: string, body: unknown, init?: RequestInit): Promise<T> {
-    log.debug(`POST ${path}`, { bodySize: JSON.stringify(body).length });
-    const res = await fetch(`${this.baseUrl()}${path}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...init?.headers,
-      },
-      body: JSON.stringify(body),
-      ...init,
-    });
-    if (!res.ok) {
-      const errorDetail = await this.parseErrorResponse(res);
-      log.error(`POST ${path} [${res.status}]`, errorDetail);
-      const error = new Error(JSON.stringify(errorDetail));
+    const url = `${this.baseUrl()}${path}`;
+    const bodySize = JSON.stringify(body).length;
+    log.debug(`📤 REQUEST: POST ${path}`, { bodySize: `${bodySize} bytes` });
+
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...init?.headers,
+        },
+        body: JSON.stringify(body),
+        ...init,
+      });
+
+      if (!res.ok) {
+        const errorDetail = await this.parseErrorResponse(res);
+        log.error(`📥 RESPONSE: POST ${path} [${res.status}]`, {
+          status: res.status,
+          statusText: res.statusText,
+          detail: errorDetail,
+        });
+        throw new ApiError(res.status, res.statusText, errorDetail, JSON.stringify(errorDetail));
+      }
+
+      log.debug(`📥 RESPONSE: POST ${path} [${res.status}] ✅`);
+      const data = (await res.json()) as T;
+      return data;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      log.error(`📥 RESPONSE: POST ${path} [NETWORK ERROR]`, { error });
       throw error;
     }
-    log.debug(`POST ${path} [${res.status}] ✅`);
-    return res.json() as Promise<T>;
   }
 
   /**

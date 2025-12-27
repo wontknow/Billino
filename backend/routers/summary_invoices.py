@@ -15,6 +15,8 @@ from models import (
     SummaryInvoiceRead,
 )
 from services import create_summary_invoice
+from services.background_pdf_generator import BackgroundPDFGenerator
+from services.pdf_generation_service import generate_pdf_for_summary_invoice
 from utils import logger
 
 LOG_DEV = os.getenv("ENV", "dev").lower() != "prod"
@@ -86,6 +88,21 @@ def create_summary(
             "invoice_count": len(summary.invoice_ids),
         },
     )
+
+    # Trigger PDF generation asynchronously in background thread
+    logger.debug(
+        f"🖨️ Starting background thread for PDF generation (summary {summary_invoice.id})..."
+    )
+
+    recipient_name = getattr(summary, "recipient_name", None)
+    BackgroundPDFGenerator.generate_in_background(
+        pdf_generation_func=generate_pdf_for_summary_invoice,
+        entity_id=summary_invoice.id,
+        entity_type="summary invoice",
+        thread_name_prefix="PDF-Summary",
+        recipient_name=recipient_name,
+    )
+
     return summary_invoice
 
 
