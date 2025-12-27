@@ -22,9 +22,12 @@ target/
 
 # Builds
 dist/
-# Database files (ignore actual data, but track the structure)
+# Data files (ignore actual data, but track the structure)
 data/*.db
-backups/
+data/backups/
+data/pdfs/invoices/*.pdf
+data/pdfs/summary_invoices/*.pdf
+data/pdfs/archive/
 
 .htmlcov/
 

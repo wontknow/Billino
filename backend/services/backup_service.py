@@ -25,8 +25,8 @@ class BackupHandler:
     Erkennt automatisch Tauri-Umgebung und wählt entsprechende Backup-Strategie.
     """
 
-    # Backup-Verzeichnis-Struktur (relativ zu Backend-Root)
-    BACKUP_ROOT = BACKEND_ROOT / "backups"
+    # Backup-Verzeichnis-Struktur (relativ zu Backend-Root, im data/ Ordner)
+    BACKUP_ROOT = BACKEND_ROOT / "data" / "backups"
     BACKUP_DAILY = BACKUP_ROOT / "daily"
     PDF_ARCHIVE = BACKEND_ROOT / "data" / "pdfs" / "archive"
 
