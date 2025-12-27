@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, Loader2, X } from "lucide-react";
+import { Plus, Trash2, Loader2, X, Info } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -29,6 +29,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { logger } from "@/lib/logger";
 import { parseApiError } from "@/lib/error-parser";
 
@@ -49,6 +56,8 @@ export function InvoiceForm() {
   const [customerSearchResults, setCustomerSearchResults] = useState<Customer[]>([]);
   const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
   const [customerSearchInput, setCustomerSearchInput] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [showCustomerNote, setShowCustomerNote] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [alert, setAlert] = useState<AlertState | null>(null);
@@ -286,6 +295,7 @@ export function InvoiceForm() {
       // Reset customer search input
       setCustomerSearchInput("");
       setCustomerSearchResults([]);
+      setSelectedCustomer(null);
 
       // Refresh preview number
       const { preview_number } = await InvoicesService.getNumberPreview();
@@ -400,6 +410,7 @@ export function InvoiceForm() {
 
                           if (value.length < 2) {
                             setCustomerSearchResults([]);
+                            setSelectedCustomer(null); // Reset selected customer
                             field.onChange(null); // Reset selection
                           }
                         }}
@@ -425,14 +436,15 @@ export function InvoiceForm() {
                                 highlightedIndex >= 0 &&
                                 highlightedIndex < customerSearchResults.length
                               ) {
-                                const selectedCustomer = customerSearchResults[highlightedIndex];
+                                const customer = customerSearchResults[highlightedIndex];
                                 log.debug("Customer selected via Enter key", {
-                                  name: selectedCustomer.name,
-                                  id: selectedCustomer.id,
+                                  name: customer.name,
+                                  id: customer.id,
                                 });
-                                field.onChange(selectedCustomer.id);
+                                field.onChange(customer.id);
+                                setSelectedCustomer(customer);
                                 shouldSkipSearchRef.current = true; // Prevent search after programmatic input change
-                                setCustomerSearchInput(selectedCustomer.name);
+                                setCustomerSearchInput(customer.name);
                                 setCustomerSearchResults([]);
                                 setHighlightedIndex(-1);
                               } else if (
@@ -440,14 +452,15 @@ export function InvoiceForm() {
                                 customerSearchResults.length > 0
                               ) {
                                 // Auto-select the first result if nothing is highlighted
-                                const selectedCustomer = customerSearchResults[0];
+                                const customer = customerSearchResults[0];
                                 log.debug("First result auto-selected via Enter", {
-                                  name: selectedCustomer.name,
-                                  id: selectedCustomer.id,
+                                  name: customer.name,
+                                  id: customer.id,
                                 });
-                                field.onChange(selectedCustomer.id);
+                                field.onChange(customer.id);
+                                setSelectedCustomer(customer);
                                 shouldSkipSearchRef.current = true; // Prevent search after programmatic input change
-                                setCustomerSearchInput(selectedCustomer.name);
+                                setCustomerSearchInput(customer.name);
                                 setCustomerSearchResults([]);
                                 setHighlightedIndex(-1);
                               }
@@ -486,6 +499,7 @@ export function InvoiceForm() {
                                 id: customer.id,
                               });
                               field.onChange(customer.id);
+                              setSelectedCustomer(customer);
                               shouldSkipSearchRef.current = true; // Prevent search after programmatic input change
                               setCustomerSearchInput(customer.name);
                               setCustomerSearchResults([]);
@@ -493,9 +507,55 @@ export function InvoiceForm() {
                             }}
                             onMouseEnter={() => setHighlightedIndex(index)}
                           >
-                            {customer.name}
+                            <div>
+                              <div className="font-medium">{customer.name}</div>
+                              {(customer.address || customer.city) && (
+                                <div className="text-xs text-muted-foreground">
+                                  {customer.address}
+                                  {customer.address && customer.city && ", "}
+                                  {customer.city}
+                                </div>
+                              )}
+                            </div>
                           </button>
                         ))}
+                      </div>
+                    )}
+
+                    {/* Selected customer chip with address/city and note button */}
+                    {selectedCustomer && field.value !== null && (
+                      <div className="mt-2 flex items-center gap-2 rounded-md bg-gray-100 px-3 py-2">
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">{selectedCustomer.name}</div>
+                          {(selectedCustomer.address || selectedCustomer.city) && (
+                            <div className="text-xs text-muted-foreground">
+                              {selectedCustomer.address}
+                              {selectedCustomer.address && selectedCustomer.city && ", "}
+                              {selectedCustomer.city}
+                            </div>
+                          )}
+                        </div>
+                        {selectedCustomer.note && (
+                          <button
+                            type="button"
+                            className="rounded-full p-1 hover:bg-gray-200 transition-colors"
+                            onClick={() => setShowCustomerNote(true)}
+                            title="Kundennotizen anzeigen"
+                          >
+                            <Info className="h-4 w-4 text-blue-600" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="text-gray-500 hover:text-gray-700"
+                          onClick={() => {
+                            setSelectedCustomer(null);
+                            setCustomerSearchInput("");
+                            field.onChange(null);
+                          }}
+                        >
+                          ✕
+                        </button>
                       </div>
                     )}
 
@@ -789,6 +849,23 @@ export function InvoiceForm() {
           </Form>
         </CardContent>
       </Card>
+
+      {/* Customer Note Dialog */}
+      {selectedCustomer?.note && (
+        <Dialog open={showCustomerNote} onOpenChange={setShowCustomerNote}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Kundennotizen: {selectedCustomer.name}</DialogTitle>
+              <DialogDescription>
+                Wichtige Hinweise und Informationen zu diesem Kunden
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4 rounded-md bg-blue-50 p-4 border border-blue-200">
+              <p className="text-sm whitespace-pre-wrap">{selectedCustomer.note}</p>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
