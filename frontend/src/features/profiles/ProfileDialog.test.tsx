@@ -165,27 +165,15 @@ describe("ProfileDialog", () => {
     expect(mockOnClose).toHaveBeenCalled();
   });
 
-  it("disables submit button when required fields are empty", () => {
+  it("disables submit button when name is empty", () => {
     render(<ProfileDialog isOpen={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />);
 
     const submitButton = screen.getByRole("button", { name: /Erstellen/ });
     expect(submitButton).toBeDisabled();
 
-    // Fill in name only
+    // Fill in name - button should be enabled
     fireEvent.change(screen.getByLabelText(/Firmenname/), {
       target: { value: "Test Company" },
-    });
-    expect(submitButton).toBeDisabled();
-
-    // Fill in address
-    fireEvent.change(screen.getByLabelText(/Adresse/), {
-      target: { value: "Test Street 123" },
-    });
-    expect(submitButton).toBeDisabled();
-
-    // Fill in city - now button should be enabled
-    fireEvent.change(screen.getByLabelText(/Stadt/), {
-      target: { value: "Test City" },
     });
     expect(submitButton).not.toBeDisabled();
   });
@@ -208,5 +196,89 @@ describe("ProfileDialog", () => {
 
     // Tax rate field should be visible again
     expect(screen.getByLabelText(/Standard-Steuersatz/)).toBeInTheDocument();
+  });
+
+  describe("Error handling", () => {
+    beforeEach(() => {
+      // Mock window.alert
+      global.alert = jest.fn();
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("displays error alert when create fails", async () => {
+      const error = new Error("Network error");
+      (ProfilesService.create as jest.Mock).mockRejectedValueOnce(error);
+
+      render(<ProfileDialog isOpen={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />);
+
+      fireEvent.change(screen.getByLabelText(/Firmenname/), {
+        target: { value: "Test Company" },
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /Erstellen/ }));
+
+      await waitFor(() => {
+        expect(global.alert).toHaveBeenCalledWith("Fehler beim Speichern: Network error");
+      });
+
+      expect(mockOnSuccess).not.toHaveBeenCalled();
+      expect(mockOnClose).not.toHaveBeenCalled();
+    });
+
+    it("displays error alert when update fails", async () => {
+      const profile: Profile = {
+        id: 1,
+        name: "Tech Solutions GmbH",
+        address: "Hauptstraße 123",
+        city: "10115 Berlin",
+        bank_data: "DE89370400440532013000",
+        tax_number: "DE123456789",
+        include_tax: true,
+        default_tax_rate: 0.19,
+      };
+
+      const error = new Error("Update failed");
+      (ProfilesService.update as jest.Mock).mockRejectedValueOnce(error);
+
+      render(
+        <ProfileDialog
+          isOpen={true}
+          profile={profile}
+          onClose={mockOnClose}
+          onSuccess={mockOnSuccess}
+        />
+      );
+
+      fireEvent.change(screen.getByLabelText(/Firmenname/), {
+        target: { value: "Updated Name" },
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /Speichern/ }));
+
+      await waitFor(() => {
+        expect(global.alert).toHaveBeenCalledWith("Fehler beim Speichern: Update failed");
+      });
+
+      expect(mockOnSuccess).not.toHaveBeenCalled();
+    });
+
+    it("displays generic error message for unknown errors", async () => {
+      (ProfilesService.create as jest.Mock).mockRejectedValueOnce("Unknown error type");
+
+      render(<ProfileDialog isOpen={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />);
+
+      fireEvent.change(screen.getByLabelText(/Firmenname/), {
+        target: { value: "Test Company" },
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /Erstellen/ }));
+
+      await waitFor(() => {
+        expect(global.alert).toHaveBeenCalledWith("Fehler beim Speichern: Unbekannter Fehler");
+      });
+    });
   });
 });
