@@ -19,6 +19,10 @@ export function useEntityDialog<T extends { id?: number | string }>(
   const [isSubmitting, setIsSubmitting] = useState(false);
   const log = logger.createScoped(config.logScope);
 
+  const formatErrorMessage = (error: unknown): string => {
+    return error instanceof Error ? error.message : "Unbekannter Fehler";
+  };
+
   const handleSubmit = async (
     entity: T | null | undefined,
     payload: Partial<T>
@@ -41,9 +45,7 @@ export function useEntityDialog<T extends { id?: number | string }>(
       return true;
     } catch (error) {
       log.error("Failed to save entity", { error });
-      alert(
-        `Fehler beim Speichern: ${error instanceof Error ? error.message : "Unbekannter Fehler"}`
-      );
+      alert(`Fehler beim Speichern: ${formatErrorMessage(error)}`);
       return false;
     } finally {
       setIsSubmitting(false);

@@ -71,10 +71,13 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
       return;
     }
 
+    // Helper to convert empty string to undefined
+    const toOptional = (value: string) => value.trim() || undefined;
+
     const payload = {
       name: name.trim(),
-      address: address.trim() || undefined,
-      city: city.trim() || undefined,
+      address: toOptional(address),
+      city: toOptional(city),
       bank_data: bankData.trim() || null,
       tax_number: taxNumber.trim() || null,
       include_tax: includeTax,
