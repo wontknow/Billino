@@ -102,6 +102,44 @@ export class ApiClient {
     }
   }
 
+  static async put<T>(path: string, body: unknown, init?: RequestInit): Promise<T> {
+    const url = `${this.baseUrl()}${path}`;
+    const bodySize = JSON.stringify(body).length;
+    log.debug(`📤 REQUEST: PUT ${path}`, { bodySize: `${bodySize} bytes` });
+
+    try {
+      const res = await fetch(url, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...init?.headers,
+        },
+        body: JSON.stringify(body),
+        ...init,
+      });
+
+      if (!res.ok) {
+        const errorDetail = await this.parseErrorResponse(res);
+        log.error(`📥 RESPONSE: PUT ${path} [${res.status}]`, {
+          status: res.status,
+          statusText: res.statusText,
+          detail: errorDetail,
+        });
+        throw new ApiError(res.status, res.statusText, errorDetail, JSON.stringify(errorDetail));
+      }
+
+      log.debug(`📥 RESPONSE: PUT ${path} [${res.status}] ✅`);
+      const data = (await res.json()) as T;
+      return data;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      log.error(`📥 RESPONSE: PUT ${path} [NETWORK ERROR]`, { error });
+      throw error;
+    }
+  }
+
   /**
    * Parse error response and extract validation details
    */

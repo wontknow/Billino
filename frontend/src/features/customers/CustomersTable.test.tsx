@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { CustomersTable } from "./CustomersTable";
 import type { Customer } from "@/types/customer";
 
@@ -35,5 +35,26 @@ describe("Kundenliste lädt korrekt", () => {
       <CustomersTable customers={[]} emptyMessage="Fehler beim Laden - Keine Kunden gefunden" />
     );
     screen.getByText("Fehler beim Laden - Keine Kunden gefunden");
+  });
+
+  it("ruft onCreateCustomer beim Button-Klick auf", () => {
+    const onCreateCustomer = jest.fn();
+    render(<CustomersTable customers={sample} onCreateCustomer={onCreateCustomer} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Neuer Kunde" }));
+    expect(onCreateCustomer).toHaveBeenCalled();
+  });
+
+  it("ruft onCustomerSelect beim Zeilen-Klick auf", () => {
+    const onCustomerSelect = jest.fn();
+    render(<CustomersTable customers={sample} onCustomerSelect={onCustomerSelect} />);
+
+    fireEvent.click(screen.getByText("Acme GmbH"));
+    expect(onCustomerSelect).toHaveBeenCalledWith(1);
+  });
+
+  it("zeigt keinen Button wenn onCreateCustomer nicht definiert ist", () => {
+    render(<CustomersTable customers={sample} />);
+    expect(screen.queryByRole("button", { name: "Neuer Kunde" })).not.toBeInTheDocument();
   });
 });

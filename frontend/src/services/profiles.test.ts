@@ -14,6 +14,7 @@ describe("ProfilesService", () => {
       {
         id: 1,
         name: "Test Profile",
+        address: "Test Street 123",
         city: "Berlin",
         include_tax: true,
         default_tax_rate: 0.19,

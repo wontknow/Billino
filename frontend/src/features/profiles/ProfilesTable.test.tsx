@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { ProfilesTable } from "./ProfilesTable";
 import type { Profile } from "@/types/profile";
 
@@ -16,6 +16,7 @@ describe("ProfilesTable", () => {
       id: 2,
       name: "Erika Musterfrau",
       city: "München",
+      address: "Musterstr. 2",
       include_tax: false,
       default_tax_rate: 0.19,
     },
@@ -23,6 +24,7 @@ describe("ProfilesTable", () => {
       id: 3,
       name: "Firma XYZ",
       city: "Hamburg",
+      address: "Firmenweg 3",
       include_tax: true,
       default_tax_rate: 0.07,
     },
@@ -95,6 +97,7 @@ describe("ProfilesTable", () => {
         id: 99,
         name: "Test ohne Stadt",
         city: "",
+        address: "Test Str",
         include_tax: true,
         default_tax_rate: 0.19,
       },
@@ -104,5 +107,32 @@ describe("ProfilesTable", () => {
     const cells = screen.getAllByRole("cell");
     const cityCell = cells.find((cell) => cell.textContent === "—");
     expect(cityCell).toBeInTheDocument();
+  });
+
+  it("calls onCreateProfile when button is clicked", () => {
+    const mockOnCreateProfile = jest.fn();
+    render(<ProfilesTable profiles={sampleProfiles} onCreateProfile={mockOnCreateProfile} />);
+
+    const button = screen.getByRole("button", { name: /Neues Profil/ });
+    fireEvent.click(button);
+
+    expect(mockOnCreateProfile).toHaveBeenCalled();
+  });
+
+  it("calls onProfileSelect when row is clicked", () => {
+    const mockOnProfileSelect = jest.fn();
+    render(<ProfilesTable profiles={sampleProfiles} onProfileSelect={mockOnProfileSelect} />);
+
+    const firstRow = screen.getByText("Max Mustermann").closest("tr");
+    fireEvent.click(firstRow!);
+
+    expect(mockOnProfileSelect).toHaveBeenCalledWith(sampleProfiles[0]);
+  });
+
+  it("does not render create button when onCreateProfile is not provided", () => {
+    render(<ProfilesTable profiles={sampleProfiles} />);
+
+    const button = screen.queryByRole("button", { name: /Neues Profil/ });
+    expect(button).not.toBeInTheDocument();
   });
 });

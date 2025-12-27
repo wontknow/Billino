@@ -10,20 +10,35 @@ import {
   TableCell,
   TableCaption,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import type { Profile } from "@/types/profile";
 
 interface ProfilesTableProps {
   profiles: Profile[];
   emptyMessage?: React.ReactNode;
+  onProfileSelect?: (profile: Profile) => void;
+  onCreateProfile?: () => void;
 }
 
-export const ProfilesTable: React.FC<ProfilesTableProps> = ({ profiles, emptyMessage }) => {
+export const ProfilesTable: React.FC<ProfilesTableProps> = ({
+  profiles,
+  emptyMessage,
+  onProfileSelect,
+  onCreateProfile,
+}) => {
   const hasData = profiles.length > 0;
+  const isInteractive = !!onProfileSelect;
+
   return (
     <Card className="w-full mx-auto flex flex-col overflow-hidden max-w-screen-lg md:max-w-screen-xl 2xl:max-w-screen-2xl h-[70vh] md:h-[75vh] lg:h-[80vh]">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle>Profile</CardTitle>
+        {onCreateProfile && (
+          <CardAction className="flex gap-2">
+            <Button onClick={onCreateProfile}>Neues Profil</Button>
+          </CardAction>
+        )}
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden">
         <div className="h-full overflow-auto">
@@ -42,7 +57,21 @@ export const ProfilesTable: React.FC<ProfilesTableProps> = ({ profiles, emptyMes
             </TableHeader>
             <TableBody>
               {profiles.map((p) => (
-                <TableRow key={p.id}>
+                <TableRow
+                  key={p.id}
+                  className={isInteractive ? "cursor-pointer hover:bg-muted/50" : ""}
+                  onClick={() => isInteractive && onProfileSelect?.(p)}
+                  tabIndex={isInteractive ? 0 : -1}
+                  onKeyDown={(event) => {
+                    if (!isInteractive) {
+                      return;
+                    }
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onProfileSelect?.(p);
+                    }
+                  }}
+                >
                   <TableCell className="font-medium">{p.name}</TableCell>
                   <TableCell>{p.city || "—"}</TableCell>
                   <TableCell>{renderTaxStatus(p)}</TableCell>
