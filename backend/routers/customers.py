@@ -19,6 +19,7 @@ def create_customer(customer: Customer, session: Session = Depends(get_session))
     - `name` (string, required): Customer name (must not be empty)
     - `address` (string, optional): Customer address
     - `city` (string, optional): Customer city
+    - `note` (string, optional): Customer notes (e.g., color preferences, special instructions)
 
     **Returns:**
     - Customer object with assigned ID
@@ -28,7 +29,8 @@ def create_customer(customer: Customer, session: Session = Depends(get_session))
     {
         "name": "John Doe",
         "address": "123 Main Street",
-        "city": "Berlin"
+        "city": "Berlin",
+        "note": "Prefers blue color scheme"
     }
     ```
 
@@ -38,7 +40,8 @@ def create_customer(customer: Customer, session: Session = Depends(get_session))
         "id": 1,
         "name": "John Doe",
         "address": "123 Main Street",
-        "city": "Berlin"
+        "city": "Berlin",
+        "note": "Prefers blue color scheme"
     }
     ```
     """
@@ -161,6 +164,7 @@ def update_customer(
     - `name` (string): Customer name
     - `address` (string or null): Customer address
     - `city` (string or null): Customer city
+    - `note` (string or null): Customer notes (e.g., color preferences, special instructions)
 
     **Returns:**
     - Updated Customer object
@@ -170,7 +174,8 @@ def update_customer(
     {
         "name": "John Doe Updated",
         "address": "456 New Street",
-        "city": "Hamburg"
+        "city": "Hamburg",
+        "note": "Updated preference: now prefers red colors"
     }
     ```
 
@@ -180,7 +185,8 @@ def update_customer(
         "id": 1,
         "name": "John Doe Updated",
         "address": "456 New Street",
-        "city": "Hamburg"
+        "city": "Hamburg",
+        "note": "Updated preference: now prefers red colors"
     }
     ```
     """
@@ -195,6 +201,8 @@ def update_customer(
         customer.address = updated_customer.address
     if customer.city != updated_customer.city:
         customer.city = updated_customer.city
+    if customer.note != updated_customer.note:
+        customer.note = updated_customer.note
     session.add(customer)
     session.commit()
     session.refresh(customer)
