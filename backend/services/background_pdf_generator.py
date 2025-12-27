@@ -175,11 +175,15 @@ class BackgroundPDFGenerator:
            - Adding monitoring/logging for incomplete PDF generations
         """
         if cls._active_threads:
-            logger.info("🛑 Shutdown detected - waiting for PDF generation threads...")
+            active_count = len(cls._active_threads)
+            logger.info(
+                f"🛑 Shutdown detected - waiting for {active_count} PDF generation thread(s)..."
+            )
             completed = cls.wait_for_active_threads()
             if not completed:
+                remaining = len([t for t in cls._active_threads if t.is_alive()])
                 logger.warning(
-                    "⚠️ Some PDF generation threads did not complete within timeout. "
+                    f"⚠️ {remaining} PDF generation thread(s) did not complete within 5s timeout. "
                     "Incomplete PDFs will be regenerated on-demand via lazy-load fallback."
                 )
 
