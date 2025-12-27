@@ -12,6 +12,7 @@ class SummaryInvoice(SQLModel, table=True):
     total_net: float
     total_tax: float
     total_gross: float
+    recipient_customer_id: Optional[int] = Field(default=None, foreign_key="customer.id")
 
     invoices: List["SummaryInvoiceLink"] = Relationship(
         back_populates="summary_invoice"
