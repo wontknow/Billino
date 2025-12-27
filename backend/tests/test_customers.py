@@ -85,12 +85,48 @@ def test_create_customer_without_city(client):
     assert data["city"] is None
 
 
+def test_create_customer_with_note(client):
+    """Creating a customer with a note should persist the note."""
+    response = client.post(
+        "/customers",
+        json={
+            "name": "Farbwerk GmbH",
+            "address": "Paletteweg 7",
+            "city": "Köln",
+            "note": "Bevorzugt Blau/Weiß Farbschema",
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["id"] is not None
+    assert data["name"] == "Farbwerk GmbH"
+    assert data["note"] == "Bevorzugt Blau/Weiß Farbschema"
+
+
 def test_list_customers(client):
     client.post("/customers", json={"name": "Peter Schmidt", "address": "Nebenstr. 2"})
     resp = client.get("/customers")
     assert resp.status_code == 200
     data = resp.json()
     assert any(c["name"] == "Peter Schmidt" for c in data)
+
+
+def test_list_customers_includes_note(client):
+    """List endpoint should include the 'note' field when present."""
+    client.post(
+        "/customers",
+        json={
+            "name": "Hinweis AG",
+            "city": "Hamburg",
+            "note": "Kunde bevorzugt Sammelrechnungen",
+        },
+    )
+    resp = client.get("/customers")
+    assert resp.status_code == 200
+    customers = resp.json()
+    found = next((c for c in customers if c["name"] == "Hinweis AG"), None)
+    assert found is not None
+    assert found["note"] == "Kunde bevorzugt Sammelrechnungen"
 
 
 def test_update_customer(client):
@@ -116,6 +152,61 @@ def test_update_customer(client):
     resp3 = client.get("/customers")
     names = [c["name"] for c in resp3.json()]
     assert "Maxi Mustermann" in names
+
+
+def test_update_customer_add_note(client):
+    """Updating a customer should allow adding a note."""
+    # Create without note
+    resp = client.post(
+        "/customers",
+        json={"name": "Ohne Notiz GmbH", "address": "Altstr. 5", "city": "Old City"},
+    )
+    cust = resp.json()
+
+    # Add note
+    resp2 = client.put(
+        f"/customers/{cust['id']}",
+        json={
+            "id": cust["id"],
+            "name": "Ohne Notiz GmbH",
+            "address": "Altstr. 5",
+            "city": "Old City",
+            "note": "Jetzt mit Notiz",
+        },
+    )
+    assert resp2.status_code == 200
+    updated = resp2.json()
+    assert updated["note"] == "Jetzt mit Notiz"
+
+
+def test_update_customer_clear_note(client):
+    """Setting note to null should clear it in the DB."""
+    # Create with note
+    resp = client.post(
+        "/customers",
+        json={
+            "name": "Mit Notiz GmbH",
+            "address": "Neu 1",
+            "city": "City",
+            "note": "Wird entfernt",
+        },
+    )
+    cust = resp.json()
+
+    # Clear note
+    resp2 = client.put(
+        f"/customers/{cust['id']}",
+        json={
+            "id": cust["id"],
+            "name": "Mit Notiz GmbH",
+            "address": "Neu 1",
+            "city": "City",
+            "note": None,
+        },
+    )
+    assert resp2.status_code == 200
+    updated = resp2.json()
+    assert updated["note"] is None
 
 
 def test_delete_customer(client):
