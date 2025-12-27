@@ -174,7 +174,7 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
               <Checkbox
                 id="includeTax"
                 checked={includeTax}
-                onCheckedChange={(checked) => setIncludeTax(checked as boolean)}
+                onCheckedChange={(checked) => setIncludeTax(checked === true)}
                 disabled={isSubmitting}
               />
               <Label htmlFor="includeTax" className="cursor-pointer font-normal">
