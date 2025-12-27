@@ -155,10 +155,33 @@ class BackgroundPDFGenerator:
 
     @classmethod
     def _shutdown_handler(cls):
-        """Handler called on process exit to wait for active threads."""
+        """
+        Handler called on process exit to wait for active threads.
+
+        IMPORTANT LIMITATIONS:
+        1. Daemon threads are forcefully terminated when the main process exits.
+           The wait_for_active_threads method has a 5-second timeout which may not
+           be sufficient for long-running PDF generations.
+
+        2. In multi-worker deployments (e.g., gunicorn/uvicorn with multiple workers):
+           - Each worker process has its own atexit handler
+           - There is no coordination between workers
+           - Workers killed ungracefully (SIGKILL) won't run this handler at all
+
+        3. For production deployments, consider:
+           - Using a proper task queue (Celery, RQ) instead of daemon threads
+           - Implementing SIGTERM signal handling for more reliable shutdown
+           - Increasing the timeout or making it configurable
+           - Adding monitoring/logging for incomplete PDF generations
+        """
         if cls._active_threads:
             logger.info("🛑 Shutdown detected - waiting for PDF generation threads...")
-            cls.wait_for_active_threads()
+            completed = cls.wait_for_active_threads()
+            if not completed:
+                logger.warning(
+                    "⚠️ Some PDF generation threads did not complete within timeout. "
+                    "Incomplete PDFs will be regenerated on-demand via lazy-load fallback."
+                )
 
 
 # Register shutdown handler to wait for threads on process exit

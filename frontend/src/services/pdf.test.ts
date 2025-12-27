@@ -14,14 +14,15 @@ jest.mock("./base", () => {
   };
 });
 
+// Mock scoped logger to match actual usage in pdfs.ts
 jest.mock("@/lib/logger", () => ({
   logger: {
-    createScoped: () => ({
+    createScoped: jest.fn(() => ({
       debug: jest.fn(),
       info: jest.fn(),
       warn: jest.fn(),
       error: jest.fn(),
-    }),
+    })),
   },
 }));
 

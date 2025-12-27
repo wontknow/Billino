@@ -169,11 +169,16 @@ export class PDFsService {
   }
 
   /**
-   * Retry fetching PDF by invoice ID with exponential backoff.
+   * Generic retry function with exponential backoff.
    * Used to handle race conditions where PDF was created between GET and POST.
+   *
+   * Retries only on 404 errors (PDF not ready yet). Fails fast on other errors
+   * (e.g., 500 server errors, network issues) to avoid unnecessary waiting.
    */
-  private static async retryGetPdfByInvoiceId(
-    invoiceId: number,
+  private static async retryGetPdf(
+    endpoint: string,
+    entityId: number,
+    entityType: string,
     maxRetries: number = 3,
     baseDelay: number = 100
   ): Promise<PdfBlob> {
@@ -183,20 +188,56 @@ export class PDFsService {
         log.debug(`🔄 Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms...`);
         await new Promise((resolve) => setTimeout(resolve, delay));
 
-        const pdfResponse: StoredPDF = await ApiClient.get<StoredPDF>(
-          `/pdfs/by-invoice/${invoiceId}`
-        );
-        log.debug(`✅ PDF Retrieved: Invoice ${invoiceId} on retry ${attempt + 1}`);
+        const pdfResponse: StoredPDF = await ApiClient.get<StoredPDF>(endpoint);
+        log.debug(`✅ PDF Retrieved: ${entityType} ${entityId} on retry ${attempt + 1}`);
         return PDFsService.convertBase64ToPdfBlob(pdfResponse);
       } catch (error: unknown) {
-        if (attempt === maxRetries - 1) {
-          log.error(`❌ All retry attempts exhausted for invoice ${invoiceId}`);
+        // Check if error is a 404 (PDF not ready yet) or a different error
+        if (error instanceof ApiError) {
+          if (error.status !== 404) {
+            // Non-404 error (e.g., 500, network error) - fail fast
+            log.error(
+              `❌ Non-transient error [${error.status}] for ${entityType} ${entityId} - failing fast`
+            );
+            throw error;
+          }
+        } else {
+          // Network error or other non-API error - fail fast
+          log.error(`❌ Network error for ${entityType} ${entityId} - failing fast`);
           throw error;
         }
-        log.debug(`⚠️ Retry ${attempt + 1} failed, continuing...`);
+
+        // 404 error - PDF might not be ready yet, continue retrying
+        if (attempt === maxRetries - 1) {
+          log.error(`❌ All retry attempts exhausted for ${entityType} ${entityId}`);
+          throw error;
+        }
+        log.debug(`⚠️ Retry ${attempt + 1} failed (404), continuing...`);
       }
     }
-    throw new Error(`Failed to fetch PDF for invoice ${invoiceId}`);
+
+    // This should never be reached due to throw on last attempt, but TypeScript requires it
+    throw new Error(
+      `Failed to fetch PDF for ${entityType} ${entityId} after ${maxRetries} retries`
+    );
+  }
+
+  /**
+   * Retry fetching PDF by invoice ID with exponential backoff.
+   * Used to handle race conditions where PDF was created between GET and POST.
+   */
+  private static async retryGetPdfByInvoiceId(
+    invoiceId: number,
+    maxRetries: number = 3,
+    baseDelay: number = 100
+  ): Promise<PdfBlob> {
+    return PDFsService.retryGetPdf(
+      `/pdfs/by-invoice/${invoiceId}`,
+      invoiceId,
+      "invoice",
+      maxRetries,
+      baseDelay
+    );
   }
 
   /**
@@ -208,26 +249,13 @@ export class PDFsService {
     maxRetries: number = 3,
     baseDelay: number = 100
   ): Promise<PdfBlob> {
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        const delay = baseDelay * Math.pow(2, attempt);
-        log.debug(`🔄 Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms...`);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-
-        const pdfResponse: StoredPDF = await ApiClient.get<StoredPDF>(
-          `/pdfs/by-summary/${summaryInvoiceId}`
-        );
-        log.debug(`✅ PDF Retrieved: Summary invoice ${summaryInvoiceId} on retry ${attempt + 1}`);
-        return PDFsService.convertBase64ToPdfBlob(pdfResponse);
-      } catch (error: unknown) {
-        if (attempt === maxRetries - 1) {
-          log.error(`❌ All retry attempts exhausted for summary invoice ${summaryInvoiceId}`);
-          throw error;
-        }
-        log.debug(`⚠️ Retry ${attempt + 1} failed, continuing...`);
-      }
-    }
-    throw new Error(`Failed to fetch PDF for summary invoice ${summaryInvoiceId}`);
+    return PDFsService.retryGetPdf(
+      `/pdfs/by-summary/${summaryInvoiceId}`,
+      summaryInvoiceId,
+      "summary invoice",
+      maxRetries,
+      baseDelay
+    );
   }
 
   private static generateFileName(storedPdf: StoredPDF): PdfFilename {
