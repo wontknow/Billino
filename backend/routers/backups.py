@@ -38,7 +38,7 @@ def trigger_backup():
     }
     ```
     """
-    logger.debug("GET /backups/trigger - Manuelles Backup angefordert")
+    logger.debug("POST /backups/trigger - Manuelles Backup angefordert")
 
     result = BackupScheduler.trigger_backup_now()
 
@@ -130,21 +130,14 @@ def list_backups():
     """
     logger.debug("GET /backups/list - Backup-Liste angefordert")
 
-    status = BackupScheduler.get_status()
-    if not status.get("backup_status"):
+    backup_list = BackupScheduler.list_backups()
+    if backup_list is None:
         logger.error("Backup-Handler nicht verfügbar")
         raise HTTPException(status_code=500, detail="Backup-System nicht verfügbar")
 
-    backup_count = status["backup_status"].get("backup_count", 0)
-    backup_path = status["backup_status"].get("backup_path", "N/A")
+    logger.info(f"{len(backup_list)} Backups gefunden")
 
-    logger.info(f"{backup_count} Backups gefunden in {backup_path}")
-
-    return {
-        "backup_count": backup_count,
-        "backup_path": backup_path,
-        "retention_days": status["backup_status"].get("retention_days", 30),
-    }
+    return backup_list
 
 
 @router.get("/jobs", status_code=200)

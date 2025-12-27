@@ -18,12 +18,12 @@ Backend-Dateistruktur:
 backend/
 ├── data/
 │   ├── billino.db
+│   ├── backups/ (neu)
+│   │   └── daily/
+│   │       └── billino_YYYY-MM-DD_HH-MM-SS.db
 │   └── pdfs/
 │       ├── invoices/
 │       └── summary_invoices/
-├── backups/ (neu)
-│   └── daily/
-│       └── billino_YYYY-MM-DD.db
 └── main.py
 ```
 
@@ -89,8 +89,8 @@ backend/
   - ⚠️ Disk-Space Warnungen
 
 ### Acceptance Criteria
-- [ ] `BackupHandler` erstellt tägliche DB-Backups im `backups/daily/` Ordner
-- [ ] Backup-Dateien sind benannt: `billino_YYYY-MM-DD.db`
+- [ ] `BackupHandler` erstellt tägliche DB-Backups im `data/backups/daily/` Ordner
+- [ ] Backup-Dateien sind benannt: `billino_YYYY-MM-DD_HH-MM-SS.db`
 - [ ] Tauri-Detektion funktioniert (für zukünftiges Ticket)
 - [ ] Retention Policy: Alte Backups werden nach 30 Tagen gelöscht
 - [ ] Manuelles Trigger über Endpoint möglich

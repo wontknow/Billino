@@ -29,9 +29,18 @@ async def lifespan(app: FastAPI):
     # Starte Backup-Scheduler (mit Konfiguration aus .env)
     backup_enabled = os.getenv("BACKUP_ENABLED", "true").lower() == "true"
     if backup_enabled:
-        backup_hour = int(os.getenv("BACKUP_SCHEDULE_HOUR", "2"))
-        backup_minute = int(os.getenv("BACKUP_SCHEDULE_MINUTE", "0"))
-        retention_days = int(os.getenv("BACKUP_RETENTION_DAYS", "30"))
+        try:
+            backup_hour = int(os.getenv("BACKUP_SCHEDULE_HOUR", "2"))
+            backup_minute = int(os.getenv("BACKUP_SCHEDULE_MINUTE", "0"))
+            retention_days = int(os.getenv("BACKUP_RETENTION_DAYS", "30"))
+        except ValueError as e:
+            logger.error(
+                f"❌ Ungültige Backup-Konfiguration: {e}. Nutze Standardwerte."
+            )
+            backup_hour = 2
+            backup_minute = 0
+            retention_days = 30
+
         tauri_enabled = os.getenv("TAURI_ENABLED", "false").lower() == "true"
 
         BackupScheduler.initialize(
@@ -48,8 +57,11 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown
-    BackupScheduler.stop()
-    logger.info("✅ Backup-Scheduler gestoppt")
+    if backup_enabled:
+        BackupScheduler.stop()
+        logger.info("✅ Backup-Scheduler gestoppt")
+    else:
+        logger.info("⏹️ Backup-Scheduler wurde nicht gestartet (BACKUP_ENABLED=false)")
 
 
 # .env explizit aus dem Backend-Verzeichnis laden (robuster bei anderem Working Directory)

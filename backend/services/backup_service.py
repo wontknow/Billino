@@ -113,7 +113,7 @@ class BackupHandler:
         """
         Erstelle ein Backup der Datenbank.
 
-        Format: billino_YYYY-MM-DD.db
+        Format: billino_YYYY-MM-DD_HH-MM-SS.db
         Speicherort: backups/daily/
 
         Returns:
@@ -123,21 +123,33 @@ class BackupHandler:
             logger.warning(f"⚠️ Datenbank nicht gefunden: {self.DB_PATH}")
             return None
 
-        # Zeitstempel für Backup-Dateiname
-        timestamp = datetime.now().strftime("%Y-%m-%d")
+        # Zeitstempel für Backup-Dateiname (mit Uhrzeit für Eindeutigkeit)
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         backup_filename = f"billino_{timestamp}.db"
         backup_path = self.BACKUP_DAILY / backup_filename
 
         try:
-            # Kopiere DB-Datei
-            shutil.copy2(self.DB_PATH, backup_path)
+            # Verwende SQLite Backup API statt shutil.copy2
+            import sqlite3
+
+            # Öffne Quell- und Zieldatenbank
+            source_conn = sqlite3.connect(str(self.DB_PATH))
+            dest_conn = sqlite3.connect(str(backup_path))
+
+            # Führe Backup durch (sicher auch bei aktiver Datenbank)
+            with dest_conn:
+                source_conn.backup(dest_conn)
+
+            source_conn.close()
+            dest_conn.close()
+
             logger.info(f"✅ Datenbank-Backup erstellt: {backup_path}")
 
             # Cleanup alte Backups
             self._cleanup_old_backups()
 
             return backup_path
-        except (IOError, OSError) as e:
+        except (IOError, OSError, sqlite3.Error) as e:
             logger.error(f"❌ Fehler beim DB-Backup: {e}")
             return None
 
@@ -193,7 +205,7 @@ class BackupHandler:
         """
         Lösche Backup-Dateien älter als `retention_days`.
 
-        Nur Dateien im Format `billino_YYYY-MM-DD.db` werden gelöscht.
+        Nur Dateien im Format `billino_YYYY-MM-DD*.db` werden gelöscht.
         """
         cutoff_date = datetime.now() - timedelta(days=self.retention_days)
         deleted_count = 0
@@ -202,14 +214,15 @@ class BackupHandler:
             for backup_file in self.BACKUP_DAILY.glob("billino_*.db"):
                 # Parse Datum aus Dateinamen
                 try:
-                    date_str = backup_file.stem.replace("billino_", "")
+                    # Extrahiere nur das Datum (YYYY-MM-DD Teil)
+                    date_str = backup_file.stem.replace("billino_", "").split("_")[0]
                     file_date = datetime.strptime(date_str, "%Y-%m-%d")
 
                     if file_date < cutoff_date:
                         backup_file.unlink()
                         deleted_count += 1
                         logger.debug(f"🗑️ Altes Backup gelöscht: {backup_file.name}")
-                except ValueError:
+                except (ValueError, IndexError):
                     # Dateinamen-Format passt nicht, überspringen
                     continue
 
