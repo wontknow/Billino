@@ -14,3 +14,6 @@ class SummaryInvoiceRead(SQLModel):
     total_tax: float
     total_gross: float
     invoice_ids: Optional[List[int]] = None
+    # Recipient (if present) and display helper
+    recipient_customer_id: Optional[int] = None
+    recipient_display_name: Optional[str] = None

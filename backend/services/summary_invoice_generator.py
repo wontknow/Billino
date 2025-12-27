@@ -19,6 +19,9 @@ def create_summary_invoice(
 ) -> SummaryInvoiceRead:
     """
     Create a summary invoice for the given profile and list of invoice IDs.
+
+    If recipient_customer_id is provided, that customer will be used as the recipient.
+    Otherwise, the customers from the invoices will be used.
     """
     profile_id = summary.profile_id
     invoice_ids = summary.invoice_ids
@@ -26,6 +29,16 @@ def create_summary_invoice(
     profile = session.get(Profile, profile_id)
     if not profile:
         raise ValueError("Profile not found")
+
+    # Validate recipient customer if provided
+    if summary.recipient_customer_id:
+        from models import Customer
+
+        recipient_customer = session.get(Customer, summary.recipient_customer_id)
+        if not recipient_customer:
+            raise ValueError(
+                f"Recipient customer with ID {summary.recipient_customer_id} not found"
+            )
 
     # Fetch the invoices
     invoices = []
@@ -88,10 +101,11 @@ def create_summary_invoice(
     summary_invoice = SummaryInvoice(
         range_text=range,
         profile_id=profile_id,
-        date=datetime.now(timezone.utc).isoformat(),  # Aktuelles Systemdate nehmen
+        date=(summary.date or datetime.now(timezone.utc).isoformat()),
         total_net=total_net,
         total_tax=total_tax,
         total_gross=total_gross,
+        recipient_customer_id=getattr(summary, "recipient_customer_id", None),
     )
     session.add(summary_invoice)
     session.flush()

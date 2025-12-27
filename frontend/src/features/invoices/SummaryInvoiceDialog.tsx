@@ -13,8 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import type { Invoice } from "@/types/invoice";
 import type { Profile } from "@/types/profile";
+import type { Customer } from "@/types/customer";
 import { SummaryInvoicesService } from "@/services/summaryInvoices";
 import { ProfilesService } from "@/services/profiles";
+import { CustomersService } from "@/services/customers";
 import { logger } from "@/lib/logger";
 
 interface SummaryInvoiceDialogProps {
@@ -44,7 +46,14 @@ export const SummaryInvoiceDialog: React.FC<SummaryInvoiceDialogProps> = ({
   const [date, setDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
-  const [recipientName, setRecipientName] = useState<string>("");
+
+  // Recipient customer fields
+  const [recipientSearchQuery, setRecipientSearchQuery] = useState<string>("");
+  const [recipientSuggestions, setRecipientSuggestions] = useState<Customer[]>([]);
+  const [selectedRecipientCustomer, setSelectedRecipientCustomer] = useState<Customer | null>(null);
+  const [isSearchingRecipient, setIsSearchingRecipient] = useState(false);
+  const [showRecipientDropdown, setShowRecipientDropdown] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [alert, setAlert] = useState<AlertState | null>(null);
 
@@ -69,12 +78,41 @@ export const SummaryInvoiceDialog: React.FC<SummaryInvoiceDialogProps> = ({
     loadProfiles();
   }, [isOpen, selectedProfileId]);
 
+  // Handle recipient search
+  useEffect(() => {
+    if (!recipientSearchQuery || recipientSearchQuery.length < 2) {
+      setRecipientSuggestions([]);
+      return;
+    }
+
+    const searchRecipient = async () => {
+      setIsSearchingRecipient(true);
+      try {
+        const results = await CustomersService.search(recipientSearchQuery);
+        setRecipientSuggestions(results);
+        setShowRecipientDropdown(true);
+      } catch (error) {
+        log.error("Failed to search customers", error);
+        setRecipientSuggestions([]);
+      } finally {
+        setIsSearchingRecipient(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(searchRecipient, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [recipientSearchQuery]);
+
   useEffect(() => {
     if (!isOpen) {
       // reset when closing
       setSelectedInvoiceIds([]);
       setAlert(null);
       setIsSubmitting(false);
+      setRecipientSearchQuery("");
+      setSelectedRecipientCustomer(null);
+      setRecipientSuggestions([]);
+      setShowRecipientDropdown(false);
     }
   }, [isOpen]);
 
@@ -116,13 +154,17 @@ export const SummaryInvoiceDialog: React.FC<SummaryInvoiceDialogProps> = ({
         profile_id: selectedProfileId,
         invoice_ids: selectedInvoiceIds,
         date,
-        recipient_name: recipientName || undefined,
+        recipient_customer_id: selectedRecipientCustomer?.id || undefined,
       });
       const summary = await SummaryInvoicesService.createSummaryInvoice({
         profile_id: selectedProfileId,
         invoice_ids: selectedInvoiceIds,
         date,
-        recipient_name: recipientName || undefined,
+        recipient_customer_id: selectedRecipientCustomer?.id,
+        recipient_name:
+          !selectedRecipientCustomer && recipientSearchQuery.trim().length > 0
+            ? recipientSearchQuery.trim()
+            : undefined,
       });
 
       // PDF will be generated automatically in the backend in an asynchronous/background process.
@@ -196,12 +238,79 @@ export const SummaryInvoiceDialog: React.FC<SummaryInvoiceDialogProps> = ({
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Empfänger (optional)</label>
-            <Input
-              type="text"
-              placeholder="z.B. Finanzamt"
-              value={recipientName}
-              onChange={(e) => setRecipientName(e.target.value)}
-            />
+            <div className="relative">
+              <Input
+                type="text"
+                placeholder="Kunde suchen oder neue Angabe..."
+                value={
+                  selectedRecipientCustomer ? selectedRecipientCustomer.name : recipientSearchQuery
+                }
+                onChange={(e) => {
+                  if (selectedRecipientCustomer) {
+                    setSelectedRecipientCustomer(null);
+                  }
+                  setRecipientSearchQuery(e.target.value);
+                }}
+                onFocus={() => recipientSearchQuery.length >= 2 && setShowRecipientDropdown(true)}
+                disabled={isSubmitting}
+              />
+
+              {/* Autocomplete dropdown */}
+              {showRecipientDropdown && recipientSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-md">
+                  <ul className="max-h-48 overflow-auto">
+                    {recipientSuggestions.map((customer) => (
+                      <li key={customer.id}>
+                        <button
+                          type="button"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
+                          onClick={() => {
+                            setSelectedRecipientCustomer(customer);
+                            setRecipientSearchQuery("");
+                            setShowRecipientDropdown(false);
+                            setRecipientSuggestions([]);
+                          }}
+                        >
+                          <div className="font-medium">{customer.name}</div>
+                          {(customer.address || customer.city) && (
+                            <div className="text-xs text-gray-500">
+                              {[customer.address, customer.city].filter(Boolean).join(", ")}
+                            </div>
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Loading indicator */}
+              {isSearchingRecipient && recipientSearchQuery.length >= 2 && (
+                <div className="absolute right-3 top-2.5 text-sm text-muted-foreground">Suche…</div>
+              )}
+
+              {/* Selected recipient chip */}
+              {selectedRecipientCustomer && (
+                <div className="mt-2 flex items-center gap-2 rounded-md bg-gray-100 px-3 py-2 text-sm">
+                  <span>
+                    {selectedRecipientCustomer.name}
+                    {selectedRecipientCustomer.address && ` (${selectedRecipientCustomer.address}`}
+                    {selectedRecipientCustomer.city && `, ${selectedRecipientCustomer.city}`}
+                    {(selectedRecipientCustomer.address || selectedRecipientCustomer.city) && ")"}
+                  </span>
+                  <button
+                    type="button"
+                    className="ml-auto text-gray-500 hover:text-gray-700"
+                    onClick={() => {
+                      setSelectedRecipientCustomer(null);
+                      setRecipientSearchQuery("");
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">

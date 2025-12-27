@@ -403,7 +403,7 @@ class PDFGenerator:
             # Create professional table with header
             invoice_list_data = [
                 # Header row
-                ["Nr.", "Rechnungsnummer", "Kunde", "Betrag"]
+                ["Nr.", "Rechnungsnummer", "Kunde", "Netto", "Brutto"]
             ]
 
             # Data rows
@@ -413,12 +413,14 @@ class PDFGenerator:
                         str(i),
                         detail["number"],
                         detail["customer_name"],
-                        f"{detail['amount']:.2f} €",
+                        f"{detail['total_net']:.2f} €",
+                        f"{detail['total_gross']:.2f} €",
                     ]
                 )
 
             invoice_table = Table(
-                invoice_list_data, colWidths=[1.5 * cm, 4 * cm, 7 * cm, 3.5 * cm]
+                invoice_list_data,
+                colWidths=[1.5 * cm, 4 * cm, 5.5 * cm, 2.5 * cm, 2.5 * cm],
             )
             invoice_table.setStyle(
                 TableStyle(
@@ -428,13 +430,18 @@ class PDFGenerator:
                         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                         ("FONTSIZE", (0, 0), (-1, 0), 10),
-                        ("ALIGN", (0, 0), (-1, 0), "LEFT"),
+                        (
+                            "ALIGN",
+                            (0, 0),
+                            (2, 0),
+                            "LEFT",
+                        ),  # First 3 columns left-aligned
                         (
                             "ALIGN",
                             (3, 0),
-                            (3, -1),
+                            (-1, -1),
                             "RIGHT",
-                        ),  # Amount column right-aligned
+                        ),  # Netto and Brutto columns right-aligned
                         # Data rows styling
                         ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
                         ("FONTSIZE", (0, 1), (-1, -1), 9),

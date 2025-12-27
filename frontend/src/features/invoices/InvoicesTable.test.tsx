@@ -8,13 +8,25 @@ describe("InvoicesTable", () => {
       id: 1,
       number: "RE-2025-001",
       date: "2025-01-15",
+      customer_id: 1,
+      profile_id: 1,
+      is_gross_amount: true,
       total_amount: 1234.56,
+      customer_name: "Kunde A",
+      total_net: 1037.78,
+      total_gross: 1234.56,
     },
     {
       id: 2,
       number: "RE-2025-002",
       date: "2025-02-20",
+      customer_id: 2,
+      profile_id: 1,
+      is_gross_amount: false,
       total_amount: 999.99,
+      customer_name: "Kunde B",
+      total_net: 999.99,
+      total_gross: 1189.99,
     },
   ];
 
@@ -23,7 +35,9 @@ describe("InvoicesTable", () => {
 
     screen.getByRole("columnheader", { name: "Nummer" });
     screen.getByRole("columnheader", { name: "Datum" });
-    screen.getByRole("columnheader", { name: "Summe" });
+    screen.getByRole("columnheader", { name: "Empfänger" });
+    screen.getByRole("columnheader", { name: "Netto" });
+    screen.getByRole("columnheader", { name: "Brutto" });
   });
 
   it("zeigt Rechnungsdaten korrekt", () => {
@@ -33,11 +47,14 @@ describe("InvoicesTable", () => {
     screen.getByText("RE-2025-002");
   });
 
-  it("formatiert Beträge mit 2 Dezimalstellen und € Symbol", () => {
+  it("formatiert Beträge (Netto/Brutto) mit 2 Dezimalstellen und € Symbol", () => {
     render(<InvoicesTable invoices={sampleInvoices} />);
-
-    screen.getByText("1234.56 €");
+    // Netto
+    screen.getByText("1037.78 €");
     screen.getByText("999.99 €");
+    // Brutto
+    screen.getByText("1234.56 €");
+    screen.getByText("1189.99 €");
   });
 
   it("formatiert Datum im deutschen Format (dd.MM.yyyy)", () => {
@@ -84,12 +101,18 @@ describe("InvoicesTable", () => {
         id: 999,
         number: "RE-INVALID",
         date: "2025-01-01",
-        total_amount: NaN,
+        customer_id: 1,
+        profile_id: 1,
+        is_gross_amount: true,
+        total_amount: NaN as unknown as number,
+        total_net: NaN,
+        total_gross: NaN,
       },
     ];
     render(<InvoicesTable invoices={invalidInvoice} />);
-    // formatAmount should return "—" for NaN
-    expect(screen.getByText("—")).toBeInTheDocument();
+    // formatAmount should return "—" for NaN; multiple placeholders may appear
+    const placeholders = screen.getAllByText("—");
+    expect(placeholders.length).toBeGreaterThan(0);
   });
 
   it("zeigt Platzhalter '—' bei ungültigen Daten", () => {
@@ -98,12 +121,17 @@ describe("InvoicesTable", () => {
         id: 998,
         number: "RE-BAD-DATE",
         date: "invalid-date",
+        customer_id: 1,
+        profile_id: 1,
+        is_gross_amount: true,
         total_amount: 100,
+        total_net: 100,
+        total_gross: 100,
       },
     ];
     render(<InvoicesTable invoices={invalidInvoice} />);
-    // formatDate should return "invalid-date" or "—" for invalid dates
-    expect(screen.getByText(/invalid-date|—/)).toBeInTheDocument();
+    // formatDate should show the raw invalid date string
+    expect(screen.getByText("invalid-date")).toBeInTheDocument();
   });
 
   it("handhabt undefined total_amount gracefully", () => {
@@ -112,12 +140,18 @@ describe("InvoicesTable", () => {
         id: 997,
         number: "RE-UNDEF",
         date: "2025-01-01",
+        customer_id: 1,
+        profile_id: 1,
+        is_gross_amount: true,
         total_amount: undefined as unknown as number,
+        total_net: undefined as unknown as number,
+        total_gross: undefined as unknown as number,
       },
     ];
     render(<InvoicesTable invoices={invoiceUndefined} />);
-    // formatAmount should handle undefined and show "—"
-    expect(screen.getByText("—")).toBeInTheDocument();
+    // formatAmount should handle undefined and show "—"; multiple placeholders may appear
+    const placeholders = screen.getAllByText("—");
+    expect(placeholders.length).toBeGreaterThan(0);
   });
 
   it("ruft onInvoiceSelect beim Zeilenklick auf", () => {

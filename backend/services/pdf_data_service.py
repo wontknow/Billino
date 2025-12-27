@@ -242,7 +242,10 @@ class PDFDataService:
         )
 
     def get_summary_invoice_pdf_data(
-        self, summary_invoice_id: int, recipient_name: Optional[str] = None
+        self,
+        summary_invoice_id: int,
+        recipient_name: Optional[str] = None,
+        recipient_customer_id: Optional[int] = None,
     ) -> PDFSummaryInvoiceData:
         """
         Retrieve and prepare summary invoice data for PDF generation.
@@ -288,24 +291,51 @@ class PDFDataService:
                 customer = self.session.get(Customer, invoice.customer_id)
                 if customer:
                     customer_names.add(customer.name)
+
+                    # Calculate net and gross amounts
+                    tax_rate = (
+                        invoice.tax_rate if invoice.tax_rate is not None else 0.19
+                    )
+                    is_gross = invoice.is_gross_amount
+                    total = invoice.total_amount
+
+                    if is_gross:
+                        # total_amount is gross, calculate net
+                        total_gross = total
+                        total_net = total / (1 + tax_rate)
+                    else:
+                        # total_amount is net, calculate gross
+                        total_net = total
+                        total_gross = total * (1 + tax_rate)
+
                     invoice_details.append(
                         {
                             "number": invoice.number,
                             "customer_name": customer.name,
-                            "amount": invoice.total_amount,
+                            "total_net": total_net,
+                            "total_gross": total_gross,
                         }
                     )
 
         # Determine recipient name and address
-        if recipient_name:
-            # Use provided recipient name
+        if recipient_customer_id:
+            # Use a specific customer entity as recipient
+            recipient_customer = self.session.get(Customer, recipient_customer_id)
+            if not recipient_customer:
+                raise ValueError("Recipient customer not found")
+            final_customer_name = recipient_customer.name
+            final_customer_address = self._format_address(
+                recipient_customer.address, recipient_customer.city
+            )
+        elif recipient_name:
+            # Use provided recipient name (no address displayed)
             final_customer_name = recipient_name
-            final_customer_address = ""  # No specific address for custom recipient
+            final_customer_address = ""
         else:
             # Use all customer names as fallback
             if not customer_names:
                 raise ValueError(
-                    "No customer names found for summary invoice and no recipient name provided"
+                    "No customer names found for summary invoice and no recipient provided"
                 )
             final_customer_name = ", ".join(sorted(customer_names))
             final_customer_address = ""  # Multiple customers, no single address

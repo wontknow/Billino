@@ -248,6 +248,27 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
         entity_type="invoice",
     )
 
+    # Compute totals for response
+    rate = db_invoice.tax_rate or 0.0
+    include_tax_flag = bool(db_invoice.include_tax) and rate > 0.0
+    if not include_tax_flag:
+        net = db_invoice.total_amount
+        tax = 0.0
+        gross = db_invoice.total_amount
+    elif db_invoice.is_gross_amount:
+        gross = db_invoice.total_amount
+        net = gross / (1 + rate)
+        tax = gross - net
+    else:
+        net = db_invoice.total_amount
+        tax = net * rate
+        gross = net + tax
+    net = round(net, 2)
+    tax = round(tax, 2)
+    gross = round(gross, 2)
+
+    customer = session.get(Customer, db_invoice.customer_id)
+
     return InvoiceRead(
         id=db_invoice.id,
         number=db_invoice.number,
@@ -258,6 +279,10 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
         tax_rate=db_invoice.tax_rate,
         is_gross_amount=db_invoice.is_gross_amount,
         total_amount=db_invoice.total_amount,
+        total_net=net,
+        total_tax=tax,
+        total_gross=gross,
+        customer_name=(customer.name if customer else None),
         invoice_items=[
             InvoiceItemRead(
                 id=item.id,
@@ -316,6 +341,27 @@ def read_invoices(session: Session = Depends(get_session)):
         items = session.exec(
             select(InvoiceItem).where(InvoiceItem.invoice_id == inv.id)
         ).all()
+        # Compute totals
+        rate = inv.tax_rate or 0.0
+        include_tax_flag = bool(inv.include_tax) and rate > 0.0
+        if not include_tax_flag:
+            net = inv.total_amount
+            tax = 0.0
+            gross = inv.total_amount
+        elif inv.is_gross_amount:
+            gross = inv.total_amount
+            net = gross / (1 + rate)
+            tax = gross - net
+        else:
+            net = inv.total_amount
+            tax = net * rate
+            gross = net + tax
+        net = round(net, 2)
+        tax = round(tax, 2)
+        gross = round(gross, 2)
+
+        customer = session.get(Customer, inv.customer_id)
+
         result.append(
             InvoiceRead(
                 id=inv.id,
@@ -324,7 +370,13 @@ def read_invoices(session: Session = Depends(get_session)):
                 customer_id=inv.customer_id,
                 profile_id=inv.profile_id,
                 include_tax=inv.include_tax,
+                tax_rate=inv.tax_rate,
+                is_gross_amount=inv.is_gross_amount,
                 total_amount=inv.total_amount,
+                total_net=net,
+                total_tax=tax,
+                total_gross=gross,
+                customer_name=(customer.name if customer else None),
                 invoice_items=[
                     InvoiceItemRead(
                         id=item.id,
@@ -396,6 +448,27 @@ def read_invoice(invoice_id: int, session: Session = Depends(get_session)):
         select(InvoiceItem).where(InvoiceItem.invoice_id == invoice.id)
     ).all()
     logger.debug(f"✅ Invoice {invoice_id} fetched with {len(items)} items")
+    # Compute single totals
+    rate = invoice.tax_rate or 0.0
+    include_tax_flag = bool(invoice.include_tax) and rate > 0.0
+    if not include_tax_flag:
+        net = invoice.total_amount
+        tax = 0.0
+        gross = invoice.total_amount
+    elif invoice.is_gross_amount:
+        gross = invoice.total_amount
+        net = gross / (1 + rate)
+        tax = gross - net
+    else:
+        net = invoice.total_amount
+        tax = net * rate
+        gross = net + tax
+    net = round(net, 2)
+    tax = round(tax, 2)
+    gross = round(gross, 2)
+
+    cust = session.get(Customer, invoice.customer_id)
+
     return InvoiceRead(
         id=invoice.id,
         number=invoice.number,
@@ -403,7 +476,13 @@ def read_invoice(invoice_id: int, session: Session = Depends(get_session)):
         customer_id=invoice.customer_id,
         profile_id=invoice.profile_id,
         include_tax=invoice.include_tax,
+        tax_rate=invoice.tax_rate,
+        is_gross_amount=invoice.is_gross_amount,
         total_amount=invoice.total_amount,
+        total_net=net,
+        total_tax=tax,
+        total_gross=gross,
+        customer_name=(cust.name if cust else None),
         invoice_items=[
             InvoiceItemRead(
                 id=item.id,

@@ -57,7 +57,9 @@ export const SummaryInvoicesTable: React.FC<SummaryInvoicesTableProps> = ({
               <TableRow>
                 <TableHead className="sticky top-0 z-10 bg-background">Bereich</TableHead>
                 <TableHead className="sticky top-0 z-10 bg-background">Datum</TableHead>
-                <TableHead className="sticky top-0 z-10 bg-background">Summe</TableHead>
+                <TableHead className="sticky top-0 z-10 bg-background">Empfänger</TableHead>
+                <TableHead className="sticky top-0 z-10 bg-background">Netto</TableHead>
+                <TableHead className="sticky top-0 z-10 bg-background">Brutto</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -86,7 +88,11 @@ export const SummaryInvoicesTable: React.FC<SummaryInvoicesTableProps> = ({
                   >
                     <TableCell className="font-medium">{summary.range_text}</TableCell>
                     <TableCell>{formatDate(summary.date)}</TableCell>
-                    <TableCell>{formatAmount(summary.total_gross)}</TableCell>
+                    <TableCell>{summary.recipient_display_name ?? "—"}</TableCell>
+                    <TableCell className="text-right">{formatAmount(summary.total_net)}</TableCell>
+                    <TableCell className="text-right">
+                      {formatAmount(summary.total_gross)}
+                    </TableCell>
                   </TableRow>
                 );
               })}

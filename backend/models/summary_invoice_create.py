@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import model_validator
 from sqlmodel import SQLModel
@@ -9,6 +9,13 @@ class SummaryInvoiceCreate(SQLModel):
 
     profile_id: int
     invoice_ids: List[int]
+    date: Optional[str] = None  # ISO date string, defaults to today
+    recipient_customer_id: Optional[int] = (
+        None  # Customer ID for recipient (instead of collecting from invoices)
+    )
+    recipient_name: Optional[str] = (
+        None  # Falls nur Name angegeben ist (Autofill/Auto-Create)
+    )
 
     @model_validator(mode="after")
     def validate_summary(self):
