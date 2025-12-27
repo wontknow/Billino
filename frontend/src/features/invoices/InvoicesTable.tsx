@@ -73,29 +73,35 @@ export const InvoicesTable: React.FC<InvoicesTableProps> = ({
               <TableRow>
                 <TableHead className="sticky top-0 z-10 bg-background">Nummer</TableHead>
                 <TableHead className="sticky top-0 z-10 bg-background">Datum</TableHead>
-                <TableHead className="sticky top-0 z-10 bg-background">Summe</TableHead>
+                <TableHead className="sticky top-0 z-10 bg-background">Empfänger</TableHead>
+                <TableHead className="sticky top-0 z-10 bg-background">Netto</TableHead>
+                <TableHead className="sticky top-0 z-10 bg-background">Brutto</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {invoices.map((inv) => (
-                <TableRow
-                  key={inv.id}
-                  role={onInvoiceSelect ? "button" : undefined}
-                  className={onInvoiceSelect ? "cursor-pointer" : undefined}
-                  tabIndex={onInvoiceSelect ? 0 : -1}
-                  onClick={() => handleRowClick(inv.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      handleRowClick(inv.id);
-                    }
-                  }}
-                >
-                  <TableCell className="font-medium">{inv.number}</TableCell>
-                  <TableCell>{formatDate(inv.date)}</TableCell>
-                  <TableCell>{formatAmount(inv.total_amount)}</TableCell>
-                </TableRow>
-              ))}
+              {invoices.map((inv) => {
+                return (
+                  <TableRow
+                    key={inv.id}
+                    role={onInvoiceSelect ? "button" : undefined}
+                    className={onInvoiceSelect ? "cursor-pointer" : undefined}
+                    tabIndex={onInvoiceSelect ? 0 : -1}
+                    onClick={() => handleRowClick(inv.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleRowClick(inv.id);
+                      }
+                    }}
+                  >
+                    <TableCell className="font-medium">{inv.number}</TableCell>
+                    <TableCell>{formatDate(inv.date)}</TableCell>
+                    <TableCell>{inv.customer_name ?? "—"}</TableCell>
+                    <TableCell className="text-right">{formatAmount(inv.total_net)}</TableCell>
+                    <TableCell className="text-right">{formatAmount(inv.total_gross)}</TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
@@ -119,3 +125,5 @@ function formatAmount(value: unknown) {
   if (!Number.isFinite(num)) return "—";
   return `${num.toFixed(2)} €`;
 }
+
+// Frontend remains dumb: relies on backend-computed totals.
