@@ -67,7 +67,7 @@ class PDFSummaryInvoiceData:
     invoice_numbers: List[str]  # List of invoice numbers included in summary
     invoice_details: List[
         dict
-    ]  # List of {"number": str, "customer_name": str} for detailed display
+    ]  # List of {"number": str, "customer_name": str, "total_net": float, "total_gross": float}
 
     # Optional fields (must come last)
     sender_bank_data: Optional[str] = None

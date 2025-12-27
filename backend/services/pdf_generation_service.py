@@ -108,7 +108,10 @@ def generate_pdf_for_invoice(session: Session, invoice_id: int) -> bool:
 
 
 def generate_pdf_for_summary_invoice(
-    session: Session, summary_invoice_id: int, recipient_name: Optional[str] = None
+    session: Session,
+    summary_invoice_id: int,
+    recipient_name: Optional[str] = None,
+    recipient_customer_id: Optional[int] = None,
 ) -> bool:
     """
     Generate and store PDF for a summary invoice asynchronously.
@@ -162,7 +165,9 @@ def generate_pdf_for_summary_invoice(
         pdf_generator = PDFGenerator()
 
         pdf_data = pdf_data_service.get_summary_invoice_pdf_data(
-            summary_invoice_id, recipient_name
+            summary_invoice_id,
+            recipient_name=recipient_name,
+            recipient_customer_id=recipient_customer_id,
         )
         pdf_bytes = pdf_generator.generate_summary_invoice_pdf(pdf_data)
 

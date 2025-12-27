@@ -111,7 +111,7 @@ def create_invoice_pdf(invoice_id: int, session: Session = Depends(get_session))
 )
 def create_summary_invoice_pdf(
     summary_invoice_id: int,
-    recipient_data: Optional[dict] = None,  # {"recipient_name": str} - optional
+    recipient_data: Optional[dict] = None,  # {"recipient_name"?: str, "recipient_customer_id"?: int}
     session: Session = Depends(get_session),
 ):
     """
@@ -160,8 +160,10 @@ def create_summary_invoice_pdf(
 
     # Get recipient name or use fallback
     recipient_name = None
+    recipient_customer_id = None
     if recipient_data:
         recipient_name = recipient_data.get("recipient_name")
+        recipient_customer_id = recipient_data.get("recipient_customer_id")
     # Check if PDF already exists
     existing_pdf = session.exec(
         select(StoredPDF).where(StoredPDF.summary_invoice_id == summary_invoice_id)
@@ -178,7 +180,9 @@ def create_summary_invoice_pdf(
 
     try:
         pdf_data = pdf_data_service.get_summary_invoice_pdf_data(
-            summary_invoice_id, recipient_name
+            summary_invoice_id,
+            recipient_name=recipient_name,
+            recipient_customer_id=recipient_customer_id,
         )
         pdf_bytes = pdf_generator.generate_summary_invoice_pdf(pdf_data)
 
