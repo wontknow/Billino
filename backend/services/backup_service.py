@@ -131,17 +131,13 @@ class BackupHandler:
 
         try:
             # Verwende SQLite Backup API statt shutil.copy2
-            # Öffne Quell- und Zieldatenbank
-            source_conn = sqlite3.connect(str(self.DB_PATH))
-            dest_conn = sqlite3.connect(str(backup_path))
-
-            # Führe Backup durch (sicher auch bei aktiver Datenbank)
-            with dest_conn:
-                source_conn.backup(dest_conn)
-
-            source_conn.close()
-            dest_conn.close()
-
+            # Öffne Quell- und Zieldatenbank in Context Managern,
+            # damit Verbindungen auch bei Fehlern sicher geschlossen werden
+            with sqlite3.connect(str(self.DB_PATH)) as source_conn:
+                with sqlite3.connect(str(backup_path)) as dest_conn:
+                    # Führe Backup durch (sicher auch bei aktiver Datenbank)
+                    with dest_conn:
+                        source_conn.backup(dest_conn)
             logger.info(f"✅ Datenbank-Backup erstellt: {backup_path}")
 
             # Cleanup alte Backups
