@@ -12,8 +12,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { Profile } from "@/types/profile";
 import { ProfilesService } from "@/services/profiles";
+import { logger } from "@/lib/logger";
+
+const log = logger.createScoped("📋 ProfileDialog");
 
 type Props = {
   isOpen: boolean;
@@ -58,7 +62,7 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name.trim() || !address.trim() || !city.trim()) {
+    if (!name.trim()) {
       return;
     }
 
@@ -67,8 +71,8 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
     try {
       const payload = {
         name: name.trim(),
-        address: address.trim(),
-        city: city.trim(),
+        address: address.trim() || undefined,
+        city: city.trim() || undefined,
         bank_data: bankData.trim() || null,
         tax_number: taxNumber.trim() || null,
         include_tax: includeTax,
@@ -88,7 +92,7 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
       onSuccess(result);
       handleClose();
     } catch (error) {
-      console.error("Error saving profile:", error);
+      log.error("Failed to save profile", { error });
       alert(
         `Fehler beim Speichern: ${error instanceof Error ? error.message : "Unbekannter Fehler"}`
       );
@@ -137,29 +141,23 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="address">
-                Adresse <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="address">Adresse</Label>
               <Input
                 id="address"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="z.B. Hauptstraße 123"
-                required
                 disabled={isSubmitting}
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="city">
-                Stadt <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="city">Stadt</Label>
               <Input
                 id="city"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 placeholder="z.B. 10115 Berlin"
-                required
                 disabled={isSubmitting}
               />
             </div>
@@ -187,13 +185,11 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
             </div>
 
             <div className="flex items-center space-x-3">
-              <input
+              <Checkbox
                 id="includeTax"
-                type="checkbox"
                 checked={includeTax}
-                onChange={(e) => setIncludeTax(e.target.checked)}
+                onCheckedChange={(checked) => setIncludeTax(checked as boolean)}
                 disabled={isSubmitting}
-                className="h-4 w-4 rounded border border-primary"
               />
               <Label htmlFor="includeTax" className="cursor-pointer font-normal">
                 Umsatzsteuer ausweisen
@@ -224,7 +220,7 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || !name.trim() || !address.trim() || !city.trim()}
+              disabled={isSubmitting || !name.trim()}
             >
               {isEditMode ? "Speichern" : "Erstellen"}
             </Button>

@@ -10,7 +10,7 @@ import {
   TableCell,
   TableCaption,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { Profile } from "@/types/profile";
 
@@ -32,12 +32,14 @@ export const ProfilesTable: React.FC<ProfilesTableProps> = ({
 
   return (
     <Card className="w-full mx-auto flex flex-col overflow-hidden max-w-screen-lg md:max-w-screen-xl 2xl:max-w-screen-2xl h-[70vh] md:h-[75vh] lg:h-[80vh]">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Profile</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between gap-3">
+        <div className="space-y-1">
+          <CardTitle>Profile</CardTitle>
+        </div>
         {onCreateProfile && (
-          <Button onClick={onCreateProfile} size="sm">
-            Neues Profil
-          </Button>
+          <CardAction className="flex gap-2">
+            <Button onClick={onCreateProfile}>Neues Profil</Button>
+          </CardAction>
         )}
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden">
@@ -61,6 +63,16 @@ export const ProfilesTable: React.FC<ProfilesTableProps> = ({
                   key={p.id}
                   className={isInteractive ? "cursor-pointer hover:bg-muted/50" : ""}
                   onClick={() => isInteractive && onProfileSelect?.(p)}
+                  tabIndex={isInteractive ? 0 : -1}
+                  onKeyDown={(event) => {
+                    if (!isInteractive) {
+                      return;
+                    }
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onProfileSelect?.(p);
+                    }
+                  }}
                 >
                   <TableCell className="font-medium">{p.name}</TableCell>
                   <TableCell>{p.city || "—"}</TableCell>

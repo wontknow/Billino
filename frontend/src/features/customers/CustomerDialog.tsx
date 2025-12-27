@@ -14,6 +14,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Customer } from "@/types/customer";
 import { CustomersService } from "@/services/customers";
+import { logger } from "@/lib/logger";
+
+const log = logger.createScoped("👤 CustomerDialog");
 
 type Props = {
   isOpen: boolean;
@@ -72,7 +75,7 @@ export function CustomerDialog({ isOpen, customer, onClose, onSuccess }: Props) 
       onSuccess(result);
       handleClose();
     } catch (error) {
-      console.error("Error saving customer:", error);
+      log.error("Failed to save customer", { error });
       alert(
         `Fehler beim Speichern: ${error instanceof Error ? error.message : "Unbekannter Fehler"}`
       );

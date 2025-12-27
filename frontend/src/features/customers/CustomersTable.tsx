@@ -60,7 +60,7 @@ export function CustomersTable({
                 <TableRow
                   key={c.id}
                   onClick={() => onCustomerSelect?.(c.id)}
-                  className={onCustomerSelect ? "cursor-pointer" : undefined}
+                  className={onCustomerSelect ? "cursor-pointer hover:bg-muted/50" : undefined}
                   tabIndex={onCustomerSelect ? 0 : undefined}
                   onKeyDown={(e) => {
                     if (onCustomerSelect && (e.key === "Enter" || e.key === " ")) {
