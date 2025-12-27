@@ -6,6 +6,7 @@ Testet:
 - BackupScheduler: Initialisierung, Status, Trigger
 """
 
+import sqlite3
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -32,8 +33,6 @@ class TestBackupHandler:
             (data_dir / "pdfs" / "summary_invoices").mkdir(parents=True)
 
             # Erstelle echte SQLite-Datenbank für Tests
-            import sqlite3
-
             db_file = data_dir / "billino.db"
             conn = sqlite3.connect(str(db_file))
             conn.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, data TEXT)")
@@ -158,8 +157,6 @@ class TestBackupHandler:
 
     def test_backup_cleanup_old_files(self, temp_dirs):
         """Test: Alte Backups werden gelöscht."""
-        import sqlite3
-
         handler = BackupHandler(
             backup_root=temp_dirs["backup_dir"],
             db_path=temp_dirs["db_file"],
@@ -324,8 +321,6 @@ class TestBackupScheduler:
 
     def test_scheduler_trigger_backup(self):
         """Test: Manuelles Backup kann getriggert werden."""
-        import sqlite3
-
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
             data_dir = tmpdir / "data"

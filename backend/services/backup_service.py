@@ -8,6 +8,7 @@ Unterstützt zwei Modi:
 
 import os
 import shutil
+import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
@@ -130,8 +131,6 @@ class BackupHandler:
 
         try:
             # Verwende SQLite Backup API statt shutil.copy2
-            import sqlite3
-
             # Öffne Quell- und Zieldatenbank
             source_conn = sqlite3.connect(str(self.DB_PATH))
             dest_conn = sqlite3.connect(str(backup_path))
