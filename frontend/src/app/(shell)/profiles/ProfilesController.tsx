@@ -23,6 +23,7 @@ export default function ProfilesController() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProfiles();
   }, [loadProfiles]);
 

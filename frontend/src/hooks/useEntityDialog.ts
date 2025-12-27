@@ -12,7 +12,7 @@ type EntityDialogConfig<T> = {
 /**
  * Custom hook for managing entity dialog state and submission logic.
  * Reduces code duplication between CustomerDialog and ProfileDialog.
- * 
+ *
  * @template T - Entity type that extends { id?: number | string }
  * @param config - Configuration object for the entity dialog
  * @param config.logScope - Logging prefix for scoped logger (e.g., "👤 CustomerDialog")
@@ -24,9 +24,7 @@ type EntityDialogConfig<T> = {
  * @returns.isSubmitting - Boolean indicating if a submission is in progress
  * @returns.handleSubmit - Async function to handle form submission
  */
-export function useEntityDialog<T extends { id?: number | string }>(
-  config: EntityDialogConfig<T>
-) {
+export function useEntityDialog<T extends { id?: number | string }>(config: EntityDialogConfig<T>) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const log = logger.createScoped(config.logScope);
 

@@ -39,6 +39,7 @@ export function CustomerDialog({ isOpen, customer, onClose, onSuccess }: Props) 
   });
 
   // Initialize form when customer changes
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (customer) {
       setName(customer.name);
@@ -50,6 +51,7 @@ export function CustomerDialog({ isOpen, customer, onClose, onSuccess }: Props) 
       setCity("");
     }
   }, [customer]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

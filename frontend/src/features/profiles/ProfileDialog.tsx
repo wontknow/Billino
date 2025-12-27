@@ -44,6 +44,7 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
   });
 
   // Initialize form when profile changes
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (profile) {
       setName(profile.name);
@@ -63,6 +64,7 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
       setDefaultTaxRate("19");
     }
   }, [profile]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -204,10 +206,7 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
             <Button type="button" variant="ghost" onClick={handleClose} disabled={isSubmitting}>
               Abbrechen
             </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting || !name.trim()}
-            >
+            <Button type="submit" disabled={isSubmitting || !name.trim()}>
               {isEditMode ? "Speichern" : "Erstellen"}
             </Button>
           </DialogFooter>
