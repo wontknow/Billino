@@ -21,8 +21,8 @@ type EntityDialogConfig<T> = {
  * @param config.onSuccess - Callback invoked with the created/updated entity on success
  * @param config.onClose - Callback invoked after successful submission
  * @returns Object containing isSubmitting state and handleSubmit function
- * @returns returns.isSubmitting - Boolean indicating if a submission is in progress
- * @returns returns.handleSubmit - Async function to handle form submission
+ * @returns.isSubmitting - Boolean indicating if a submission is in progress
+ * @returns.handleSubmit - Async function to handle form submission
  */
 export function useEntityDialog<T extends { id?: number | string }>(
   config: EntityDialogConfig<T>
