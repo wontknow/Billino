@@ -15,9 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Profile } from "@/types/profile";
 import { ProfilesService } from "@/services/profiles";
-import { logger } from "@/lib/logger";
-
-const log = logger.createScoped("📋 ProfileDialog");
+import { useEntityDialog } from "@/hooks/useEntityDialog";
 
 type Props = {
   isOpen: boolean;
@@ -34,9 +32,16 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
   const [taxNumber, setTaxNumber] = useState("");
   const [includeTax, setIncludeTax] = useState(true);
   const [defaultTaxRate, setDefaultTaxRate] = useState("19");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isEditMode = !!profile;
+
+  const { isSubmitting, handleSubmit } = useEntityDialog<Profile>({
+    logScope: "📋 ProfileDialog",
+    createFn: ProfilesService.create,
+    updateFn: ProfilesService.update,
+    onSuccess,
+    onClose: handleClose,
+  });
 
   // Initialize form when profile changes
   useEffect(() => {
@@ -59,49 +64,27 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
     }
   }, [profile]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!name.trim()) {
       return;
     }
 
-    setIsSubmitting(true);
+    const payload = {
+      name: name.trim(),
+      address: address.trim() || undefined,
+      city: city.trim() || undefined,
+      bank_data: bankData.trim() || null,
+      tax_number: taxNumber.trim() || null,
+      include_tax: includeTax,
+      default_tax_rate: Number(defaultTaxRate) / 100,
+    };
 
-    try {
-      const payload = {
-        name: name.trim(),
-        address: address.trim() || undefined,
-        city: city.trim() || undefined,
-        bank_data: bankData.trim() || null,
-        tax_number: taxNumber.trim() || null,
-        include_tax: includeTax,
-        default_tax_rate: Number(defaultTaxRate) / 100,
-      };
-
-      let result: Profile;
-
-      if (isEditMode && profile) {
-        // Update existing profile using service
-        result = await ProfilesService.update(Number(profile.id), payload);
-      } else {
-        // Create new profile using service
-        result = await ProfilesService.create(payload);
-      }
-
-      onSuccess(result);
-      handleClose();
-    } catch (error) {
-      log.error("Failed to save profile", { error });
-      alert(
-        `Fehler beim Speichern: ${error instanceof Error ? error.message : "Unbekannter Fehler"}`
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+    await handleSubmit(profile, payload);
   };
 
-  const handleClose = () => {
+  function handleClose() {
     setName("");
     setAddress("");
     setCity("");
@@ -110,7 +93,7 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
     setIncludeTax(true);
     setDefaultTaxRate("19");
     onClose();
-  };
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -124,7 +107,7 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={onSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">

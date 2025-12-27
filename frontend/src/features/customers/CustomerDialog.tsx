@@ -14,9 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Customer } from "@/types/customer";
 import { CustomersService } from "@/services/customers";
-import { logger } from "@/lib/logger";
-
-const log = logger.createScoped("👤 CustomerDialog");
+import { useEntityDialog } from "@/hooks/useEntityDialog";
 
 type Props = {
   isOpen: boolean;
@@ -29,9 +27,16 @@ export function CustomerDialog({ isOpen, customer, onClose, onSuccess }: Props) 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isEditMode = !!customer;
+
+  const { isSubmitting, handleSubmit } = useEntityDialog<Customer>({
+    logScope: "👤 CustomerDialog",
+    createFn: CustomersService.create,
+    updateFn: CustomersService.update,
+    onSuccess,
+    onClose: handleClose,
+  });
 
   // Initialize form when customer changes
   useEffect(() => {
@@ -46,50 +51,28 @@ export function CustomerDialog({ isOpen, customer, onClose, onSuccess }: Props) 
     }
   }, [customer]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!name.trim()) {
       return;
     }
 
-    setIsSubmitting(true);
+    const payload = {
+      name: name.trim(),
+      address: address.trim() || null,
+      city: city.trim() || null,
+    };
 
-    try {
-      const payload = {
-        name: name.trim(),
-        address: address.trim() || null,
-        city: city.trim() || null,
-      };
-
-      let result: Customer;
-
-      if (isEditMode && customer) {
-        // Update existing customer using service
-        result = await CustomersService.update(customer.id, payload);
-      } else {
-        // Create new customer using service
-        result = await CustomersService.create(payload);
-      }
-
-      onSuccess(result);
-      handleClose();
-    } catch (error) {
-      log.error("Failed to save customer", { error });
-      alert(
-        `Fehler beim Speichern: ${error instanceof Error ? error.message : "Unbekannter Fehler"}`
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+    await handleSubmit(customer, payload);
   };
 
-  const handleClose = () => {
+  function handleClose() {
     setName("");
     setAddress("");
     setCity("");
     onClose();
-  };
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -103,7 +86,7 @@ export function CustomerDialog({ isOpen, customer, onClose, onSuccess }: Props) 
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={onSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">
