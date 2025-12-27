@@ -8,3 +8,4 @@ class Customer(SQLModel, table=True):
     name: str
     address: Optional[str] = None
     city: Optional[str] = None
+    note: Optional[str] = None
