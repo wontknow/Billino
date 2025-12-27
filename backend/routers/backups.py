@@ -45,10 +45,11 @@ def trigger_backup():
     if result.get("success"):
         logger.info(f"Manuelles Backup erstellt: {result.get('backup_path')}")
     else:
+        # Log the detailed error server-side, but return a generic message to the client.
         logger.error(f"Manuelles Backup fehlgeschlagen: {result.get('error')}")
         raise HTTPException(
             status_code=500,
-            detail=f"Backup fehlgeschlagen: {result.get('error', 'Unbekannter Fehler')}",
+            detail="Backup fehlgeschlagen. Bitte versuchen Sie es später erneut.",
         )
 
     return result

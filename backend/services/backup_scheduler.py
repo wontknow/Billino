@@ -119,8 +119,12 @@ class BackupScheduler:
             else:
                 return {"success": False, "error": "Backup fehlgeschlagen"}
         except Exception as e:
+            # Log the detailed exception server-side, but do not expose it to the client.
             logger.error(f"❌ Fehler beim manuellen Backup: {e}")
-            return {"success": False, "error": str(e)}
+            return {
+                "success": False,
+                "error": "Backup fehlgeschlagen (interner Fehler)",
+            }
 
     @classmethod
     def get_status(cls) -> dict:
