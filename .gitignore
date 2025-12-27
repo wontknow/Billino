@@ -22,7 +22,9 @@ target/
 
 # Builds
 dist/
-invoices.db
+# Database files (ignore actual data, but track the structure)
+data/*.db
+backups/
 
 .htmlcov/
 

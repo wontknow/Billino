@@ -14,6 +14,9 @@ from typing import Optional
 
 from utils.logger import logger
 
+# Backend-Root Verzeichnis (wo main.py liegt)
+BACKEND_ROOT = Path(__file__).parent.parent
+
 
 class BackupHandler:
     """
@@ -22,15 +25,15 @@ class BackupHandler:
     Erkennt automatisch Tauri-Umgebung und wählt entsprechende Backup-Strategie.
     """
 
-    # Backup-Verzeichnis-Struktur
-    BACKUP_ROOT = Path("./backups")
+    # Backup-Verzeichnis-Struktur (relativ zu Backend-Root)
+    BACKUP_ROOT = BACKEND_ROOT / "backups"
     BACKUP_DAILY = BACKUP_ROOT / "daily"
-    PDF_ARCHIVE = Path("./data/pdfs/archive")
+    PDF_ARCHIVE = BACKEND_ROOT / "data" / "pdfs" / "archive"
 
-    # Datenbank-Pfad
-    DB_PATH = Path("./data/billino.db")
-    PDF_INVOICES_PATH = Path("./data/pdfs/invoices")
-    PDF_SUMMARY_PATH = Path("./data/pdfs/summary_invoices")
+    # Datenbank-Pfad (relativ zu Backend-Root)
+    DB_PATH = BACKEND_ROOT / "data" / "billino.db"
+    PDF_INVOICES_PATH = BACKEND_ROOT / "data" / "pdfs" / "invoices"
+    PDF_SUMMARY_PATH = BACKEND_ROOT / "data" / "pdfs" / "summary_invoices"
 
     def __init__(
         self,
@@ -98,10 +101,12 @@ class BackupHandler:
             self.BACKUP_DAILY.mkdir(parents=True, exist_ok=True)
             self.PDF_ARCHIVE.mkdir(parents=True, exist_ok=True)
             logger.debug(
-                f"✅ Backup-Verzeichnisse erstellt/verifiziert: {self.BACKUP_ROOT}"
+                f"Backup-Verzeichnisse erstellt/verifiziert: {self.BACKUP_ROOT}"
             )
+            logger.debug(f"DB-Pfad: {self.DB_PATH}")
+            logger.debug(f"PDF-Archiv: {self.PDF_ARCHIVE}")
         except OSError as e:
-            logger.error(f"❌ Fehler beim Erstellen von Backup-Verzeichnissen: {e}")
+            logger.error(f"Fehler beim Erstellen von Backup-Verzeichnissen: {e}")
             raise
 
     def backup_database(self) -> Optional[Path]:
