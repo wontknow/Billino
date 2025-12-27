@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Customer } from "@/types/customer";
-import { CustomersService } from "@/services/customers";
+import { CustomersService, type CustomerCreatePayload } from "@/services/customers";
 import { useEntityDialog } from "@/hooks/useEntityDialog";
 
 type Props = {
@@ -30,7 +30,7 @@ export function CustomerDialog({ isOpen, customer, onClose, onSuccess }: Props) 
 
   const isEditMode = !!customer;
 
-  const { isSubmitting, handleSubmit } = useEntityDialog<Customer>({
+  const { isSubmitting, handleSubmit } = useEntityDialog<Customer, CustomerCreatePayload>({
     logScope: "👤 CustomerDialog",
     createFn: CustomersService.create,
     updateFn: CustomersService.update,

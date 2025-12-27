@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Profile } from "@/types/profile";
-import { ProfilesService } from "@/services/profiles";
+import { ProfilesService, type ProfileCreatePayload } from "@/services/profiles";
 import { useEntityDialog } from "@/hooks/useEntityDialog";
 
 type Props = {
@@ -35,7 +35,7 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
 
   const isEditMode = !!profile;
 
-  const { isSubmitting, handleSubmit } = useEntityDialog<Profile>({
+  const { isSubmitting, handleSubmit } = useEntityDialog<Profile, ProfileCreatePayload>({
     logScope: "📋 ProfileDialog",
     createFn: ProfilesService.create,
     updateFn: ProfilesService.update,
@@ -73,13 +73,10 @@ export function ProfileDialog({ isOpen, profile, onClose, onSuccess }: Props) {
       return;
     }
 
-    // Helper to convert empty string to undefined
-    const toOptional = (value: string) => value.trim() || undefined;
-
-    const payload = {
+    const payload: ProfileCreatePayload = {
       name: name.trim(),
-      address: toOptional(address),
-      city: toOptional(city),
+      address: address.trim(),
+      city: city.trim(),
       bank_data: bankData.trim() || null,
       tax_number: taxNumber.trim() || null,
       include_tax: includeTax,

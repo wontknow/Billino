@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { logger } from "@/lib/logger";
 
-type EntityDialogConfig<T> = {
+type EntityDialogConfig<T, TPayload = Partial<T>> = {
   logScope: string;
-  createFn: (payload: Partial<T>) => Promise<T>;
-  updateFn: (id: number | string, payload: Partial<T>) => Promise<T>;
+  createFn: (payload: TPayload) => Promise<T>;
+  updateFn: (id: number, payload: TPayload) => Promise<T>;
   onSuccess: (entity: T) => void | Promise<void>;
   onClose: () => void;
 };
@@ -24,7 +24,9 @@ type EntityDialogConfig<T> = {
  * @returns.isSubmitting - Boolean indicating if a submission is in progress
  * @returns.handleSubmit - Async function to handle form submission
  */
-export function useEntityDialog<T extends { id?: number | string }>(config: EntityDialogConfig<T>) {
+export function useEntityDialog<T extends { id?: number | string }, TPayload = Partial<T>>(
+  config: EntityDialogConfig<T, TPayload>
+) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const log = logger.createScoped(config.logScope);
 
@@ -34,7 +36,7 @@ export function useEntityDialog<T extends { id?: number | string }>(config: Enti
 
   const handleSubmit = async (
     entity: T | null | undefined,
-    payload: Partial<T>
+    payload: TPayload
   ): Promise<boolean> => {
     setIsSubmitting(true);
 
@@ -43,7 +45,7 @@ export function useEntityDialog<T extends { id?: number | string }>(config: Enti
 
       if (entity?.id) {
         // Update existing entity
-        result = await config.updateFn(entity.id, payload);
+        result = await config.updateFn(Number(entity.id), payload);
       } else {
         // Create new entity
         result = await config.createFn(payload);
