@@ -15,7 +15,13 @@ describe("InvoicesService", () => {
         id: 1,
         number: "RE-2025-001",
         date: "2025-01-15",
+        customer_id: 1,
+        profile_id: 1,
+        is_gross_amount: true,
         total_amount: 1234.56,
+        total_net: 1037.78,
+        total_gross: 1234.56,
+        customer_name: "Kunde A",
       },
     ];
 

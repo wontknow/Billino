@@ -11,8 +11,24 @@ jest.mock("@/services/summaryInvoices");
 
 const mockProfiles = [{ id: 1, name: "Profil A" }];
 const invoices: Invoice[] = [
-  { id: 10, number: "R-001", date: "2025-01-10", total_amount: 100 },
-  { id: 11, number: "R-002", date: "2025-01-20", total_amount: 200 },
+  {
+    id: 10,
+    number: "R-001",
+    date: "2025-01-10",
+    customer_id: 1,
+    profile_id: 1,
+    is_gross_amount: true,
+    total_amount: 100,
+  },
+  {
+    id: 11,
+    number: "R-002",
+    date: "2025-01-20",
+    customer_id: 2,
+    profile_id: 1,
+    is_gross_amount: true,
+    total_amount: 200,
+  },
 ];
 
 const setup = async () => {
@@ -48,7 +64,10 @@ describe("SummaryInvoiceDialog", () => {
     await user.click(checkboxes[1]);
 
     // set recipient
-    await user.type(screen.getByPlaceholderText("z.B. Finanzamt"), "Finanzamt Mustermann");
+    await user.type(
+      screen.getByPlaceholderText("Kunde suchen oder neue Angabe..."),
+      "Finanzamt Mustermann"
+    );
 
     // submit
     await user.click(screen.getByRole("button", { name: "Sammelrechnung erstellen" }));
