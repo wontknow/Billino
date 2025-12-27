@@ -125,7 +125,9 @@ class BackgroundPDFGenerator:
         if timeout is None:
             timeout = cls._shutdown_timeout
 
-        logger.info(f"⏳ Waiting for {len(cls._active_threads)} PDF generation threads...")
+        logger.info(
+            f"⏳ Waiting for {len(cls._active_threads)} PDF generation threads..."
+        )
 
         # Get a snapshot of active threads
         with cls._lock:

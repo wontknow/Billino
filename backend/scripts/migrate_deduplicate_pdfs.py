@@ -27,8 +27,8 @@ from pathlib import Path
 # Add parent directory to path to import from backend
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from sqlmodel import Session, select
 from sqlalchemy import func
+from sqlmodel import Session, select
 
 from database import get_engine
 from models.stored_pdf import StoredPDF
@@ -60,9 +60,7 @@ def find_duplicate_pdfs_by_summary_invoice(session: Session) -> list[tuple[int, 
         List of (summary_invoice_id, count) tuples for summary invoices with multiple PDFs
     """
     stmt = (
-        select(
-            StoredPDF.summary_invoice_id, func.count(StoredPDF.id).label("count")
-        )
+        select(StoredPDF.summary_invoice_id, func.count(StoredPDF.id).label("count"))
         .where(StoredPDF.summary_invoice_id.isnot(None))
         .group_by(StoredPDF.summary_invoice_id)
         .having(func.count(StoredPDF.id) > 1)
@@ -233,14 +231,10 @@ def run_migration(dry_run: bool = False) -> None:
             logger.info("")
             logger.info("✅ Migration completed successfully")
             logger.info("")
-            logger.info(
-                "ℹ️ You can now safely deploy the unique constraint changes"
-            )
+            logger.info("ℹ️ You can now safely deploy the unique constraint changes")
         else:
             logger.info("")
-            logger.info(
-                "ℹ️ This was a dry run. Run without --dry-run to apply changes"
-            )
+            logger.info("ℹ️ This was a dry run. Run without --dry-run to apply changes")
 
     except Exception as e:
         session.rollback()
