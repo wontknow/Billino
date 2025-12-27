@@ -7,14 +7,18 @@ export type SummaryInvoiceResponse = {
   total_tax: number;
   total_gross: number;
   invoice_ids: number[];
+  recipient_customer_id?: number;
+  recipient_display_name?: string;
 };
 
 export type SummaryInvoiceCompact = {
   id: number;
   range_text: string;
   date: string;
+  total_net: number;
   total_gross: number;
   profile_id: number;
+  recipient_display_name?: string;
 };
 
 export type SummaryInvoiceCreatePayload = {
@@ -22,4 +26,5 @@ export type SummaryInvoiceCreatePayload = {
   invoice_ids: number[];
   date?: string;
   recipient_name?: string;
+  recipient_customer_id?: number;
 };
