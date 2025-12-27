@@ -8,3 +8,4 @@ isort==7.0.0
 sqlmodel==0.0.27
 reportlab==4.4.7
 python-dotenv==1.2.1
+apscheduler==3.11.1
