@@ -196,7 +196,6 @@ export class PDFsService {
         log.debug(`⚠️ Retry ${attempt + 1} failed, continuing...`);
       }
     }
-    throw new Error(`Failed to fetch PDF for invoice ${invoiceId} after ${maxRetries} retries`);
   }
 
   /**
