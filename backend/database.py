@@ -41,7 +41,7 @@ def init_db(engine=None) -> None:
     """Erzeuge Tabellen gemäß SQLModel-Metadaten."""
     # Stelle sicher, dass data/ Verzeichnis existiert
     _DB_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     if engine is None:
         engine = get_engine()
     import models
