@@ -102,6 +102,7 @@ def create_summary(
     # If only a recipient name was provided, try to resolve to a customer (create if not exists)
     if recipient_customer_id is None and recipient_name:
         from models import Customer
+
         existing = session.exec(
             select(Customer).where(Customer.name == recipient_name)
         ).first()
@@ -114,7 +115,7 @@ def create_summary(
             session.commit()
             session.refresh(new_customer)
             recipient_customer_id = new_customer.id
-    
+
     BackgroundPDFGenerator.generate_in_background(
         pdf_generation_func=generate_pdf_for_summary_invoice,
         entity_id=summary_invoice.id,

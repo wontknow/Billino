@@ -46,14 +46,14 @@ export const SummaryInvoiceDialog: React.FC<SummaryInvoiceDialogProps> = ({
   const [date, setDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
-  
+
   // Recipient customer fields
   const [recipientSearchQuery, setRecipientSearchQuery] = useState<string>("");
   const [recipientSuggestions, setRecipientSuggestions] = useState<Customer[]>([]);
   const [selectedRecipientCustomer, setSelectedRecipientCustomer] = useState<Customer | null>(null);
   const [isSearchingRecipient, setIsSearchingRecipient] = useState(false);
   const [showRecipientDropdown, setShowRecipientDropdown] = useState(false);
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [alert, setAlert] = useState<AlertState | null>(null);
 
@@ -242,7 +242,9 @@ export const SummaryInvoiceDialog: React.FC<SummaryInvoiceDialogProps> = ({
               <Input
                 type="text"
                 placeholder="Kunde suchen oder neue Angabe..."
-                value={selectedRecipientCustomer ? selectedRecipientCustomer.name : recipientSearchQuery}
+                value={
+                  selectedRecipientCustomer ? selectedRecipientCustomer.name : recipientSearchQuery
+                }
                 onChange={(e) => {
                   if (selectedRecipientCustomer) {
                     setSelectedRecipientCustomer(null);
@@ -252,7 +254,7 @@ export const SummaryInvoiceDialog: React.FC<SummaryInvoiceDialogProps> = ({
                 onFocus={() => recipientSearchQuery.length >= 2 && setShowRecipientDropdown(true)}
                 disabled={isSubmitting}
               />
-              
+
               {/* Autocomplete dropdown */}
               {showRecipientDropdown && recipientSuggestions.length > 0 && (
                 <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-md">

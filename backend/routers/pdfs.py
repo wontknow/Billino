@@ -111,7 +111,9 @@ def create_invoice_pdf(invoice_id: int, session: Session = Depends(get_session))
 )
 def create_summary_invoice_pdf(
     summary_invoice_id: int,
-    recipient_data: Optional[dict] = None,  # {"recipient_name"?: str, "recipient_customer_id"?: int}
+    recipient_data: Optional[
+        dict
+    ] = None,  # {"recipient_name"?: str, "recipient_customer_id"?: int}
     session: Session = Depends(get_session),
 ):
     """

@@ -291,12 +291,14 @@ class PDFDataService:
                 customer = self.session.get(Customer, invoice.customer_id)
                 if customer:
                     customer_names.add(customer.name)
-                    
+
                     # Calculate net and gross amounts
-                    tax_rate = invoice.tax_rate if invoice.tax_rate is not None else 0.19
+                    tax_rate = (
+                        invoice.tax_rate if invoice.tax_rate is not None else 0.19
+                    )
                     is_gross = invoice.is_gross_amount
                     total = invoice.total_amount
-                    
+
                     if is_gross:
                         # total_amount is gross, calculate net
                         total_gross = total
@@ -305,7 +307,7 @@ class PDFDataService:
                         # total_amount is net, calculate gross
                         total_net = total
                         total_gross = total * (1 + tax_rate)
-                    
+
                     invoice_details.append(
                         {
                             "number": invoice.number,

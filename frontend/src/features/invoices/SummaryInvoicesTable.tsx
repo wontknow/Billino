@@ -90,7 +90,9 @@ export const SummaryInvoicesTable: React.FC<SummaryInvoicesTableProps> = ({
                     <TableCell>{formatDate(summary.date)}</TableCell>
                     <TableCell>{summary.recipient_display_name ?? "—"}</TableCell>
                     <TableCell className="text-right">{formatAmount(summary.total_net)}</TableCell>
-                    <TableCell className="text-right">{formatAmount(summary.total_gross)}</TableCell>
+                    <TableCell className="text-right">
+                      {formatAmount(summary.total_gross)}
+                    </TableCell>
                   </TableRow>
                 );
               })}

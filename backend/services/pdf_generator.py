@@ -419,7 +419,8 @@ class PDFGenerator:
                 )
 
             invoice_table = Table(
-                invoice_list_data, colWidths=[1.5 * cm, 4 * cm, 5.5 * cm, 2.5 * cm, 2.5 * cm]
+                invoice_list_data,
+                colWidths=[1.5 * cm, 4 * cm, 5.5 * cm, 2.5 * cm, 2.5 * cm],
             )
             invoice_table.setStyle(
                 TableStyle(
@@ -429,7 +430,12 @@ class PDFGenerator:
                         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                         ("FONTSIZE", (0, 0), (-1, 0), 10),
-                        ("ALIGN", (0, 0), (2, 0), "LEFT"),  # First 3 columns left-aligned
+                        (
+                            "ALIGN",
+                            (0, 0),
+                            (2, 0),
+                            "LEFT",
+                        ),  # First 3 columns left-aligned
                         (
                             "ALIGN",
                             (3, 0),
