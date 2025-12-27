@@ -35,7 +35,7 @@ export function CustomerDialog({ isOpen, customer, onClose, onSuccess }: Props) 
     createFn: CustomersService.create,
     updateFn: CustomersService.update,
     onSuccess,
-    onClose: () => onClose(),
+    onClose,
   });
 
   // Initialize form when customer changes
