@@ -227,9 +227,6 @@ export class PDFsService {
         log.debug(`⚠️ Retry ${attempt + 1} failed, continuing...`);
       }
     }
-    throw new Error(
-      `Failed to fetch PDF for summary invoice ${summaryInvoiceId} after ${maxRetries} retries`
-    );
   }
 
   private static generateFileName(storedPdf: StoredPDF): PdfFilename {
