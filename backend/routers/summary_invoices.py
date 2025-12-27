@@ -9,6 +9,8 @@ from sqlmodel import select
 
 from database import get_session
 from models import (
+    Customer,
+    Invoice,
     SummaryInvoice,
     SummaryInvoiceCreate,
     SummaryInvoiceLink,
@@ -95,12 +97,30 @@ def create_summary(
     )
 
     recipient_name = getattr(summary, "recipient_name", None)
+    recipient_customer_id = getattr(summary, "recipient_customer_id", None)
+
+    # If only a recipient name was provided, try to resolve to a customer (create if not exists)
+    if recipient_customer_id is None and recipient_name:
+        from models import Customer
+        existing = session.exec(
+            select(Customer).where(Customer.name == recipient_name)
+        ).first()
+        if existing:
+            recipient_customer_id = existing.id
+        else:
+            # Create a minimal customer record for the recipient
+            new_customer = Customer(name=recipient_name)
+            session.add(new_customer)
+            session.commit()
+            session.refresh(new_customer)
+            recipient_customer_id = new_customer.id
+    
     BackgroundPDFGenerator.generate_in_background(
         pdf_generation_func=generate_pdf_for_summary_invoice,
         entity_id=summary_invoice.id,
-        entity_type="summary invoice",
+        entity_type="summary_invoice",
         thread_name_prefix="PDF-Summary",
-        recipient_name=recipient_name,
+        recipient_customer_id=recipient_customer_id,
     )
 
     return summary_invoice
@@ -127,7 +147,9 @@ def list_summaries(session: Session = Depends(get_session)):
             "total_net": 100.00,
             "total_tax": 19.00,
             "total_gross": 119.00,
-            "invoice_ids": [1, 2, 3]
+            "invoice_ids": [1, 2, 3],
+            "recipient_customer_id": 5,
+            "recipient_display_name": "Example Customer"
         }
     ]
     ```
@@ -146,6 +168,22 @@ def list_summaries(session: Session = Depends(get_session)):
         ).all()
         invoice_ids = [link.invoice_id for link in links]
 
+        # Determine recipient_display_name
+        recipient_display = None
+        if summary.recipient_customer_id:
+            cust = session.get(Customer, summary.recipient_customer_id)
+            recipient_display = cust.name if cust else None
+        else:
+            # Fallback: join distinct customer names from linked invoices
+            names = []
+            for inv_id in invoice_ids:
+                inv = session.get(Invoice, inv_id)
+                if inv:
+                    cust = session.get(Customer, inv.customer_id)
+                    if cust and cust.name not in names:
+                        names.append(cust.name)
+            recipient_display = ", ".join(names) if names else None
+
         summary_invoices.append(
             SummaryInvoiceRead(
                 id=summary.id,
@@ -156,6 +194,8 @@ def list_summaries(session: Session = Depends(get_session)):
                 total_tax=summary.total_tax,
                 total_gross=summary.total_gross,
                 invoice_ids=invoice_ids,
+                recipient_customer_id=summary.recipient_customer_id,
+                recipient_display_name=recipient_display,
             )
         )
     return summary_invoices
@@ -273,6 +313,21 @@ def read_summary(summary_id: int, session: Session = Depends(get_session)):
     ).all()
     invoice_ids = [link.invoice_id for link in links]
 
+    # Determine recipient_display_name
+    recipient_display = None
+    if summary.recipient_customer_id:
+        cust = session.get(Customer, summary.recipient_customer_id)
+        recipient_display = cust.name if cust else None
+    else:
+        names = []
+        for inv_id in invoice_ids:
+            inv = session.get(Invoice, inv_id)
+            if inv:
+                cust = session.get(Customer, inv.customer_id)
+                if cust and cust.name not in names:
+                    names.append(cust.name)
+        recipient_display = ", ".join(names) if names else None
+
     summary_invoice = SummaryInvoiceRead(
         id=summary.id,
         range_text=summary.range_text,
@@ -282,6 +337,8 @@ def read_summary(summary_id: int, session: Session = Depends(get_session)):
         total_tax=summary.total_tax,
         total_gross=summary.total_gross,
         invoice_ids=invoice_ids,
+        recipient_customer_id=summary.recipient_customer_id,
+        recipient_display_name=recipient_display,
     )
     return summary_invoice
 
