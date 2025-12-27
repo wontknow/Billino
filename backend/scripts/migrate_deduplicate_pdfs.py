@@ -21,7 +21,6 @@ Options:
 
 import argparse
 import sys
-from datetime import datetime
 from pathlib import Path
 
 # Add parent directory to path to import from backend
