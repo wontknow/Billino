@@ -8,14 +8,20 @@ import {
 
 const log = logger.createScoped("📄 Summary Invoices");
 
+export interface SummaryInvoiceCreateRequest extends SummaryInvoiceCreatePayload {
+  recipient_customer_id?: number; // Optional: for autocomplete customer selection
+  recipient_name?: string; // Optional name (auto-create customer if not existing)
+}
+
 export class SummaryInvoicesService {
   static async createSummaryInvoice(
-    payload: SummaryInvoiceCreatePayload
+    payload: SummaryInvoiceCreateRequest
   ): Promise<SummaryInvoiceResponse> {
     log.info("Creating summary invoice", {
       invoice_count: payload.invoice_ids.length,
       profile_id: payload.profile_id,
       has_date: Boolean(payload.date),
+      has_recipient_customer: Boolean(payload.recipient_customer_id),
     });
 
     const created = await ApiClient.post<SummaryInvoiceResponse>("/summary-invoices/", payload);
@@ -55,8 +61,10 @@ export class SummaryInvoicesService {
       id: summaryInvoice.id,
       range_text: summaryInvoice.range_text,
       date: summaryInvoice.date,
+      total_net: summaryInvoice.total_net,
       total_gross: summaryInvoice.total_gross,
       profile_id: summaryInvoice.profile_id,
+      recipient_display_name: summaryInvoice.recipient_display_name,
     };
   }
 }
