@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import type { Customer } from "@/types/customer";
 import { CustomersService, type CustomerCreatePayload } from "@/services/customers";
 import { useEntityDialog } from "@/hooks/useEntityDialog";
@@ -27,6 +28,7 @@ export function CustomerDialog({ isOpen, customer, onClose, onSuccess }: Props) 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
+  const [note, setNote] = useState("");
 
   const isEditMode = !!customer;
 
@@ -45,10 +47,12 @@ export function CustomerDialog({ isOpen, customer, onClose, onSuccess }: Props) 
       setName(customer.name);
       setAddress(customer.address ?? "");
       setCity(customer.city ?? "");
+      setNote(customer.note ?? "");
     } else {
       setName("");
       setAddress("");
       setCity("");
+      setNote("");
     }
   }, [customer]);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -64,6 +68,7 @@ export function CustomerDialog({ isOpen, customer, onClose, onSuccess }: Props) 
       name: name.trim(),
       address: address.trim() || null,
       city: city.trim() || null,
+      note: note.trim() || null,
     };
 
     await handleSubmit(customer, payload);
@@ -73,6 +78,7 @@ export function CustomerDialog({ isOpen, customer, onClose, onSuccess }: Props) 
     setName("");
     setAddress("");
     setCity("");
+    setNote("");
     onClose();
   }
 
@@ -123,6 +129,18 @@ export function CustomerDialog({ isOpen, customer, onClose, onSuccess }: Props) 
                 onChange={(e) => setCity(e.target.value)}
                 placeholder="z.B. 12345 Berlin"
                 disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="note">Notizen</Label>
+              <Textarea
+                id="note"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="z.B. Bevorzugte Farben, Hinweise zur Zusammenarbeit..."
+                disabled={isSubmitting}
+                rows={3}
               />
             </div>
           </div>

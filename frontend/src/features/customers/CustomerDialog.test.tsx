@@ -21,6 +21,7 @@ describe("CustomerDialog", () => {
     expect(screen.getByLabelText(/Name/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Adresse/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Stadt/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Notizen/)).toBeInTheDocument();
   });
 
   it("renders dialog in edit mode with customer data", () => {
@@ -29,6 +30,7 @@ describe("CustomerDialog", () => {
       name: "Max Mustermann",
       address: "Teststraße 123",
       city: "12345 Berlin",
+      note: "Bevorzugt blaue Farben",
     };
 
     render(
@@ -44,6 +46,7 @@ describe("CustomerDialog", () => {
     expect(screen.getByDisplayValue("Max Mustermann")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Teststraße 123")).toBeInTheDocument();
     expect(screen.getByDisplayValue("12345 Berlin")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Bevorzugt blaue Farben")).toBeInTheDocument();
   });
 
   it("creates a new customer on submit", async () => {
@@ -52,6 +55,7 @@ describe("CustomerDialog", () => {
       name: "Neuer Kunde",
       address: "Neue Straße 1",
       city: "10115 Berlin",
+      note: "Test Notiz",
     };
 
     (CustomersService.create as jest.Mock).mockResolvedValueOnce(newCustomer);
@@ -67,6 +71,9 @@ describe("CustomerDialog", () => {
     fireEvent.change(screen.getByLabelText(/Stadt/), {
       target: { value: "10115 Berlin" },
     });
+    fireEvent.change(screen.getByLabelText(/Notizen/), {
+      target: { value: "Test Notiz" },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: /Erstellen/ }));
 
@@ -75,6 +82,7 @@ describe("CustomerDialog", () => {
         name: "Neuer Kunde",
         address: "Neue Straße 1",
         city: "10115 Berlin",
+        note: "Test Notiz",
       });
     });
 
@@ -89,6 +97,7 @@ describe("CustomerDialog", () => {
       name: "Max Mustermann",
       address: "Teststraße 123",
       city: "12345 Berlin",
+      note: "Original Notiz",
     };
 
     const updatedCustomer: Customer = {
@@ -118,6 +127,7 @@ describe("CustomerDialog", () => {
         name: "Max Mustermann Aktualisiert",
         address: "Teststraße 123",
         city: "12345 Berlin",
+        note: "Original Notiz",
       });
     });
 
@@ -183,6 +193,7 @@ describe("CustomerDialog", () => {
         name: "Max Mustermann",
         address: "Teststraße 123",
         city: "12345 Berlin",
+        note: null,
       };
 
       const error = new Error("Update failed");
