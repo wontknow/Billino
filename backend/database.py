@@ -6,7 +6,9 @@ from typing import Iterator, Optional
 
 from sqlmodel import Session, SQLModel, create_engine
 
-_DB_FILE = Path(__file__).resolve().parent / "invoices.db"
+# Datenbank im data/ Ordner
+_DB_DIR = Path(__file__).resolve().parent / "data"
+_DB_FILE = _DB_DIR / "billino.db"
 
 
 def _build_sqlite_url(db_path: Path) -> str:
@@ -37,6 +39,9 @@ def get_engine(url: Optional[str] = None):
 
 def init_db(engine=None) -> None:
     """Erzeuge Tabellen gemäß SQLModel-Metadaten."""
+    # Stelle sicher, dass data/ Verzeichnis existiert
+    _DB_DIR.mkdir(parents=True, exist_ok=True)
+
     if engine is None:
         engine = get_engine()
     import models

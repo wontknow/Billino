@@ -8,7 +8,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import init_db
-from routers import customers, health, invoices, pdfs, profiles, summary_invoices
+from routers import (
+    backups,
+    customers,
+    health,
+    invoices,
+    pdfs,
+    profiles,
+    summary_invoices,
+)
+from services.backup_scheduler import BackupScheduler
 from utils import logger
 
 
@@ -16,8 +25,43 @@ from utils import logger
 async def lifespan(app: FastAPI):
     # Startup
     init_db()
+
+    # Starte Backup-Scheduler (mit Konfiguration aus .env)
+    backup_enabled = os.getenv("BACKUP_ENABLED", "true").lower() == "true"
+    if backup_enabled:
+        try:
+            backup_hour = int(os.getenv("BACKUP_SCHEDULE_HOUR", "2"))
+            backup_minute = int(os.getenv("BACKUP_SCHEDULE_MINUTE", "0"))
+            retention_days = int(os.getenv("BACKUP_RETENTION_DAYS", "30"))
+        except ValueError as e:
+            logger.error(
+                f"❌ Ungültige Backup-Konfiguration: {e}. Nutze Standardwerte."
+            )
+            backup_hour = 2
+            backup_minute = 0
+            retention_days = 30
+
+        tauri_enabled = os.getenv("TAURI_ENABLED", "false").lower() == "true"
+
+        BackupScheduler.initialize(
+            backup_hour=backup_hour,
+            backup_minute=backup_minute,
+            retention_days=retention_days,
+            tauri_enabled=tauri_enabled,
+        )
+        BackupScheduler.start()
+        logger.info("✅ Backup-Scheduler gestartet")
+    else:
+        logger.info("⏸️ Backup-System deaktiviert (BACKUP_ENABLED=false)")
+
     yield
-    # Shutdown (hier später evtl. cleanup, Logs, etc.)
+
+    # Shutdown
+    if backup_enabled:
+        BackupScheduler.stop()
+        logger.info("✅ Backup-Scheduler gestoppt")
+    else:
+        logger.info("⏹️ Backup-Scheduler wurde nicht gestartet (BACKUP_ENABLED=false)")
 
 
 # .env explizit aus dem Backend-Verzeichnis laden (robuster bei anderem Working Directory)
@@ -100,6 +144,10 @@ See the individual endpoint documentation for specific error responses.
             "name": "PDFs",
             "description": "Generate and manage PDF representations of invoices",
         },
+        {
+            "name": "backups",
+            "description": "Database and file backup management",
+        },
     ],
 )
 
@@ -124,3 +172,4 @@ app.include_router(profiles.router)
 app.include_router(invoices.router)
 app.include_router(summary_invoices.router)
 app.include_router(pdfs.router)
+app.include_router(backups.router)

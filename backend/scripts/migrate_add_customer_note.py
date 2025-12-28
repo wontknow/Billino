@@ -14,13 +14,13 @@ from pathlib import Path
 
 def migrate_add_customer_note():
     """Add note column to customer table if it doesn't exist."""
-    db_path = Path(__file__).resolve().parent.parent / "invoices.db"
+    db_path = Path(__file__).resolve().parent.parent / "data" / "billino.db"
 
     if not db_path.exists():
-        print(f"❌ Database not found at {db_path}")
+        print(f"Database not found at {db_path}")
         return
 
-    print(f"🔍 Connecting to database: {db_path}")
+    print(f"Connecting to database: {db_path}")
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
