@@ -27,6 +27,12 @@ def generate_pdf_for_invoice(session: Session, invoice_id: int) -> bool:
 
     **Returns:**
     - True if PDF was generated successfully, False if it already exists or invoice not found
+
+    **Race Condition Handling:**
+    Uses a check-then-create pattern with IntegrityError fallback. The database-level
+    unique constraint on invoice_id ensures only one PDF exists, even under concurrent
+    access. If multiple threads attempt generation simultaneously, all but the first
+    will receive an IntegrityError on commit, which is caught and handled gracefully.
     """
     try:
         logger.debug(f"📝 PDF Generation: Checking for invoice {invoice_id}")
@@ -76,10 +82,17 @@ def generate_pdf_for_invoice(session: Session, invoice_id: int) -> bool:
 
         try:
             session.commit()
-            session.refresh(stored_pdf)
-            logger.info(
-                f"✅ PDF generated for invoice {invoice_id} (PDF ID: {stored_pdf.id}, size: {len(pdf_base64)} bytes)"
-            )
+            # Try to get the ID safely - in race conditions the object may be detached
+            try:
+                pdf_id = stored_pdf.id
+                logger.info(
+                    f"✅ PDF generated for invoice {invoice_id} (PDF ID: {pdf_id}, size: {len(pdf_base64)} bytes)"
+                )
+            except Exception:
+                # If we can't get the ID, still log success (we committed)
+                logger.info(
+                    f"✅ PDF generated for invoice {invoice_id} (size: {len(pdf_base64)} bytes)"
+                )
             return True
         except IntegrityError as e:
             # Another thread/process created the PDF first (caught by unique constraint)
