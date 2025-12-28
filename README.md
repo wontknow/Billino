@@ -39,7 +39,9 @@ Ein over-engineered **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trenn
 
 ## ✨ Features
 
-### ✅ Implementiert
+### ✅ Implementiert (v1.1.0 und später)
+
+#### Core Features (v1.0.0 MVP)
 - **Kundenverwaltung**: CRUD API für Stammkunden (Name, Adresse, Stadt)
 - **Profile**: Absender-Profile mit flexiblen Steuereinstellungen
   - 19% MwSt (Standard), 7% MwSt (ermäßigt), 0% MwSt (§19 UStG)
@@ -87,14 +89,36 @@ Ein over-engineered **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trenn
   - 📋 Field-Level Error-Details im Frontend
   - 🎯 Structured Error Messages
 
+#### Neue Features (v1.1.0)
+- **PDF Viewer Integration**: Frontend-Integration zum Anzeigen generierter PDFs
+  - 📄 PDF-Anzeige direkt im Browser
+  - 🔍 Zoom & Navigation
+  - 📥 Download & Drucken
+- **Customer Management UI**: Vollständige Frontend-Verwaltung für Kunden
+  - ✏️ Create/Edit UI für Kunden
+  - 📝 Customer-Notizen hinzufügen
+  - 💾 Persistierung in SQLite
+- **Profile Management UI**: Vollständige Frontend-Verwaltung für Profile
+  - ✏️ Create/Edit UI für Profile
+  - 🎯 Flexible Steuereinstellungen per UI
+  - 💾 Profile-Auswahl für Rechnungserstellung
+- **Backup System**: Basis-Backup-Funktionalität für Datensicherung
+  - 💾 Database-Export (SQLite → JSON/ZIP)
+  - 📅 Zeitgestempelte Backups
+  - ♻️ Automatische Backup-Rotation
+  - 📦 Backup-Wiederherstellung
+
 ### 🚧 Geplant
-- **PDF-Viewer**: Frontend-Integration zur Anzeige generierter PDFs
-- **Customer Management UI**: Create/Edit/Delete UI (aktuell nur Read-Only Tabelle)
 - E-Rechnung (XRechnung / ZUGFeRD)
 - Desktop-App: Tauri v2 bündelt Backend + Frontend + DB in **eine ausführbare Datei**
+- Backup Strategie für Tauri Version
 
-### 🎯 MVP v1.0.0 Status: ✅ RELEASED (November 2025)
-Alle **✅ Implementiert** Features = **MVP Complete**. Alle 🚧 Geplanten Features = **Post-MVP**.
+### 📦 Version History
+- **v1.1.0** ✅ (Dezember 2025): PDF Viewer, Customer Management, Profile Management, Backup System
+- **v1.0.0** ✅ (November 2025): MVP Complete - Invoicing Core, Profile Management, PDF Generation
+
+### 🎯 MVP v1.0.0 Status: ✅ RELEASED (November 2025) | v1.1.0 Status: ✅ RELEASED (Dezember 2025)
+Alle **✅ Implementiert** Features = **Release Complete**. Alle neuen 🚧 Features = **Post-v1.1.0**.
 
 ---
 
@@ -474,7 +498,7 @@ jobs:
 
 ## 📑 Projektphasen (Roadmap)
 
-**MVP v1.0.0 Phasen:**
+**MVP v1.0.0 Phasen (November 2025):**
 - [x] **Phase 0** – Repo-Bootstrap (Ordner, CI/CD, Readme, Templates) 🎯 MVP
 - [x] **Phase 1** – Backend-Skeleton (FastAPI Healthcheck) 🎯 MVP
 - [x] **Phase 2** – DB-Anbindung (SQLite via SQLModel) 🎯 MVP
@@ -489,15 +513,18 @@ jobs:
 - [x] **Phase 8** – Invoice-Form ✨ (Autocomplete, Submit, Alerts, Logging, Bug-Fixes) 🎯 MVP
 - [x] **Phase 8.1** – Logging & Error Handling ✨ (Strukturiertes Logging, Error Parser, UI Alerts) 🎯 MVP
 
-**Post-MVP Phasen:**
-- [ ] **Phase 8.5** – PDF-Viewer (Frontend-Integration zur Anzeige generierter PDFs)
-- [ ] **Phase 9** – Customer Management & Profiles UI (Create/Edit/Delete für Kunden & Profile)
-- [ ] **Phase 10** – Next Static Export
-- [ ] **Phase 11** – E-Invoice Foundations (XRechnung/ZUGFeRD)
-- [ ] **Phase 12** – Prototype E-Invoice
-- [ ] **Phase 13** – Tauri Shell
-- [ ] **Phase 14** – Backend Sidecar
-- [ ] **Phase 15** – Release & Docs
+**v1.1.0 Phasen (Dezember 2025):**
+- [x] **Phase 9** – PDF-Viewer Integration (Frontend PDF-Anzeige mit Zoom & Navigation) ✅ v1.1.0
+- [x] **Phase 10** – Customer Management UI (Create/Edit/Delete/Notes) ✅ v1.1.0
+- [x] **Phase 11** – Profile Management UI (Create/Edit/Delete) ✅ v1.1.0
+- [x] **Phase 12** – Backup System (Database-Export, Rotation, Restore) ✅ v1.1.0
+
+**Post-v1.1.0 Phasen (zukünftig):**
+- [ ] **Phase 13** – Tauri Shell (Desktop App Bootstrap)
+- [ ] **Phase 14** – Backend Sidecar (Python-Integration in Tauri)
+- [ ] **Phase 15** – E-Invoice Foundations (XRechnung/ZUGFeRD Integration)
+- [ ] **Phase 16** – Cloud-Sync & Multi-Device
+- [ ] **Phase 17** – Release & Production Deployment
 
 ---
 
@@ -734,28 +761,42 @@ erDiagram
 
 ---
 
-## 📈 Entwicklungsstand (November 2025)
+## 📈 Entwicklungsstand (Dezember 2025)
 
-### Aktuelle Metriken
-- **Test-Suite**: 51 Frontend Tests + Backend Tests (88% Coverage)
-- **Codebase**: ~4.500+ Lines of Code (ohne Scripts/Generated)
-- **API-Endpunkte**: 25+ RESTful Endpoints
-- **Frontend-Features**: Backend-Core + Invoice-Form vollständig implementiert
+### Aktuelle Metriken (v1.1.0)
+- **Test-Suite**: 167+ Backend Tests + Frontend Tests (88% Coverage)
+- **Codebase**: ~6.000+ Lines of Code (ohne Scripts/Generated)
+- **API-Endpunkte**: 30+ RESTful Endpoints
+- **Frontend-Features**: Backend-Core + Invoice-Form + Customer Management + Profile Management vollständig
 - **Logging**: Strukturiertes Backend + Frontend Logging System
+- **UI-Components**: 25+ shadcn/ui Components integriert
 
-### Code-Quality
+### Code-Quality (v1.1.0)
 - **Umfassende Validierung**: Alle Eingaben werden validiert (Pydantic/SQLModel + Zod)
 - **Error Handling**: Strukturierte HTTP-Fehlerantworten mit Field-Level Details
 - **Type Safety**: Vollständig typisiert mit Python Type Hints + TypeScript
 - **Documentation**: Auto-generierte OpenAPI/Swagger-Docs
 - **CI/CD**: Automatisierte Tests bei jedem Commit/PR
 - **Logging**: Structured Logging mit DEBUG/PROD-Modes für Debugging
+- **Customer Management**: Komplette UI mit CRUD-Operationen & Notizen
+- **PDF Integration**: PDF Viewer im Frontend mit Zoom & Navigation
+- **Backup System**: Automatische Datenbank-Backups mit Rotation
 
-### Nächste Schritte
-1. **PDF-Viewer**: Frontend-Integration zur Anzeige generierter PDFs
-2. **Customer Management UI**: Create/Edit/Delete UI für Kunden
-3. **Desktop Integration**: Tauri v2 Shell mit Python Sidecar
-4. **E-Invoice Support**: XRechnung/ZUGFeRD Integration
+### Release Status
+- ✅ **v1.0.0 MVP**: November 2025 (Invoicing Core, PDF Generation)
+- ✅ **v1.1.0 Current**: Dezember 2025 (PDF Viewer, Customer Management, Profiles, Backup)
+
+### Nächste Schritte (v1.2.0+)
+#### Release v1.2.0
+1. **Komplexe Filter**: Tabellenfilter & Sortierung
+2. **Datenexport**: CSV/XLSX Export für relevante Dateien
+#### Release 2.0.0
+1. **Desktop Integration**: Tauri v2 Shell mit Python Sidecar
+
+#### Weitere Releases
+1. **E-Invoice Support**: XRechnung/ZUGFeRD Integration
+2. **Cloud-Sync**: Multi-Device Synchronisation
+3. **Multi-User**: Grundlagen für Mehrbenutzer-Unterstützung
 
 ---
 
