@@ -789,7 +789,7 @@ erDiagram
 ### Nächste Schritte (v1.2.0+)
 #### Release v1.2.0
 1. **Komplexe Filter**: Tabellenfilter & Sortierung
-2. **Datenexport**: CSV/XLSX Export für relevante Dateien
+2. **Datenexport**: CSV/XLSX Export für relevante Daten
 #### Release 2.0.0
 1. **Desktop Integration**: Tauri v2 Shell mit Python Sidecar
 
