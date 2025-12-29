@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 
 from database import get_session
@@ -13,14 +13,22 @@ from models import (
     SummaryInvoiceCreate,
     SummaryInvoiceRead,
 )
+from models.table_models import (
+    GlobalSearch,
+    PaginatedResponse,
+    SortDirection,
+    SortField,
+)
 from services import (
     create_summary_invoice,
     generate_next_invoice_number,
     get_preview_invoice_number,
 )
 from services.background_pdf_generator import BackgroundPDFGenerator
+from services.filter_service import FilterService, create_paginated_response, paginate
 from services.pdf_generation_service import generate_pdf_for_invoice
 from utils import logger
+from utils.router_utils import parse_filter_params, parse_sort_params
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
@@ -296,100 +304,178 @@ def create_invoice(invoice: InvoiceCreate, session: Session = Depends(get_sessio
     )
 
 
-@router.get("/", response_model=list[InvoiceRead])
-def read_invoices(session: Session = Depends(get_session)):
+@router.get("/", response_model=PaginatedResponse[InvoiceRead])
+def read_invoices(
+    session: Session = Depends(get_session),
+    # Filterung
+    filter: list[str] = Query(
+        None,
+        description="Filters as 'field:operator:value'. Example: 'number:contains:25'",
+    ),
+    # Sortierung
+    sort: list[str] = Query(
+        None,
+        description="Sort order as 'field:direction'. Example: 'date:desc'",
+    ),
+    # Globale Suche
+    q: str = Query(
+        None,
+        min_length=2,
+        description="Global search query (searches in number, customer_name)",
+    ),
+    # Paginierung
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    pageSize: int = Query(10, ge=1, le=100, description="Items per page (max 100)"),
+):
     """
-    List all invoices.
+    List invoices with advanced filtering, sorting, and pagination.
 
-    Retrieves a list of all invoices in the database with their line items.
+    **Query Parameters:**
+
+    **Filtering:**
+    - `filter` (repeatable): Filter as 'field:operator:value'
+      - Fields: `id`, `number`, `date`, `customer_id`, `profile_id`, `total_amount`, `include_tax`, `tax_rate`
+      - Examples: `filter=number:contains:25`, `filter=date:gte:2025-01-01`
+
+    **Sorting:**
+    - `sort` (repeatable): Sort as 'field:direction'
+      - Examples: `sort=date:desc`, `sort=number:asc`
+
+    **Global Search:**
+    - `q` (string, optional): Searches in number and related customer name
+
+    **Pagination:**
+    - `page` (integer, default=1): Page number
+    - `pageSize` (integer, default=10, max=100): Items per page
 
     **Returns:**
-    - List of InvoiceRead objects with all related invoice items
-
-    **Example Response (200):**
-    ```json
-    [
-        {
-            "id": 1,
-            "number": "25 | 001",
-            "date": "2025-12-19",
-            "customer_id": 1,
-            "profile_id": 1,
-            "total_amount": 119.00,
-            "include_tax": true,
-            "tax_rate": 0.19,
-            "is_gross_amount": true,
-            "invoice_items": [
-                {
-                    "id": 1,
-                    "invoice_id": 1,
-                    "quantity": 2,
-                    "description": "Consulting Service",
-                    "price": 50.00,
-                    "tax_rate": null
-                }
-            ]
-        }
-    ]
-    ```
+    - PaginatedResponse with InvoiceRead items (including computed tax totals)
     """
-    logger.debug("📄 GET /invoices - Listing all invoices")
-    invoices = session.exec(select(Invoice)).all()
-    logger.debug(f"✅ Found {len(invoices)} invoices")
-    result = []
-    for inv in invoices:
-        items = session.exec(
-            select(InvoiceItem).where(InvoiceItem.invoice_id == inv.id)
-        ).all()
-        # Compute totals
-        rate = inv.tax_rate or 0.0
-        include_tax_flag = bool(inv.include_tax) and rate > 0.0
-        if not include_tax_flag:
-            net = inv.total_amount
-            tax = 0.0
-            gross = inv.total_amount
-        elif inv.is_gross_amount:
-            gross = inv.total_amount
-            net = gross / (1 + rate)
-            tax = gross - net
-        else:
-            net = inv.total_amount
-            tax = net * rate
-            gross = net + tax
-        net = round(net, 2)
-        tax = round(tax, 2)
-        gross = round(gross, 2)
+    logger.debug("📄 GET /invoices - Listing with filters/sort/pagination")
 
-        customer = session.get(Customer, inv.customer_id)
+    filters = parse_filter_params(filter)
+    sort_fields = parse_sort_params(sort)
 
-        result.append(
-            InvoiceRead(
-                id=inv.id,
-                number=inv.number,
-                date=inv.date,
-                customer_id=inv.customer_id,
-                profile_id=inv.profile_id,
-                include_tax=inv.include_tax,
-                tax_rate=inv.tax_rate,
-                is_gross_amount=inv.is_gross_amount,
-                total_amount=inv.total_amount,
-                total_net=net,
-                total_tax=tax,
-                total_gross=gross,
-                customer_name=(customer.name if customer else None),
-                invoice_items=[
-                    InvoiceItemRead(
-                        id=item.id,
-                        invoice_id=item.invoice_id,
-                        quantity=item.quantity,
-                        description=item.description,
-                        price=item.price,
-                    )
-                    for item in items
-                ],
+    try:
+        stmt = select(Invoice)
+
+        if filters:
+            stmt = FilterService.apply_filters(
+                stmt,
+                filters,
+                Invoice,
+                allowed_fields={
+                    "id",
+                    "number",
+                    "date",
+                    "customer_id",
+                    "profile_id",
+                    "total_amount",
+                    "include_tax",
+                    "tax_rate",
+                },
             )
+
+        if q:
+            # Globale Suche: Wir müssen hier nur auf Invoice-Felder durchsuchen
+            # (customer_name ist computed, nicht in DB)
+            stmt = FilterService.apply_global_search(
+                stmt,
+                GlobalSearch(query=q),
+                Invoice,
+                search_fields={"number"},
+            )
+
+        sort_fields_to_apply = (
+            sort_fields
+            if sort_fields
+            else [SortField(field="id", direction=SortDirection.DESC)]
         )
-    return result
+        stmt = FilterService.apply_sort(
+            stmt,
+            sort_fields_to_apply,
+            Invoice,
+            primary_key_field="id",
+            allowed_fields={
+                "id",
+                "number",
+                "date",
+                "customer_id",
+                "profile_id",
+                "total_amount",
+                "include_tax",
+                "tax_rate",
+            },
+        )
+
+        invoices, total = paginate(
+            session, stmt, Invoice, page=page, page_size=pageSize
+        )
+
+        # Compute InvoiceRead objects with tax calculations
+        result = []
+        for inv in invoices:
+            items = session.exec(
+                select(InvoiceItem).where(InvoiceItem.invoice_id == inv.id)
+            ).all()
+
+            # Compute totals
+            rate = inv.tax_rate or 0.0
+            include_tax_flag = bool(inv.include_tax) and rate > 0.0
+            if not include_tax_flag:
+                net = inv.total_amount
+                tax = 0.0
+                gross = inv.total_amount
+            elif inv.is_gross_amount:
+                gross = inv.total_amount
+                net = gross / (1 + rate)
+                tax = gross - net
+            else:
+                net = inv.total_amount
+                tax = net * rate
+                gross = net + tax
+
+            net = round(net, 2)
+            tax = round(tax, 2)
+            gross = round(gross, 2)
+
+            customer = session.get(Customer, inv.customer_id)
+
+            result.append(
+                InvoiceRead(
+                    id=inv.id,
+                    number=inv.number,
+                    date=inv.date,
+                    customer_id=inv.customer_id,
+                    profile_id=inv.profile_id,
+                    include_tax=inv.include_tax,
+                    tax_rate=inv.tax_rate,
+                    is_gross_amount=inv.is_gross_amount,
+                    total_amount=inv.total_amount,
+                    total_net=net,
+                    total_tax=tax,
+                    total_gross=gross,
+                    customer_name=(customer.name if customer else None),
+                    invoice_items=[
+                        InvoiceItemRead(
+                            id=item.id,
+                            invoice_id=item.invoice_id,
+                            quantity=item.quantity,
+                            description=item.description,
+                            price=item.price,
+                        )
+                        for item in items
+                    ],
+                )
+            )
+
+        response = create_paginated_response(result, total, page, pageSize)
+        logger.info(f"✅ Retrieved {len(result)}/{total} invoices")
+        return response
+
+    except ValueError as e:
+        logger.error(f"❌ Invalid query parameters: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/{invoice_id}", response_model=InvoiceRead)
