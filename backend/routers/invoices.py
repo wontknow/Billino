@@ -359,10 +359,43 @@ def read_invoices(
     try:
         stmt = select(Invoice)
 
-        if filters:
+        # Sonderfall-Filter: customer_name (benötigt Join auf Customer)
+        customer_name_filters = (
+            [f for f in filters if f.field == "customer_name"] if filters else []
+        )
+        other_filters = [f for f in (filters or []) if f.field != "customer_name"]
+
+        if customer_name_filters:
+            # Join auf Customer und Filter auf Customer.name anwenden
+            from sqlalchemy import and_  # lokal um globale Imports minimal zu halten
+
+            stmt = stmt.join(Customer, Invoice.customer_id == Customer.id)
+            for f in customer_name_filters:
+                val = str(f.value)
+                op = f.operator
+                if op == "contains":
+                    condition = Customer.name.ilike(
+                        f"%{FilterService.escape_wildcards(val)}%", escape="\\"
+                    )
+                elif op in ("exact", "equals"):
+                    # exact: case-insensitive Gleichheit via ilike
+                    condition = Customer.name.ilike(
+                        FilterService.escape_wildcards(val), escape="\\"
+                    )
+                elif op == "starts_with":
+                    condition = Customer.name.ilike(
+                        f"{FilterService.escape_wildcards(val)}%", escape="\\"
+                    )
+                else:
+                    raise ValueError(f"Operator '{op}' not supported for customer_name")
+                stmt = stmt.where(condition)
+            # Duplikate vermeiden, falls mehrere Invoices den gleichen Customer haben
+            stmt = stmt.distinct()
+
+        if other_filters:
             stmt = FilterService.apply_filters(
                 stmt,
-                filters,
+                other_filters,
                 Invoice,
                 allowed_fields={
                     "id",

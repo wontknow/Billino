@@ -317,9 +317,9 @@ def paginate(
     page = max(1, page)
     page_size = max(1, min(page_size, 1000))  # Max 1000 pro Seite
 
-    # Hole Gesamtanzahl
-    count_stmt = select(func.count()).select_from(model).where(stmt.whereclause)
-    total = session.scalar(count_stmt)
+    # Hole Gesamtanzahl aus dem gefilterten Statement
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total = session.scalar(count_stmt) or 0
 
     # Paginiere
     offset = (page - 1) * page_size

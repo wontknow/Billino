@@ -358,7 +358,7 @@ class TestFilterSecurityValidation:
             )
         ]
 
-        with pytest.raises(ValueError, match="does not exist"):
+        with pytest.raises(ValueError, match="not allowed for filtering"):
             FilterService.apply_filters(stmt, filters, Customer)
 
     def test_field_not_in_whitelist_raises_error(self, session, sample_customers):

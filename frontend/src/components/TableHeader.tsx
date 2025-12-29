@@ -1,9 +1,10 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Filter } from "lucide-react";
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { ColumnFilter, SortDirection, SortField } from "@/types/table-filters";
 
-interface ColumnConfig {
+export interface ColumnConfig {
   /**
    * Eindeutige Feld-ID
    */
@@ -94,6 +95,17 @@ export function TableHeader({
   onFilterChange,
 }: TableHeaderProps) {
   const [filterInputs, setFilterInputs] = useState<Record<string, string>>({});
+  const debounceRefs = useRef<Record<string, ReturnType<typeof setTimeout> | undefined>>({});
+
+  // Sync lokale Input-Werte mit aktiven Filtern (z.B. nach URL-Änderung/Reload)
+  useEffect(() => {
+    const next: Record<string, string> = {};
+    for (const col of columns) {
+      const af = filters.find((f) => f.field === col.id);
+      if (af) next[col.id] = String(af.value ?? "");
+    }
+    setFilterInputs((prev) => ({ ...prev, ...next }));
+  }, [filters, columns]);
 
   // Finde aktive Sortierung für eine Spalte
   const getColumnSort = useCallback(
@@ -126,62 +138,150 @@ export function TableHeader({
           onSortChange([...sort, { field: columnId, direction: "asc" }]);
         }
       } else {
-        // Single-Sort
-        if (currentSort) {
-          // Toggle Richtung
-          onSortChange([
-            {
-              field: columnId,
-              direction: currentSort.direction === "asc" ? "desc" : "asc",
-            },
-          ]);
-        } else {
-          // Set Single-Sort
+        // Single-Sort: cycle asc -> desc -> none
+        if (!currentSort) {
           onSortChange([{ field: columnId, direction: "asc" }]);
+        } else if (currentSort.direction === "asc") {
+          onSortChange([{ field: columnId, direction: "desc" }]);
+        } else {
+          onSortChange([]); // none
         }
       }
     },
     [sort, getColumnSort, onSortChange]
   );
 
-  // Handle Filter (Text-Input)
+  // Handle Filter (Text-Input) mit Debounce, um Navigations-Reloads zu reduzieren
   const handleTextFilter = useCallback(
     (columnId: string, value: string) => {
       setFilterInputs((prev) => ({ ...prev, [columnId]: value }));
 
-      if (value.trim()) {
-        // Entferne alte Filter für diese Spalte
-        const newFilters = filters.filter((f) => f.field !== columnId);
-        newFilters.push({
-          field: columnId,
-          operator: "contains",
-          value: value.trim(),
-        });
-        onFilterChange(newFilters);
-      } else {
-        // Entferne Filter für diese Spalte
-        onFilterChange(filters.filter((f) => f.field !== columnId));
-      }
+      // clear previous timer for this column
+      const t = debounceRefs.current[columnId];
+      if (t) clearTimeout(t);
+
+      debounceRefs.current[columnId] = setTimeout(() => {
+        const trimmed = value.trim();
+        if (trimmed) {
+          const newFilters = filters.filter((f) => f.field !== columnId);
+          newFilters.push({ field: columnId, operator: "contains", value: trimmed });
+          onFilterChange(newFilters);
+        } else {
+          onFilterChange(filters.filter((f) => f.field !== columnId));
+        }
+      }, 300);
     },
     [filters, onFilterChange]
   );
 
   return (
     <thead>
-      <tr className="border-b bg-slate-100">
-        {columns.map((column) => {
+      <tr className="border-b">
+        {columns.map((column, idx) => {
           const columnSort = getColumnSort(column.id);
           const sortIndex = getSortIndex(column.id);
           const activeFilter = filters.find((f) => f.field === column.id);
+          const isFirst = idx === 0;
+          const isLast = idx === columns.length - 1;
 
           return (
             <th
               key={column.id}
               className="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold"
             >
-              <div className="flex items-center gap-2">
-                {/* Label */}
-                <span>{column.label}</span>
+              <div className="flex items-center gap-2 text-foreground">
+                {/* Label opens filter popup */}
+                {column.filterable ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className={[
+                          "group inline-flex items-center gap-1 rounded-md px-1.5 py-0.5",
+                          activeFilter ? "ring-1 ring-black" : "hover:ring-1 hover:ring-black/30",
+                        ].join(" ")}
+                      >
+                        <span className="leading-none text-base font-semibold">{column.label}</span>
+                        <Filter className="h-3 w-3 opacity-50 group-hover:opacity-80" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-60 p-2">
+                      {column.filterType === "text" && (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="text"
+                            placeholder="Filtern…"
+                            value={filterInputs[column.id] || ""}
+                            onChange={(e) => handleTextFilter(column.id, e.target.value)}
+                            className="h-8 text-sm"
+                          />
+                          {activeFilter && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8"
+                              onClick={() => {
+                                setFilterInputs((prev) => ({ ...prev, [column.id]: "" }));
+                                onFilterChange(filters.filter((f) => f.field !== column.id));
+                              }}
+                            >
+                              Clear
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
+                      {column.filterType === "select" && column.filterOptions && (
+                        <div className="flex w-full flex-col gap-1">
+                          <select
+                            className="h-8 w-full rounded border bg-background px-2 text-sm"
+                            value={(activeFilter?.value as string) || ""}
+                            onChange={(e) => {
+                              if (!e.target.value) {
+                                onFilterChange(filters.filter((f) => f.field !== column.id));
+                              } else {
+                                const newFilters = filters.filter((f) => f.field !== column.id);
+                                newFilters.push({
+                                  field: column.id,
+                                  operator: "exact",
+                                  value: e.target.value,
+                                });
+                                onFilterChange(newFilters);
+                              }
+                            }}
+                          >
+                            <option value="">– alle –</option>
+                            {column.filterOptions.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                          {activeFilter && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 self-end"
+                              onClick={() =>
+                                onFilterChange(filters.filter((f) => f.field !== column.id))
+                              }
+                            >
+                              Clear
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
+                      <DropdownMenuSeparator />
+                      <div className="text-xs text-muted-foreground px-1">
+                        Esc schließt das Menü
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:ring-1 hover:ring-black/30">
+                    <span className="leading-none text-base font-semibold">{column.label}</span>
+                  </span>
+                )}
 
                 {/* Sortierungs-Buttons */}
                 {column.sortable && (
@@ -191,114 +291,26 @@ export function TableHeader({
                       size="sm"
                       className="h-6 w-6 p-0"
                       onClick={(e) => handleSort(column.id, e.shiftKey || e.metaKey)}
-                      title={`Click zum Sortieren${columnSort ? ", Shift+Click für Multi-Sort" : ""}`}
+                      title={`Sortieren${columnSort ? " (erneut klicken zum Entfernen)" : ""}`}
                     >
                       {columnSort ? (
                         columnSort.direction === "asc" ? (
-                          <ArrowUp size={14} className="text-blue-600" />
+                          <ArrowUp size={14} />
                         ) : (
-                          <ArrowDown size={14} className="text-blue-600" />
+                          <ArrowDown size={14} />
                         )
                       ) : (
-                        <ArrowUpDown size={14} className="text-slate-400" />
+                        <ArrowUpDown size={14} className="text-muted-foreground" />
                       )}
                     </Button>
 
                     {/* Multi-Sort Index */}
                     {sortIndex > 0 && columnSort && (
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                      <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded border px-1 text-[10px] font-medium">
                         {sortIndex}
                       </span>
                     )}
                   </div>
-                )}
-
-                {/* Filter-Dropdown */}
-                {column.filterable && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`h-6 w-6 p-0 ${activeFilter ? "bg-green-100" : ""}`}
-                        title="Filter für diese Spalte"
-                      >
-                        <ChevronDown size={14} className={activeFilter ? "text-green-600" : ""} />
-                      </Button>
-                    </DropdownMenuTrigger>
-
-                    <DropdownMenuContent align="start" className="w-56">
-                      {column.filterType === "text" && (
-                        <>
-                          <div className="px-2 py-2">
-                            <input
-                              type="text"
-                              placeholder="Text eingeben..."
-                              value={filterInputs[column.id] || ""}
-                              onChange={(e) => handleTextFilter(column.id, e.target.value)}
-                              className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-                            />
-                          </div>
-
-                          <DropdownMenuSeparator />
-
-                          {activeFilter && (
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setFilterInputs((prev) => ({
-                                  ...prev,
-                                  [column.id]: "",
-                                }));
-                                onFilterChange(filters.filter((f) => f.field !== column.id));
-                              }}
-                              className="text-red-600"
-                            >
-                              Filter löschen
-                            </DropdownMenuItem>
-                          )}
-                        </>
-                      )}
-
-                      {column.filterType === "select" && column.filterOptions && (
-                        <>
-                          {column.filterOptions.map((option) => (
-                            <DropdownMenuItem
-                              key={option.value}
-                              onClick={() => {
-                                const newFilters = filters.filter((f) => f.field !== column.id);
-                                newFilters.push({
-                                  field: column.id,
-                                  operator: "exact",
-                                  value: option.value,
-                                });
-                                onFilterChange(newFilters);
-                              }}
-                              className={
-                                activeFilter?.value === option.value
-                                  ? "bg-green-50 font-semibold"
-                                  : ""
-                              }
-                            >
-                              {option.label}
-                            </DropdownMenuItem>
-                          ))}
-
-                          <DropdownMenuSeparator />
-
-                          {activeFilter && (
-                            <DropdownMenuItem
-                              onClick={() => {
-                                onFilterChange(filters.filter((f) => f.field !== column.id));
-                              }}
-                              className="text-red-600"
-                            >
-                              Filter löschen
-                            </DropdownMenuItem>
-                          )}
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 )}
               </div>
             </th>

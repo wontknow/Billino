@@ -5,7 +5,7 @@ import os
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlmodel import select
+from sqlmodel import and_, or_, select
 
 from database import get_session
 from models import (
@@ -188,10 +188,80 @@ def list_summaries(
     try:
         stmt = select(SummaryInvoice)
 
-        if filters:
+        # Sonderfall-Filter: recipient_display_name (benötigt Join auf Customer)
+        # Exklusive OR Logik:
+        # 1. Hat direkten recipient (recipient_customer_id IS NOT NULL) -> filtere NUR auf diesen
+        # 2. Hat KEINEN direkten recipient (recipient_customer_id IS NULL) -> filtere auf Kunden der verlinkten Rechnungen
+        recipient_filters = [
+            f for f in (filters or []) if f.field == "recipient_display_name"
+        ]
+        other_filters = [
+            f for f in (filters or []) if f.field != "recipient_display_name"
+        ]
+
+        if recipient_filters:
+            for f in recipient_filters:
+                val = str(f.value)
+                op = f.operator
+                if op == "contains":
+                    name_condition = Customer.name.ilike(
+                        f"%{FilterService.escape_wildcards(val)}%", escape="\\"
+                    )
+                elif op in ("exact", "equals"):
+                    name_condition = Customer.name.ilike(
+                        FilterService.escape_wildcards(val), escape="\\"
+                    )
+                elif op == "starts_with":
+                    name_condition = Customer.name.ilike(
+                        f"{FilterService.escape_wildcards(val)}%", escape="\\"
+                    )
+                else:
+                    raise ValueError(
+                        f"Operator '{op}' not supported for recipient_display_name"
+                    )
+
+                # Fall 1: Hat direkten Empfänger -> filtere NUR auf diesen
+                direct_recipient_ids = (
+                    select(SummaryInvoice.id)
+                    .join(Customer, Customer.id == SummaryInvoice.recipient_customer_id)
+                    .where(
+                        and_(
+                            SummaryInvoice.recipient_customer_id.isnot(None),
+                            name_condition,
+                        )
+                    )
+                )
+
+                # Fall 2: KEIN direkter Empfänger -> filtere auf Kunden der verlinkten Rechnungen
+                linked_invoice_ids = (
+                    select(SummaryInvoice.id)
+                    .join(
+                        SummaryInvoiceLink,
+                        SummaryInvoiceLink.summary_invoice_id == SummaryInvoice.id,
+                    )
+                    .join(Invoice, Invoice.id == SummaryInvoiceLink.invoice_id)
+                    .join(Customer, Customer.id == Invoice.customer_id)
+                    .where(
+                        and_(
+                            SummaryInvoice.recipient_customer_id.is_(None),
+                            name_condition,
+                        )
+                    )
+                )
+
+                # Kombiniere beide Fälle mit OR (exklusiv, da durch AND getrennt)
+                stmt = stmt.where(
+                    or_(
+                        SummaryInvoice.id.in_(direct_recipient_ids),
+                        SummaryInvoice.id.in_(linked_invoice_ids),
+                    )
+                )
+            stmt = stmt.distinct()
+
+        if other_filters:
             stmt = FilterService.apply_filters(
                 stmt,
-                filters,
+                other_filters,
                 SummaryInvoice,
                 allowed_fields={
                     "id",

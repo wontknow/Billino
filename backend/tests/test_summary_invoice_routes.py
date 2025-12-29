@@ -299,8 +299,9 @@ def test_get_summary_invoices_list_empty(client):
 
     assert response.status_code == 200
     result = response.json()
-    assert isinstance(result, list)
-    assert len(result) == 0
+    assert isinstance(result, dict)
+    assert "items" in result
+    assert len(result["items"]) == 0
 
 
 def test_get_summary_invoices_list_with_data(client, sample_data):
@@ -320,11 +321,12 @@ def test_get_summary_invoices_list_with_data(client, sample_data):
 
     assert response.status_code == 200
     result = response.json()
-    assert isinstance(result, list)
-    assert len(result) == 1
-    assert result[0]["id"] is not None
-    assert result[0]["profile_id"] == data["profile"].id
-    assert result[0]["range_text"] == "25 | 0001 - 25 | 0002"
+    assert isinstance(result, dict)
+    assert "items" in result
+    assert len(result["items"]) == 1
+    assert result["items"][0]["id"] is not None
+    assert result["items"][0]["profile_id"] == data["profile"].id
+    assert result["items"][0]["range_text"] == "25 | 0001 - 25 | 0002"
 
 
 def test_get_summary_invoices_list_multiple(client, sample_data):
@@ -348,7 +350,7 @@ def test_get_summary_invoices_list_multiple(client, sample_data):
 
     assert response.status_code == 200
     result = response.json()
-    assert len(result) == 2
+    assert len(result["items"]) == 2
 
 
 def test_get_summary_invoices_list_by_profile(client, sample_data):
@@ -611,7 +613,7 @@ def test_full_crud_workflow(client, sample_data):
     # 3. Read list of summary invoices
     list_response = client.get("/summary-invoices")
     assert list_response.status_code == 200
-    assert len(list_response.json()) == 1
+    assert len(list_response.json()["items"]) == 1
 
     # 4. Delete summary invoice
     delete_response = client.delete(f"/summary-invoices/{summary_id}")
@@ -623,7 +625,7 @@ def test_full_crud_workflow(client, sample_data):
 
     list_after_delete = client.get("/summary-invoices")
     assert list_after_delete.status_code == 200
-    assert len(list_after_delete.json()) == 0
+    assert len(list_after_delete.json()["items"]) == 0
 
 
 def test_concurrent_operations(client, sample_data):
@@ -649,7 +651,7 @@ def test_concurrent_operations(client, sample_data):
     # Verify all exist
     list_response = client.get("/summary-invoices")
     assert list_response.status_code == 200
-    assert len(list_response.json()) == 3
+    assert len(list_response.json()["items"]) == 3
 
     # Verify individual access
     for summary_id in created_ids:

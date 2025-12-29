@@ -3,14 +3,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { PdfViewer } from "@/components/ui/pdf-viewer";
 import { PDFsService } from "@/services/pdfs";
-import { InvoicesService } from "@/services/invoices";
-import { SummaryInvoicesService } from "@/services/summaryInvoices";
 import { Invoice } from "@/types/invoice";
 import { SummaryInvoiceCompact } from "@/types/summaryInvoices";
 import { InvoicesTable } from "./InvoicesTable";
 import { SummaryInvoicesTable } from "./SummaryInvoicesTable";
 import { SummaryInvoiceDialog } from "./SummaryInvoiceDialog";
 import { A6InvoiceDialog } from "./A6InvoiceDialog";
+import { useTableState } from "@/hooks/useTableState";
+import { fetchTableData } from "@/services/table-api";
+import type { ColumnConfig } from "@/components/TableHeader";
 
 type PdfResult = Blob | { blob: Blob; filename?: string };
 
@@ -62,6 +63,52 @@ export const InvoicesContainer: React.FC<InvoicesContainerProps> = ({
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const [isA6DialogOpen, setIsA6DialogOpen] = useState(false);
 
+  // URL-synced state for invoices and summary invoices independently
+  const {
+    state: invState,
+    updateFilters: updateInvFilters,
+    updateSort: updateInvSort,
+  } = useTableState(10);
+  const {
+    state: sumState,
+    updateFilters: updateSumFilters,
+    updateSort: updateSumSort,
+  } = useTableState(10);
+
+  const invoiceColumns: ColumnConfig[] = useMemo(
+    () => [
+      { id: "number", label: "Nummer", sortable: true, filterable: true, filterType: "text" },
+      { id: "date", label: "Datum", sortable: true, filterable: true, filterType: "text" },
+      {
+        id: "customer_name",
+        label: "Empfänger",
+        sortable: true,
+        filterable: true,
+        filterType: "text",
+      },
+      { id: "total_net", label: "Netto", sortable: true, filterable: false },
+      { id: "total_gross", label: "Brutto", sortable: true, filterable: false },
+    ],
+    []
+  );
+
+  const summaryColumns: ColumnConfig[] = useMemo(
+    () => [
+      { id: "range_text", label: "Bereich", sortable: true, filterable: true, filterType: "text" },
+      { id: "date", label: "Datum", sortable: true, filterable: true, filterType: "text" },
+      {
+        id: "recipient_display_name",
+        label: "Empfänger",
+        sortable: true,
+        filterable: true,
+        filterType: "text",
+      },
+      { id: "total_net", label: "Netto", sortable: true, filterable: false },
+      { id: "total_gross", label: "Brutto", sortable: true, filterable: false },
+    ],
+    []
+  );
+
   const defaultInvoicePdfLoader = useCallback(
     (invoiceId: number) => PDFsService.getPdfByInvoiceIdWithFallback(invoiceId),
     []
@@ -85,13 +132,31 @@ export const InvoicesContainer: React.FC<InvoicesContainerProps> = ({
     setPdfBlob(null);
   };
 
+  // Fetch invoices based on URL state (only when tab is active)
   useEffect(() => {
-    setInvoicesState(invoices);
-  }, [invoices]);
+    if (activeTab !== "invoices") return;
+    let mounted = true;
+    (async () => {
+      const resp = await fetchTableData<Invoice>("/invoices/", invState);
+      if (mounted) setInvoicesState(resp.items);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [invState, activeTab]);
 
+  // Fetch summary invoices based on URL state (only when tab is active)
   useEffect(() => {
-    setSummaryInvoicesState(summaryInvoices);
-  }, [summaryInvoices]);
+    if (activeTab !== "summary-invoices") return;
+    let mounted = true;
+    (async () => {
+      const resp = await fetchTableData<SummaryInvoiceCompact>("/summary-invoices/", sumState);
+      if (mounted) setSummaryInvoicesState(resp.items);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [sumState, activeTab]);
 
   const handleOpenInvoicePdf = useCallback(
     async (invoiceId: Invoice["id"]) => {
@@ -137,28 +202,24 @@ export const InvoicesContainer: React.FC<InvoicesContainerProps> = ({
   const handleRefreshInvoices = useCallback(async () => {
     setIsRefreshingInvoices(true);
     try {
-      if (onRefreshInvoices) {
-        await onRefreshInvoices();
-      }
-      const latest = await InvoicesService.list();
-      setInvoicesState(latest);
+      if (onRefreshInvoices) await onRefreshInvoices();
+      const resp = await fetchTableData<Invoice>("/invoices/", invState);
+      setInvoicesState(resp.items);
     } finally {
       setIsRefreshingInvoices(false);
     }
-  }, [onRefreshInvoices]);
+  }, [onRefreshInvoices, invState]);
 
   const handleRefreshSummary = useCallback(async () => {
     setIsRefreshingSummary(true);
     try {
-      if (onRefreshSummaryInvoices) {
-        await onRefreshSummaryInvoices();
-      }
-      const latest = await SummaryInvoicesService.getSummaryInvoiceList();
-      setSummaryInvoicesState(latest);
+      if (onRefreshSummaryInvoices) await onRefreshSummaryInvoices();
+      const resp = await fetchTableData<SummaryInvoiceCompact>("/summary-invoices/", sumState);
+      setSummaryInvoicesState(resp.items);
     } finally {
       setIsRefreshingSummary(false);
     }
-  }, [onRefreshSummaryInvoices]);
+  }, [onRefreshSummaryInvoices, sumState]);
 
   const handleOpenSummaryDialog = () => {
     onOpenCreateSummaryInvoice?.();
@@ -208,6 +269,11 @@ export const InvoicesContainer: React.FC<InvoicesContainerProps> = ({
           onCreateA6Pdf={handleOpenA6Dialog}
           isRefreshing={isRefreshingInvoices}
           emptyMessage="Keine Rechnungen vorhanden."
+          columns={invoiceColumns}
+          filters={invState.filters}
+          sort={invState.sort}
+          onFiltersChange={updateInvFilters}
+          onSortChange={updateInvSort}
         />
       ) : (
         <SummaryInvoicesTable
@@ -217,6 +283,11 @@ export const InvoicesContainer: React.FC<InvoicesContainerProps> = ({
           onCreateSummaryInvoice={handleOpenSummaryDialog}
           isRefreshing={isRefreshingSummary}
           emptyMessage="Keine Sammelrechnungen vorhanden."
+          columns={summaryColumns}
+          filters={sumState.filters}
+          sort={sumState.sort}
+          onFiltersChange={updateSumFilters}
+          onSortChange={updateSumSort}
         />
       )}
 

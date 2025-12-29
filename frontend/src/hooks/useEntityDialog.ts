@@ -4,7 +4,7 @@ import { logger } from "@/lib/logger";
 type EntityDialogConfig<T, TPayload = Partial<T>> = {
   logScope: string;
   createFn: (payload: TPayload) => Promise<T>;
-  updateFn: (id: number, payload: TPayload) => Promise<T>;
+  updateFn: (id: number | string, payload: TPayload) => Promise<T>;
   onSuccess: (entity: T) => void | Promise<void>;
   onClose: () => void;
 };
@@ -45,7 +45,7 @@ export function useEntityDialog<T extends { id?: number | string }, TPayload = P
 
       if (entity?.id) {
         // Update existing entity
-        result = await config.updateFn(Number(entity.id), payload);
+        result = await config.updateFn(entity.id, payload);
       } else {
         // Create new entity
         result = await config.createFn(payload);
