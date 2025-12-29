@@ -94,7 +94,7 @@ export function useTableState(defaultPageSize: number = 10, namespace: string = 
         pageSize: Math.max(1, pageSize),
       },
     };
-  }, [searchParams, defaultPageSize]);
+  }, [searchParams, defaultPageSize, namespace]);
 
   /**
    * Aktualisiere die URL mit neuen Parametern
@@ -151,7 +151,7 @@ export function useTableState(defaultPageSize: number = 10, namespace: string = 
 
       router.push(`?${params.toString()}`, { scroll: false });
     },
-    [router, searchParams]
+    [router, searchParams, namespace]
   );
 
   const updateFilters = useCallback(
