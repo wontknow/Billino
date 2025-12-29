@@ -24,7 +24,7 @@ from models.table_models import (
 )
 from utils import logger
 
-log = logger.createScoped("🔍 FilterService")
+log = logger
 
 
 class FilterService:

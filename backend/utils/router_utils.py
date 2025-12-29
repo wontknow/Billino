@@ -10,7 +10,7 @@ from fastapi import HTTPException
 from models.table_models import ColumnFilter, FilterOperator, SortDirection, SortField
 from utils import logger
 
-log = logger.createScoped("🔧 RouterUtils")
+log = logger
 
 
 def parse_filter_params(filter_list: list[str] | None) -> list[ColumnFilter]:
