@@ -187,6 +187,7 @@ def list_summaries(
 
     try:
         stmt = select(SummaryInvoice)
+        joined_customer = False
 
         # Sonderfall-Filter: recipient_display_name (benötigt Join auf Customer)
         # Exklusive OR Logik:
@@ -283,14 +284,39 @@ def list_summaries(
                 search_fields={"range_text"},
             )
 
+        # Sortierung anwenden, inkl. Sonderfall: recipient_display_name
         sort_fields_to_apply = (
             sort_fields
             if sort_fields
             else [SortField(field="id", direction=SortDirection.DESC)]
         )
+
+        recipient_name_sorts = [
+            s for s in sort_fields_to_apply if s.field == "recipient_display_name"
+        ]
+        other_sorts = [
+            s for s in sort_fields_to_apply if s.field != "recipient_display_name"
+        ]
+
+        # Falls nach Empfängername sortiert werden soll, outer join auf Customer
+        if recipient_name_sorts:
+            # Sortiere nach direktem Empfänger (falls vorhanden); Einträge ohne direkten Empfänger werden nachrangig sortiert
+            stmt = stmt.join(
+                Customer,
+                SummaryInvoice.recipient_customer_id == Customer.id,
+                isouter=True,
+            )
+            joined_customer = True
+            for s in recipient_name_sorts:
+                if s.direction == SortDirection.ASC:
+                    stmt = stmt.order_by(Customer.name.asc())
+                else:
+                    stmt = stmt.order_by(Customer.name.desc())
+
+        # Übrige Sortierfelder normal anwenden (nur erlaubte SummaryInvoice-Felder)
         stmt = FilterService.apply_sort(
             stmt,
-            sort_fields_to_apply,
+            other_sorts,
             SummaryInvoice,
             primary_key_field="id",
             allowed_fields={

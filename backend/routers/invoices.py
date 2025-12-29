@@ -358,6 +358,7 @@ def read_invoices(
 
     try:
         stmt = select(Invoice)
+        joined_customer = False
 
         # Sonderfall-Filter: customer_name (benötigt Join auf Customer)
         customer_name_filters = (
@@ -370,6 +371,7 @@ def read_invoices(
             from sqlalchemy import and_  # lokal um globale Imports minimal zu halten
 
             stmt = stmt.join(Customer, Invoice.customer_id == Customer.id)
+            joined_customer = True
             for f in customer_name_filters:
                 val = str(f.value)
                 op = f.operator
@@ -419,14 +421,33 @@ def read_invoices(
                 search_fields={"number"},
             )
 
+        # Sortierung anwenden, inkl. Sonderfall: customer_name (Join + ORDER BY Customer.name)
         sort_fields_to_apply = (
             sort_fields
             if sort_fields
             else [SortField(field="id", direction=SortDirection.DESC)]
         )
+
+        customer_name_sorts = [
+            s for s in sort_fields_to_apply if s.field == "customer_name"
+        ]
+        other_sorts = [s for s in sort_fields_to_apply if s.field != "customer_name"]
+
+        # Falls nach customer_name sortiert werden soll, Join sicherstellen und ORDER BY auf Customer.name setzen
+        if customer_name_sorts:
+            if not joined_customer:
+                stmt = stmt.join(Customer, Invoice.customer_id == Customer.id)
+                joined_customer = True
+            for s in customer_name_sorts:
+                if s.direction == SortDirection.ASC:
+                    stmt = stmt.order_by(Customer.name.asc())
+                else:
+                    stmt = stmt.order_by(Customer.name.desc())
+
+        # Übrige Sortierfelder normal anwenden (nur erlaubte Invoice-Felder)
         stmt = FilterService.apply_sort(
             stmt,
-            sort_fields_to_apply,
+            other_sorts,
             Invoice,
             primary_key_field="id",
             allowed_fields={
