@@ -5,6 +5,7 @@ import {
   SummaryInvoiceCompact,
   SummaryInvoiceCreatePayload,
 } from "@/types/summaryInvoices";
+import type { PaginatedResponse } from "@/types/table-filters";
 
 const log = logger.createScoped("📄 Summary Invoices");
 
@@ -42,8 +43,9 @@ export class SummaryInvoicesService {
 
   static async getSummaryInvoiceList(): Promise<SummaryInvoiceCompact[]> {
     log.debug("Fetching summary invoice list");
-    const response = await ApiClient.get<SummaryInvoiceResponse[]>("/summary-invoices/");
-    return response.map(this.convertResponseToCompact);
+    const response =
+      await ApiClient.get<PaginatedResponse<SummaryInvoiceResponse>>("/summary-invoices/");
+    return response.items.map(this.convertResponseToCompact);
   }
 
   static async getSummaryInvoiceListByProfile(profileId: number): Promise<SummaryInvoiceCompact[]> {

@@ -1,5 +1,6 @@
 import { Customer } from "@/types/customer";
 import { ApiClient } from "./base";
+import type { PaginatedResponse } from "@/types/table-filters";
 import { logger } from "@/lib/logger";
 
 const log = logger.createScoped("👥 CUSTOMERS");
@@ -21,7 +22,8 @@ export interface CustomerCreatePayload {
 export class CustomersService {
   static async list(): Promise<Customer[]> {
     log.debug("Fetching customers list");
-    return ApiClient.get<Customer[]>("/customers/");
+    const resp = await ApiClient.get<PaginatedResponse<Customer>>("/customers/");
+    return resp.items;
   }
 
   static async create(payload: CustomerCreatePayload): Promise<Customer> {

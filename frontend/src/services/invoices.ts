@@ -1,5 +1,6 @@
 import { ApiClient } from "./base";
 import type { Invoice } from "@/types/invoice";
+import type { PaginatedResponse } from "@/types/table-filters";
 import { logger } from "@/lib/logger";
 
 const log = logger.createScoped("📄 INVOICES");
@@ -34,7 +35,8 @@ export interface InvoiceNumberPreview {
 export class InvoicesService {
   static async list(): Promise<Invoice[]> {
     log.debug("Fetching invoices list");
-    return ApiClient.get<Invoice[]>("/invoices/");
+    const resp = await ApiClient.get<PaginatedResponse<Invoice>>("/invoices/");
+    return resp.items;
   }
 
   static async getNumberPreview(): Promise<InvoiceNumberPreview> {
