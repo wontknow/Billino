@@ -304,12 +304,20 @@ export function TableHeader({
                       )}
                     </Button>
 
-                    {/* Multi-Sort Index */}
-                    {sortIndex > 0 && columnSort && (
-                      <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded border px-1 text-[10px] font-medium">
-                        {sortIndex}
-                      </span>
-                    )}
+                    {/* Multi-Sort Index: immer Platz reservieren, Sichtbarkeit togglen */}
+                    <span
+                      className={[
+                        "inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded px-1 text-[10px] font-medium",
+                        // Border-Breite immer reservieren, Farbe nur bei aktivem Sort sichtbar
+                        columnSort ? "border" : "border border-transparent",
+                        // Wenn nicht aktiv sortiert, Platz behalten aber nicht anzeigen
+                        columnSort ? "opacity-100" : "opacity-0",
+                        "transition-opacity",
+                      ].join(" ")}
+                      aria-hidden={!columnSort}
+                    >
+                      {columnSort ? sortIndex : null}
+                    </span>
                   </div>
                 )}
               </div>

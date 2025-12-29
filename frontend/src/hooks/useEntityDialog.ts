@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { logger } from "@/lib/logger";
 
+type IdOf<T> = T extends { id?: infer I } ? NonNullable<I> : never;
+
 type EntityDialogConfig<T, TPayload = Partial<T>> = {
   logScope: string;
   createFn: (payload: TPayload) => Promise<T>;
-  updateFn: (id: number | string, payload: TPayload) => Promise<T>;
+  updateFn: (id: IdOf<T>, payload: TPayload) => Promise<T>;
   onSuccess: (entity: T) => void | Promise<void>;
   onClose: () => void;
 };
@@ -45,7 +47,7 @@ export function useEntityDialog<T extends { id?: number | string }, TPayload = P
 
       if (entity?.id) {
         // Update existing entity
-        result = await config.updateFn(entity.id, payload);
+        result = await config.updateFn(entity.id as IdOf<T>, payload);
       } else {
         // Create new entity
         result = await config.createFn(payload);
