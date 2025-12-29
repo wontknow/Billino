@@ -68,12 +68,12 @@ export const InvoicesContainer: React.FC<InvoicesContainerProps> = ({
     state: invState,
     updateFilters: updateInvFilters,
     updateSort: updateInvSort,
-  } = useTableState(10);
+  } = useTableState(10, "inv_");
   const {
     state: sumState,
     updateFilters: updateSumFilters,
     updateSort: updateSumSort,
-  } = useTableState(10);
+  } = useTableState(10, "sum_");
 
   const invoiceColumns: ColumnConfig[] = useMemo(
     () => [
@@ -86,8 +86,8 @@ export const InvoicesContainer: React.FC<InvoicesContainerProps> = ({
         filterable: true,
         filterType: "text",
       },
-      { id: "total_net", label: "Netto", sortable: true, filterable: false },
-      { id: "total_gross", label: "Brutto", sortable: true, filterable: false },
+      { id: "total_net", label: "Netto", sortable: false, filterable: false },
+      { id: "total_gross", label: "Brutto", sortable: false, filterable: false },
     ],
     []
   );
@@ -103,8 +103,8 @@ export const InvoicesContainer: React.FC<InvoicesContainerProps> = ({
         filterable: true,
         filterType: "text",
       },
-      { id: "total_net", label: "Netto", sortable: true, filterable: false },
-      { id: "total_gross", label: "Brutto", sortable: true, filterable: false },
+      { id: "total_net", label: "Netto", sortable: false, filterable: false },
+      { id: "total_gross", label: "Brutto", sortable: false, filterable: false },
     ],
     []
   );
