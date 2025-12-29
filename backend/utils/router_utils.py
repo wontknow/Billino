@@ -3,6 +3,7 @@ Helper-Utilities für erweiterte Router-Implementierung.
 Enthält Funktionen zum Parsing von Query-Parametern für Filter/Sort/Paging.
 """
 
+import json
 from urllib.parse import unquote
 
 from fastapi import HTTPException
@@ -41,9 +42,17 @@ def parse_filter_params(filter_list: list[str] | None) -> list[ColumnFilter]:
                 log.warning(f"⚠️ Ungültiges Filter-Format: {filter_str}")
                 continue
 
-            field, operator_str, value = parts
+            field, operator_str, value_str = parts
             # Decode URL-encoded value (Frontend sendet encodeURIComponent)
-            value = unquote(value)
+            decoded_value = unquote(value_str)
+
+            # Try to parse JSON for complex values (arrays, objects)
+            # Frontend sends JSON.stringify for objects/arrays, then encodeURIComponent
+            try:
+                parsed_value = json.loads(decoded_value)
+            except (json.JSONDecodeError, ValueError):
+                # Not JSON - use as plain string
+                parsed_value = decoded_value
 
             # Validiere Operator (raises ValueError if invalid)
             operator = FilterOperator(operator_str)
@@ -52,10 +61,10 @@ def parse_filter_params(filter_list: list[str] | None) -> list[ColumnFilter]:
                 ColumnFilter(
                     field=field,
                     operator=operator,
-                    value=value,
+                    value=parsed_value,
                 )
             )
-            log.debug(f"✅ Filter geparst: {field} {operator} {value}")
+            log.debug(f"✅ Filter geparst: {field} {operator} {parsed_value}")
 
         except ValueError as e:
             log.error(f"❌ Ungültiger Filter-Operator: {operator_str}")
