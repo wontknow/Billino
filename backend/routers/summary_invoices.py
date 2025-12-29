@@ -4,6 +4,7 @@
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlmodel import and_, or_, select
 
@@ -300,18 +301,38 @@ def list_summaries(
 
         # Falls nach Empfängername sortiert werden soll, outer join auf Customer
         if recipient_name_sorts:
-            # Sortiere nach direktem Empfänger (falls vorhanden); Einträge ohne direkten Empfänger werden nachrangig sortiert
+            # Sortiere nach direktem Empfänger (falls vorhanden) und nutze Fallback auf verlinkte Rechnungs-Kunden
             stmt = stmt.join(
                 Customer,
                 SummaryInvoice.recipient_customer_id == Customer.id,
                 isouter=True,
             )
+            # Aggregiere minimalen Kunden-Namen aus verlinkten Rechnungen pro Summary
+            linked_min_names_subq = (
+                select(
+                    SummaryInvoiceLink.summary_invoice_id.label("sid"),
+                    func.min(Customer.name).label("linked_min_name"),
+                )
+                .join(Invoice, Invoice.id == SummaryInvoiceLink.invoice_id)
+                .join(Customer, Customer.id == Invoice.customer_id)
+                .group_by(SummaryInvoiceLink.summary_invoice_id)
+                .subquery()
+            )
+            # Outer Join auf aggregierte Namen
+            stmt = stmt.join(
+                linked_min_names_subq,
+                SummaryInvoice.id == linked_min_names_subq.c.sid,
+                isouter=True,
+            )
             joined_customer = True
             for s in recipient_name_sorts:
+                coalesced_name = func.coalesce(
+                    Customer.name, linked_min_names_subq.c.linked_min_name
+                )
                 if s.direction == SortDirection.ASC:
-                    stmt = stmt.order_by(Customer.name.asc())
+                    stmt = stmt.order_by(coalesced_name.asc())
                 else:
-                    stmt = stmt.order_by(Customer.name.desc())
+                    stmt = stmt.order_by(coalesced_name.desc())
 
         # Übrige Sortierfelder normal anwenden (nur erlaubte SummaryInvoice-Felder)
         stmt = FilterService.apply_sort(

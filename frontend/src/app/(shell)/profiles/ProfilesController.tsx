@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { ProfilesService } from "@/services/profiles";
 import { ProfilesTable } from "@/features/profiles/ProfilesTable";
 import { ProfileDialog } from "@/features/profiles/ProfileDialog";
 import type { Profile } from "@/types/profile";

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { CustomersService } from "@/services/customers";
 import { CustomersTable } from "@/features/customers/CustomersTable";
 import { CustomerDialog } from "@/features/customers/CustomerDialog";
 import type { Customer } from "@/types/customer";

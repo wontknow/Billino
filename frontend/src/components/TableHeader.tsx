@@ -8,11 +8,10 @@ import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { ColumnFilter, SortDirection, SortField } from "@/types/table-filters";
+import type { ColumnFilter, SortField } from "@/types/table-filters";
 
 export interface ColumnConfig {
   /**
@@ -104,6 +103,7 @@ export function TableHeader({
       const af = filters.find((f) => f.field === col.id);
       if (af) next[col.id] = String(af.value ?? "");
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFilterInputs((prev) => ({ ...prev, ...next }));
   }, [filters, columns]);
 
@@ -177,13 +177,10 @@ export function TableHeader({
   return (
     <thead>
       <tr className="border-b">
-        {columns.map((column, idx) => {
+        {columns.map((column) => {
           const columnSort = getColumnSort(column.id);
           const sortIndex = getSortIndex(column.id);
           const activeFilter = filters.find((f) => f.field === column.id);
-          const isFirst = idx === 0;
-          const isLast = idx === columns.length - 1;
-
           return (
             <th
               key={column.id}

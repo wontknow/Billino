@@ -90,8 +90,8 @@ describe("useEntityDialog", () => {
     });
 
     it("sets isSubmitting to true during submission", async () => {
-      let resolvePromise: (value: any) => void;
-      const delayedPromise = new Promise((resolve) => {
+      let resolvePromise: (value: unknown) => void;
+      const delayedPromise = new Promise<unknown>((resolve) => {
         resolvePromise = resolve;
       });
       mockCreateFn.mockReturnValue(delayedPromise);
@@ -101,7 +101,7 @@ describe("useEntityDialog", () => {
       expect(result.current.isSubmitting).toBe(false);
 
       // Start submission in act
-      let submitPromise: Promise<boolean>;
+      let submitPromise: Promise<boolean> | undefined;
       act(() => {
         submitPromise = result.current.handleSubmit(null, { name: "Test" });
       });
