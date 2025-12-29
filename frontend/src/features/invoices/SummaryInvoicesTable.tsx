@@ -80,8 +80,12 @@ export const SummaryInvoicesTable: React.FC<SummaryInvoicesTableProps> = ({
                   <TableHead className="sticky top-0 z-10 bg-background">Bereich</TableHead>
                   <TableHead className="sticky top-0 z-10 bg-background">Datum</TableHead>
                   <TableHead className="sticky top-0 z-10 bg-background">Empfänger</TableHead>
-                  <TableHead className="sticky top-0 z-10 bg-background">Netto</TableHead>
-                  <TableHead className="sticky top-0 z-10 bg-background">Brutto</TableHead>
+                  <TableHead className="sticky top-0 z-10 bg-background text-right min-w-[5.5rem] px-2 pr-5">
+                    Netto
+                  </TableHead>
+                  <TableHead className="sticky top-0 z-10 bg-background text-right min-w-[5.5rem] px-2 pl-3">
+                    Brutto
+                  </TableHead>
                 </TableRow>
               </ShadTableHeader>
             )}
@@ -112,8 +116,10 @@ export const SummaryInvoicesTable: React.FC<SummaryInvoicesTableProps> = ({
                     <TableCell className="font-medium">{summary.range_text}</TableCell>
                     <TableCell>{formatDate(summary.date)}</TableCell>
                     <TableCell>{summary.recipient_display_name ?? "—"}</TableCell>
-                    <TableCell className="text-right">{formatAmount(summary.total_net)}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right tabular-nums min-w-[5.5rem] px-2 pr-5">
+                      {formatAmount(summary.total_net)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums min-w-[5.5rem] px-2 pl-3">
                       {formatAmount(summary.total_gross)}
                     </TableCell>
                   </TableRow>
