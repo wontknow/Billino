@@ -2,7 +2,7 @@
 
 import { ArrowDown, ArrowUp, ArrowUpDown, Filter } from "lucide-react";
 import type React from "react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -98,12 +98,16 @@ export function TableHeader({
   const debounceRefs = useRef<Record<string, ReturnType<typeof setTimeout> | undefined>>({});
 
   // Derive filter input values from filters prop, overlaying uncommitted changes
-  const filterInputs: Record<string, string> = {};
-  for (const col of columns) {
-    const af = filters.find((f) => f.field === col.id);
-    // Use uncommitted value if exists, otherwise use committed filter value
-    filterInputs[col.id] = uncommittedInputs[col.id] ?? (af ? String(af.value ?? "") : "");
-  }
+  // Use useMemo to avoid recreating the object on every render
+  const filterInputs = useMemo(() => {
+    const inputs: Record<string, string> = {};
+    for (const col of columns) {
+      const af = filters.find((f) => f.field === col.id);
+      // Use uncommitted value if exists, otherwise use committed filter value
+      inputs[col.id] = uncommittedInputs[col.id] ?? (af ? String(af.value ?? "") : "");
+    }
+    return inputs;
+  }, [columns, filters, uncommittedInputs]);
 
   // Finde aktive Sortierung für eine Spalte
   const getColumnSort = useCallback(
