@@ -25,13 +25,11 @@ export class TableQueryBuilder {
    * Füge Filterung hinzu
    */
   addFilters(filters: ColumnFilter[]): this {
-    filters.forEach((filter, index) => {
-      const value =
+    filters.forEach((filter) => {
+      const rawValue =
         typeof filter.value === "object" ? JSON.stringify(filter.value) : String(filter.value);
-
-      this.params.append(`filter[${index}].field`, filter.field);
-      this.params.append(`filter[${index}].operator`, filter.operator);
-      this.params.append(`filter[${index}].value`, value);
+      const value = encodeURIComponent(rawValue);
+      this.params.append("filter", `${filter.field}:${filter.operator}:${value}`);
     });
 
     return this;
@@ -41,9 +39,8 @@ export class TableQueryBuilder {
    * Füge Sortierung hinzu
    */
   addSort(sort: SortField[]): this {
-    sort.forEach((s, index) => {
-      this.params.append(`sort[${index}].field`, s.field);
-      this.params.append(`sort[${index}].direction`, s.direction);
+    sort.forEach((s) => {
+      this.params.append("sort", `${s.field}:${s.direction}`);
     });
 
     return this;

@@ -204,18 +204,27 @@ export function tableStateToQueryParams(
   };
 
   // Konvertiere Filters zu Backend-Format
-  state.filters.forEach((filter, idx) => {
-    params[`filter[${idx}].field`] = filter.field;
-    params[`filter[${idx}].operator`] = filter.operator;
-    params[`filter[${idx}].value`] =
-      typeof filter.value === "object" ? JSON.stringify(filter.value) : filter.value;
+  const filterParams: string[] = [];
+  state.filters.forEach((filter) => {
+    const rawValue =
+      typeof filter.value === "object" ? JSON.stringify(filter.value) : String(filter.value);
+    const value = encodeURIComponent(rawValue);
+    filterParams.push(`${filter.field}:${filter.operator}:${value}`);
   });
+  if (filterParams.length) {
+    // Hinweis: Dieser Helper gibt ein Objekt zurück; beim tatsächlichen Request
+    // müssen die wiederholten Parameter entsprechend aufgebaut werden.
+    (params as any).filter = filterParams as unknown as any;
+  }
 
   // Konvertiere Sort zu Backend-Format
-  state.sort.forEach((sort, idx) => {
-    params[`sort[${idx}].field`] = sort.field;
-    params[`sort[${idx}].direction`] = sort.direction;
+  const sortParams: string[] = [];
+  state.sort.forEach((s) => {
+    sortParams.push(`${s.field}:${s.direction}`);
   });
+  if (sortParams.length) {
+    (params as any).sort = sortParams as unknown as any;
+  }
 
   // Konvertiere Search
   if (state.search) {
