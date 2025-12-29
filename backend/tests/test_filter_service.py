@@ -4,7 +4,7 @@ Testet Filter-Operatoren, Wildcard-Escaping, Sortierung und Paginierung.
 """
 
 import pytest
-from sqlmodel import Session, create_engine, select
+from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 
 from database import get_session
@@ -29,8 +29,6 @@ def session():
     )
 
     # Create tables
-    from models import SQLModel
-
     SQLModel.metadata.create_all(engine)
 
     with Session(engine) as session:
