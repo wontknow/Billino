@@ -3,6 +3,8 @@ Helper-Utilities für erweiterte Router-Implementierung.
 Enthält Funktionen zum Parsing von Query-Parametern für Filter/Sort/Paging.
 """
 
+from urllib.parse import unquote
+
 from fastapi import HTTPException
 
 from models.table_models import ColumnFilter, FilterOperator, SortDirection, SortField
@@ -40,6 +42,8 @@ def parse_filter_params(filter_list: list[str] | None) -> list[ColumnFilter]:
                 continue
 
             field, operator_str, value = parts
+            # Decode URL-encoded value (Frontend sendet encodeURIComponent)
+            value = unquote(value)
 
             # Validiere Operator (raises ValueError if invalid)
             operator = FilterOperator(operator_str)
