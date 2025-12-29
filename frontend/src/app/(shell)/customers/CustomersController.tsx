@@ -66,31 +66,19 @@ export default function CustomersController() {
     setSelectedCustomer(null);
   };
 
-  if (loading) {
-    return <CustomersTable customers={[]} emptyMessage={<span>Lädt Kunden...</span>} />;
-  }
-
-  if (error) {
-    return (
-      <CustomersTable
-        customers={[]}
-        emptyMessage={
-          <>
-            <span>Fehler beim Laden - Keine Kunden gefunden</span>
-            <br />
-            <span className="text-muted-foreground">failed request</span>
-          </>
-        }
-      />
-    );
-  }
-
   return (
     <>
       <CustomersTable
         customers={customers}
         onCustomerSelect={handleEditCustomer}
         onCreateCustomer={handleCreateCustomer}
+        emptyMessage={
+          loading
+            ? "Lädt Kunden..."
+            : error
+              ? "Fehler beim Laden - Keine Kunden gefunden"
+              : "Keine Kunden gefunden"
+        }
         // Erweiterte Filter-/Sort-UI
         columns={columns}
         filters={state.filters}
