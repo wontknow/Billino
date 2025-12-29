@@ -5,14 +5,47 @@ Tests für GET /customers, /profiles, /invoices, /summary-invoices.
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.pool import StaticPool
+from sqlmodel import Session, create_engine
 
+from database import get_session, init_db
 from main import app
+
+# In-Memory Test-Datenbank
+TEST_DB_URL = "sqlite:///:memory:"
+
+
+@pytest.fixture(scope="session")
+def engine():
+    """Erstelle Test-Engine mit In-Memory DB"""
+    engine = create_engine(
+        TEST_DB_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    init_db(engine)
+    return engine
 
 
 @pytest.fixture
-def client():
-    """FastAPI TestClient"""
-    return TestClient(app)
+def session(engine):
+    """Erstelle DB Session für Tests"""
+    with Session(engine) as session:
+        yield session
+
+
+@pytest.fixture
+def client(engine):
+    """FastAPI TestClient mit Session-Override"""
+
+    def get_session_override():
+        with Session(engine) as session:
+            yield session
+
+    app.dependency_overrides[get_session] = get_session_override
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.clear()
 
 
 class TestCustomersFilterSort:
