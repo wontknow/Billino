@@ -4,8 +4,6 @@ from sqlmodel import Session, select
 from database import get_session
 from models import Customer
 from models.table_models import (
-    ColumnFilter,
-    FilterOperator,
     GlobalSearch,
     PaginatedResponse,
     SortDirection,
@@ -13,6 +11,7 @@ from models.table_models import (
 )
 from services.filter_service import FilterService, create_paginated_response, paginate
 from utils import logger
+from utils.router_utils import parse_filter_params, parse_sort_params
 
 router = APIRouter(prefix="/customers", tags=["customers"])
 
@@ -153,48 +152,9 @@ def list_customers(
     """
     logger.debug("👥 GET /customers - Listing with filters/sort/pagination")
 
-    # Parse Filters
-    filters: list[ColumnFilter] = []
-    if filter:
-        for filter_str in filter:
-            try:
-                parts = filter_str.split(":", 2)  # Split on first 2 colons
-                if len(parts) < 3:
-                    logger.warning(f"⚠️ Invalid filter format: {filter_str}")
-                    continue
-
-                field, operator, value = parts
-                filters.append(
-                    ColumnFilter(
-                        field=field,
-                        operator=FilterOperator(operator),  # Validates operator
-                        value=value,
-                    )
-                )
-            except ValueError as e:
-                logger.warning(f"⚠️ Invalid filter operator: {operator}")
-                raise HTTPException(status_code=400, detail=f"Invalid filter: {str(e)}")
-
-    # Parse Sort Fields
-    sort_fields: list[SortField] = []
-    if sort:
-        for sort_str in sort:
-            try:
-                parts = sort_str.split(":")
-                if len(parts) != 2:
-                    logger.warning(f"⚠️ Invalid sort format: {sort_str}")
-                    continue
-
-                field, direction = parts
-                sort_fields.append(
-                    SortField(
-                        field=field,
-                        direction=SortDirection(direction),  # Validates direction
-                    )
-                )
-            except ValueError as e:
-                logger.warning(f"⚠️ Invalid sort direction: {direction}")
-                raise HTTPException(status_code=400, detail=f"Invalid sort: {str(e)}")
+    # Parse query parameters using shared utilities
+    filters = parse_filter_params(filter)
+    sort_fields = parse_sort_params(sort)
 
     try:
         # Start with base select
