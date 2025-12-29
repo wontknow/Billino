@@ -3,7 +3,7 @@
 
 import os
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlmodel import select
 
@@ -16,10 +16,18 @@ from models import (
     SummaryInvoiceLink,
     SummaryInvoiceRead,
 )
+from models.table_models import (
+    GlobalSearch,
+    PaginatedResponse,
+    SortDirection,
+    SortField,
+)
 from services import create_summary_invoice
 from services.background_pdf_generator import BackgroundPDFGenerator
+from services.filter_service import FilterService, create_paginated_response, paginate
 from services.pdf_generation_service import generate_pdf_for_summary_invoice
 from utils import logger
+from utils.router_utils import parse_filter_params, parse_sort_params
 
 LOG_DEV = os.getenv("ENV", "dev").lower() != "prod"
 
@@ -127,79 +135,159 @@ def create_summary(
     return summary_invoice
 
 
-@router.get("/", response_model=list[SummaryInvoiceRead])
-def list_summaries(session: Session = Depends(get_session)):
+@router.get("/", response_model=PaginatedResponse[SummaryInvoiceRead])
+def list_summaries(
+    session: Session = Depends(get_session),
+    # Filterung
+    filter: list[str] = Query(
+        None,
+        description="Filters as 'field:operator:value'. Example: 'profile_id:equals:1'",
+    ),
+    # Sortierung
+    sort: list[str] = Query(
+        None,
+        description="Sort order as 'field:direction'. Example: 'date:desc'",
+    ),
+    # Globale Suche
+    q: str = Query(
+        None,
+        min_length=2,
+        description="Global search query (searches in range_text)",
+    ),
+    # Paginierung
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    pageSize: int = Query(10, ge=1, le=100, description="Items per page (max 100)"),
+):
     """
-    List all summary invoices.
+    List all summary invoices with filtering, sorting, and pagination.
 
-    Retrieves a list of all summary invoices with their associated regular invoice IDs.
+    **Query Parameters:**
+
+    **Filtering:**
+    - `filter` (repeatable): Filter as 'field:operator:value'
+      - Fields: `id`, `range_text`, `date`, `profile_id`, `total_net`, `total_tax`, `total_gross`
+      - Examples: `filter=profile_id:equals:1`, `filter=date:gte:2025-01-01`
+
+    **Sorting:**
+    - `sort` (repeatable): Sort as 'field:direction'
+      - Examples: `sort=date:desc`, `sort=range_text:asc`
+
+    **Global Search:**
+    - `q` (string, optional): Searches in range_text
+
+    **Pagination:**
+    - `page` (integer, default=1): Page number
+    - `pageSize` (integer, default=10, max=100): Items per page
 
     **Returns:**
-    - List of SummaryInvoiceRead objects
-
-    **Example Response (200):**
-    ```json
-    [
-        {
-            "id": 1,
-            "range_text": "Invoice #1-3",
-            "date": "2025-12-19",
-            "profile_id": 1,
-            "total_net": 100.00,
-            "total_tax": 19.00,
-            "total_gross": 119.00,
-            "invoice_ids": [1, 2, 3],
-            "recipient_customer_id": 5,
-            "recipient_display_name": "Example Customer"
-        }
-    ]
-    ```
+    - PaginatedResponse with SummaryInvoiceRead items
     """
-    summaries = session.exec(select(SummaryInvoice)).all()
-    if LOG_DEV:
-        logger.debug("🔍 [DEV] GET /summary-invoices", {"count": len(summaries)})
-    # Create list of SummaryInvoiceRead with invoice_ids from links
-    summary_invoices = []
-    for summary in summaries:
-        # Get invoice IDs from links
-        links = session.exec(
-            select(SummaryInvoiceLink).where(
-                SummaryInvoiceLink.summary_invoice_id == summary.id
-            )
-        ).all()
-        invoice_ids = [link.invoice_id for link in links]
+    filters = parse_filter_params(filter)
+    sort_fields = parse_sort_params(sort)
 
-        # Determine recipient_display_name
-        recipient_display = None
-        if summary.recipient_customer_id:
-            cust = session.get(Customer, summary.recipient_customer_id)
-            recipient_display = cust.name if cust else None
-        else:
-            # Fallback: join distinct customer names from linked invoices
-            names = []
-            for inv_id in invoice_ids:
-                inv = session.get(Invoice, inv_id)
-                if inv:
-                    cust = session.get(Customer, inv.customer_id)
-                    if cust and cust.name not in names:
-                        names.append(cust.name)
-            recipient_display = ", ".join(names) if names else None
+    try:
+        stmt = select(SummaryInvoice)
 
-        summary_invoices.append(
-            SummaryInvoiceRead(
-                id=summary.id,
-                range_text=summary.range_text,
-                date=summary.date,
-                profile_id=summary.profile_id,
-                total_net=summary.total_net,
-                total_tax=summary.total_tax,
-                total_gross=summary.total_gross,
-                invoice_ids=invoice_ids,
-                recipient_customer_id=summary.recipient_customer_id,
-                recipient_display_name=recipient_display,
+        if filters:
+            stmt = FilterService.apply_filters(
+                stmt,
+                filters,
+                SummaryInvoice,
+                allowed_fields={
+                    "id",
+                    "range_text",
+                    "date",
+                    "profile_id",
+                    "total_net",
+                    "total_tax",
+                    "total_gross",
+                    "recipient_customer_id",
+                },
             )
+
+        if q:
+            stmt = FilterService.apply_global_search(
+                stmt,
+                GlobalSearch(query=q),
+                SummaryInvoice,
+                search_fields={"range_text"},
+            )
+
+        sort_fields_to_apply = (
+            sort_fields
+            if sort_fields
+            else [SortField(field="id", direction=SortDirection.DESC)]
         )
-    return summary_invoices
+        stmt = FilterService.apply_sort(
+            stmt,
+            sort_fields_to_apply,
+            SummaryInvoice,
+            primary_key_field="id",
+            allowed_fields={
+                "id",
+                "range_text",
+                "date",
+                "profile_id",
+                "total_net",
+                "total_tax",
+                "total_gross",
+                "recipient_customer_id",
+            },
+        )
+
+        summaries, total = paginate(
+            session, stmt, SummaryInvoice, page=page, page_size=pageSize
+        )
+
+        # Build SummaryInvoiceRead objects
+        summary_invoices = []
+        for summary in summaries:
+            # Get invoice IDs from links
+            links = session.exec(
+                select(SummaryInvoiceLink).where(
+                    SummaryInvoiceLink.summary_invoice_id == summary.id
+                )
+            ).all()
+            invoice_ids = [link.invoice_id for link in links]
+
+            # Determine recipient_display_name
+            recipient_display = None
+            if summary.recipient_customer_id:
+                cust = session.get(Customer, summary.recipient_customer_id)
+                recipient_display = cust.name if cust else None
+            else:
+                # Fallback: join distinct customer names from linked invoices
+                names = []
+                for inv_id in invoice_ids:
+                    inv = session.get(Invoice, inv_id)
+                    if inv:
+                        cust = session.get(Customer, inv.customer_id)
+                        if cust and cust.name not in names:
+                            names.append(cust.name)
+                recipient_display = ", ".join(names) if names else None
+
+            summary_invoices.append(
+                SummaryInvoiceRead(
+                    id=summary.id,
+                    range_text=summary.range_text,
+                    date=summary.date,
+                    profile_id=summary.profile_id,
+                    total_net=summary.total_net,
+                    total_tax=summary.total_tax,
+                    total_gross=summary.total_gross,
+                    invoice_ids=invoice_ids,
+                    recipient_customer_id=summary.recipient_customer_id,
+                    recipient_display_name=recipient_display,
+                )
+            )
+
+        response = create_paginated_response(summary_invoices, total, page, pageSize)
+        logger.info(f"✅ Retrieved {len(summary_invoices)}/{total} summary invoices")
+        return response
+
+    except ValueError as e:
+        logger.error(f"❌ Invalid query parameters: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # get summaries by profile_id
