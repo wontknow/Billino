@@ -73,7 +73,7 @@ export function FilterToolbar({
     (value: string) => {
       setSearchInput(value);
 
-      // Clearexisting timeout
+      // Clear existing timeout
       if (searchTimeout) {
         clearTimeout(searchTimeout);
       }
