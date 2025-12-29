@@ -3,10 +3,12 @@ Tests for the pdf_generation_service module.
 Tests background PDF generation with race condition handling.
 """
 
+import sqlite3
 import threading
 from unittest.mock import Mock, patch
 
 import pytest
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, create_engine, select
 
@@ -262,7 +264,6 @@ class TestGeneratePDFForInvoice:
         as long as no duplicate PDFs are created.
         """
         results = []
-        exceptions = []
 
         def generate_pdf():
             # Create a new session for this thread
@@ -276,10 +277,17 @@ class TestGeneratePDFForInvoice:
                     else:
                         # Invoice not found in this session (can happen with concurrency)
                         results.append(False)
-            except Exception as e:
-                # SQLite threading errors are expected - log but don't fail
-                exceptions.append(str(e))
+            except (SQLAlchemyError, sqlite3.Error) as e:
+                # Expected SQLite/SQLAlchemy concurrency errors - handle gracefully
+                # These include IntegrityError (duplicates), OperationalError (busy),
+                # InvalidRequestError (NULL keys), ObjectDeletedError, etc.
+                # All are normal in concurrent scenarios
                 results.append(False)
+            except Exception as e:
+                # Unexpected error - re-raise to fail the test
+                raise AssertionError(
+                    f"Unexpected exception in concurrent PDF generation: {type(e).__name__}: {e}"
+                ) from e
 
         # Create multiple threads attempting to generate the same PDF
         threads = []
@@ -428,7 +436,6 @@ class TestGeneratePDFForSummaryInvoice:
         as long as no duplicate PDFs are created.
         """
         results = []
-        exceptions = []
 
         def generate_pdf():
             # Create a new session for this thread
@@ -448,10 +455,17 @@ class TestGeneratePDFForSummaryInvoice:
                     else:
                         # Summary invoice not found in this session (can happen with concurrency)
                         results.append(False)
-            except Exception as e:
-                # SQLite threading errors are expected - log but don't fail
-                exceptions.append(str(e))
+            except (SQLAlchemyError, sqlite3.Error) as e:
+                # Expected SQLite/SQLAlchemy concurrency errors - handle gracefully
+                # These include IntegrityError (duplicates), OperationalError (busy),
+                # InvalidRequestError (NULL keys), ObjectDeletedError, etc.
+                # All are normal in concurrent scenarios
                 results.append(False)
+            except Exception as e:
+                # Unexpected error - re-raise to fail the test
+                raise AssertionError(
+                    f"Unexpected exception in concurrent PDF generation: {type(e).__name__}: {e}"
+                ) from e
 
         # Create multiple threads attempting to generate the same PDF
         threads = []
