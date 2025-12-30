@@ -5,7 +5,7 @@ const isStaticExport = process.env.NEXT_OUTPUT === "export";
 
 const normalizedBasePath = (() => {
   const basePath = process.env.NEXT_BASE_PATH?.trim();
-  if (!basePath) return undefined;
+  if (!basePath || basePath === "/") return undefined;
   return basePath.startsWith("/") ? basePath : `/${basePath}`;
 })();
 
