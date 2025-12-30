@@ -203,14 +203,21 @@ export const A6InvoiceDialog: React.FC<A6InvoiceDialogProps> = ({
                   }}
                   onFocus={() => customerSearchQuery.length >= 2 && setShowCustomerDropdown(true)}
                   disabled={isSubmitting}
+                  role="combobox"
+                  aria-expanded={showCustomerDropdown && customerSuggestions.length > 0}
+                  aria-controls="customer-listbox"
+                  aria-autocomplete="list"
                 />
 
                 {/* Autocomplete dropdown */}
                 {showCustomerDropdown && customerSuggestions.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-md">
-                    <ul className="max-h-48 overflow-auto">
+                  <div
+                    id="customer-listbox"
+                    className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-md"
+                  >
+                    <ul className="max-h-48 overflow-auto" role="listbox">
                       {customerSuggestions.map((customer) => (
-                        <li key={customer.id}>
+                        <li key={customer.id} role="option" aria-selected={false}>
                           <button
                             type="button"
                             className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
@@ -257,6 +264,7 @@ export const A6InvoiceDialog: React.FC<A6InvoiceDialogProps> = ({
                         setSelectedCustomer(null);
                         setCustomerSearchQuery("");
                       }}
+                      aria-label="Kundenauswahl entfernen"
                     >
                       ✕
                     </button>

@@ -184,6 +184,55 @@ export function TableHeader({
     [filters, onFilterChange]
   );
 
+  // Helper function to update date filters with smart single date vs range logic
+  const updateDateFilters = useCallback(
+    (
+      columnId: string,
+      fromValue: string | undefined,
+      toValue: string | undefined,
+      currentFilters: ColumnFilter[]
+    ): ColumnFilter[] => {
+      // Remove all date-related filters for this column
+      const baseFilters = currentFilters
+        .filter((f) => f.field !== `${columnId}_from`)
+        .filter((f) => f.field !== `${columnId}_to`)
+        .filter((f) => f.field !== columnId);
+
+      if (toValue) {
+        if (fromValue && fromValue !== toValue) {
+          // Range: both dates different
+          baseFilters.push({
+            field: `${columnId}_from`,
+            operator: "gte",
+            value: fromValue,
+          });
+          baseFilters.push({
+            field: `${columnId}_to`,
+            operator: "lte",
+            value: toValue,
+          });
+        } else {
+          // Single date: exact match on the column
+          baseFilters.push({
+            field: columnId,
+            operator: "exact",
+            value: toValue,
+          });
+        }
+      } else if (fromValue) {
+        // Only from date remains: exact match on the column
+        baseFilters.push({
+          field: columnId,
+          operator: "exact",
+          value: fromValue,
+        });
+      }
+
+      return baseFilters;
+    },
+    []
+  );
+
   return (
     <thead>
       <tr className="border-b">
@@ -235,7 +284,7 @@ export function TableHeader({
                                 onFilterChange(filters.filter((f) => f.field !== column.id));
                               }}
                             >
-                              Clear
+                              Zurücksetzen
                             </Button>
                           )}
                         </div>
@@ -276,7 +325,7 @@ export function TableHeader({
                                 onFilterChange(filters.filter((f) => f.field !== column.id))
                               }
                             >
-                              Clear
+                              Zurücksetzen
                             </Button>
                           )}
                         </div>
@@ -302,35 +351,14 @@ export function TableHeader({
                               const currentTo = filters.find((f) => f.field === `${column.id}_to`)
                                 ?.value as string | undefined;
 
-                              // Remove all date-related filters
-                              const baseFilters = filters
-                                .filter((f) => f.field !== `${column.id}_from`)
-                                .filter((f) => f.field !== `${column.id}_to`)
-                                .filter((f) => f.field !== column.id);
+                              const updatedFilters = updateDateFilters(
+                                column.id,
+                                value,
+                                currentTo,
+                                filters
+                              );
 
-                              if (value) {
-                                if (currentTo && currentTo !== value) {
-                                  // Range: both dates different
-                                  baseFilters.push({
-                                    field: `${column.id}_from`,
-                                    operator: "gte",
-                                    value,
-                                  });
-                                  baseFilters.push({
-                                    field: `${column.id}_to`,
-                                    operator: "lte",
-                                    value: currentTo,
-                                  });
-                                } else {
-                                  // Single date: exact match
-                                  baseFilters.push({
-                                    field: column.id,
-                                    operator: "exact",
-                                    value,
-                                  });
-                                }
-                              }
-                              onFilterChange(baseFilters);
+                              onFilterChange(updatedFilters);
                             }}
                             onValueToChange={(value) => {
                               const currentFrom =
@@ -341,42 +369,14 @@ export function TableHeader({
                                   | string
                                   | undefined);
 
-                              // Remove all date-related filters
-                              const baseFilters = filters
-                                .filter((f) => f.field !== `${column.id}_from`)
-                                .filter((f) => f.field !== `${column.id}_to`)
-                                .filter((f) => f.field !== column.id);
+                              const updatedFilters = updateDateFilters(
+                                column.id,
+                                currentFrom,
+                                value,
+                                filters
+                              );
 
-                              if (value) {
-                                if (currentFrom && currentFrom !== value) {
-                                  // Range: both dates different
-                                  baseFilters.push({
-                                    field: `${column.id}_from`,
-                                    operator: "gte",
-                                    value: currentFrom,
-                                  });
-                                  baseFilters.push({
-                                    field: `${column.id}_to`,
-                                    operator: "lte",
-                                    value,
-                                  });
-                                } else {
-                                  // Single date: exact match
-                                  baseFilters.push({
-                                    field: column.id,
-                                    operator: "exact",
-                                    value,
-                                  });
-                                }
-                              } else if (currentFrom) {
-                                // Only from date remains: exact match
-                                baseFilters.push({
-                                  field: column.id,
-                                  operator: "exact",
-                                  value: currentFrom,
-                                });
-                              }
-                              onFilterChange(baseFilters);
+                              onFilterChange(updatedFilters);
                             }}
                           />
                           {(filters.find((f) => f.field === `${column.id}_from`) ||
@@ -395,7 +395,7 @@ export function TableHeader({
                                 )
                               }
                             >
-                              Clear
+                              Zurücksetzen
                             </Button>
                           )}
                         </div>

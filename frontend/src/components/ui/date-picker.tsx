@@ -213,7 +213,8 @@ function Calendar({
     0
   ).getDate();
 
-  const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
+  const firstDayOfMonth =
+    (new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() + 6) % 7;
 
   const days = [];
   for (let i = 0; i < firstDayOfMonth; i++) {
@@ -235,27 +236,33 @@ function Calendar({
     onMonthChange(next);
   };
 
+  const formatDateToISO = (year: number, month: number, day: number): string => {
+    const monthStr = String(month).padStart(2, "0");
+    const dayStr = String(day).padStart(2, "0");
+    return `${year}-${monthStr}-${dayStr}`;
+  };
+
   const isDateInRange = (day: number): boolean => {
     if (!rangeStart || !rangeEnd) return false;
-    const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const dateStr = formatDateToISO(currentMonth.getFullYear(), currentMonth.getMonth() + 1, day);
     return dateStr >= rangeStart && dateStr <= rangeEnd;
   };
 
   const isSelectedDate = (day: number): boolean => {
     if (!selectedDate) return false;
-    const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const dateStr = formatDateToISO(currentMonth.getFullYear(), currentMonth.getMonth() + 1, day);
     return dateStr === selectedDate;
   };
 
   const isRangeStart = (day: number): boolean => {
     if (!rangeStart) return false;
-    const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const dateStr = formatDateToISO(currentMonth.getFullYear(), currentMonth.getMonth() + 1, day);
     return dateStr === rangeStart;
   };
 
   const isRangeEnd = (day: number): boolean => {
     if (!rangeEnd) return false;
-    const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const dateStr = formatDateToISO(currentMonth.getFullYear(), currentMonth.getMonth() + 1, day);
     return dateStr === rangeEnd;
   };
 

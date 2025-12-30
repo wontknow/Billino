@@ -240,17 +240,15 @@ export const SummaryInvoiceDialog: React.FC<SummaryInvoiceDialogProps> = ({
             <DatePicker value={date} onValueChange={setDate} placeholder="Datum wählen" />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Filter: Datum (optional)</label>
-              <DateRangePicker
-                valueFrom={dateFrom}
-                valueTo={dateTo}
-                onValueFromChange={setDateFrom}
-                onValueToChange={setDateTo}
-                placeholder="Datum auswählen..."
-              />
-            </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Filter: Datum (optional)</label>
+            <DateRangePicker
+              valueFrom={dateFrom}
+              valueTo={dateTo}
+              onValueFromChange={setDateFrom}
+              onValueToChange={setDateTo}
+              placeholder="Datum auswählen..."
+            />
           </div>
 
           <div className="space-y-2">
