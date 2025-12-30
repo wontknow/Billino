@@ -5,6 +5,7 @@ import type React from "react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateRangePicker } from "@/components/ui/date-picker";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -183,6 +184,55 @@ export function TableHeader({
     [filters, onFilterChange]
   );
 
+  // Helper function to update date filters with smart single date vs range logic
+  const updateDateFilters = useCallback(
+    (
+      columnId: string,
+      fromValue: string | undefined,
+      toValue: string | undefined,
+      currentFilters: ColumnFilter[]
+    ): ColumnFilter[] => {
+      // Remove all date-related filters for this column
+      const baseFilters = currentFilters
+        .filter((f) => f.field !== `${columnId}_from`)
+        .filter((f) => f.field !== `${columnId}_to`)
+        .filter((f) => f.field !== columnId);
+
+      if (toValue) {
+        if (fromValue && fromValue !== toValue) {
+          // Range: both dates different
+          baseFilters.push({
+            field: `${columnId}_from`,
+            operator: "gte",
+            value: fromValue,
+          });
+          baseFilters.push({
+            field: `${columnId}_to`,
+            operator: "lte",
+            value: toValue,
+          });
+        } else {
+          // Single date: exact match on the column
+          baseFilters.push({
+            field: columnId,
+            operator: "exact",
+            value: toValue,
+          });
+        }
+      } else if (fromValue) {
+        // Only from date remains: exact match on the column
+        baseFilters.push({
+          field: columnId,
+          operator: "exact",
+          value: fromValue,
+        });
+      }
+
+      return baseFilters;
+    },
+    []
+  );
+
   return (
     <thead>
       <tr className="border-b">
@@ -234,7 +284,7 @@ export function TableHeader({
                                 onFilterChange(filters.filter((f) => f.field !== column.id));
                               }}
                             >
-                              Clear
+                              Zurücksetzen
                             </Button>
                           )}
                         </div>
@@ -275,7 +325,77 @@ export function TableHeader({
                                 onFilterChange(filters.filter((f) => f.field !== column.id))
                               }
                             >
-                              Clear
+                              Zurücksetzen
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
+                      {column.filterType === "date" && (
+                        <div className="flex w-full flex-col gap-2">
+                          <DateRangePicker
+                            valueFrom={
+                              (filters.find((f) => f.field === `${column.id}_from`)?.value as
+                                | string
+                                | undefined) ||
+                              (filters.find((f) => f.field === column.id)?.value as
+                                | string
+                                | undefined)
+                            }
+                            valueTo={
+                              filters.find((f) => f.field === `${column.id}_to`)?.value as
+                                | string
+                                | undefined
+                            }
+                            onValueFromChange={(value) => {
+                              const currentTo = filters.find((f) => f.field === `${column.id}_to`)
+                                ?.value as string | undefined;
+
+                              const updatedFilters = updateDateFilters(
+                                column.id,
+                                value,
+                                currentTo,
+                                filters
+                              );
+
+                              onFilterChange(updatedFilters);
+                            }}
+                            onValueToChange={(value) => {
+                              const currentFrom =
+                                (filters.find((f) => f.field === `${column.id}_from`)?.value as
+                                  | string
+                                  | undefined) ||
+                                (filters.find((f) => f.field === column.id)?.value as
+                                  | string
+                                  | undefined);
+
+                              const updatedFilters = updateDateFilters(
+                                column.id,
+                                currentFrom,
+                                value,
+                                filters
+                              );
+
+                              onFilterChange(updatedFilters);
+                            }}
+                          />
+                          {(filters.find((f) => f.field === `${column.id}_from`) ||
+                            filters.find((f) => f.field === `${column.id}_to`) ||
+                            filters.find((f) => f.field === column.id)) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 self-end"
+                              onClick={() =>
+                                onFilterChange(
+                                  filters
+                                    .filter((f) => f.field !== `${column.id}_from`)
+                                    .filter((f) => f.field !== `${column.id}_to`)
+                                    .filter((f) => f.field !== column.id)
+                                )
+                              }
+                            >
+                              Zurücksetzen
                             </Button>
                           )}
                         </div>
