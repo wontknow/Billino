@@ -50,6 +50,12 @@ jobs:
       - name: Code formatting
         run: pnpm exec prettier --check .
 
+      # Server/SSR Build (cloud/web deployment)
+      - name: Build (server)
+        run: pnpm run build
+
       # Static Build (Next.js Export)
       - name: Build (static export)
-        run: pnpm run build
+        run: pnpm run export
+        env:
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
