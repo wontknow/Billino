@@ -428,28 +428,10 @@ def read_invoices(
             stmt = stmt.distinct()
 
         if profile_name_filters:
-            # Join auf Profile und Filter auf Profile.name anwenden
-            stmt = stmt.join(Profile, Invoice.profile_id == Profile.id)
-            joined_profile = True
-            for f in profile_name_filters:
-                val = str(f.value)
-                op = f.operator
-                if op == "contains":
-                    condition = Profile.name.ilike(
-                        f"%{FilterService.escape_wildcards(val)}%", escape="\\"
-                    )
-                elif op in ("exact", "equals"):
-                    condition = Profile.name.ilike(
-                        FilterService.escape_wildcards(val), escape="\\"
-                    )
-                elif op == "starts_with":
-                    condition = Profile.name.ilike(
-                        f"{FilterService.escape_wildcards(val)}%", escape="\\"
-                    )
-                else:
-                    raise ValueError(f"Operator '{op}' not supported for profile_name")
-                stmt = stmt.where(condition)
-            stmt = stmt.distinct()
+            # Apply profile name filtering via helper method
+            stmt = FilterService.apply_profile_name_filters(
+                stmt, profile_name_filters, Invoice, Profile
+            )
 
         if other_filters:
             stmt = FilterService.apply_filters(
@@ -510,12 +492,13 @@ def read_invoices(
 
         # Falls nach profile_name sortiert werden soll, Join sicherstellen und ORDER BY auf Profile.name setzen
         if profile_name_sorts:
-            stmt = stmt.join(Profile, Invoice.profile_id == Profile.id)
-            for s in profile_name_sorts:
-                if s.direction == SortDirection.ASC:
-                    stmt = stmt.order_by(Profile.name.asc())
-                else:
-                    stmt = stmt.order_by(Profile.name.desc())
+            stmt = FilterService.apply_profile_name_sort(
+                stmt,
+                profile_name_sorts,
+                Invoice,
+                Profile,
+                joined_profile=joined_profile,
+            )
 
         # Übrige Sortierfelder normal anwenden (nur erlaubte Invoice-Felder)
         stmt = FilterService.apply_sort(

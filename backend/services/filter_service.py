@@ -292,6 +292,109 @@ class FilterService:
 
         return stmt
 
+    @staticmethod
+    def apply_profile_name_filters(
+        stmt: Any,
+        filters: list[ColumnFilter],
+        base_model: Type[SQLModel],
+        profile_model: Type[SQLModel],
+        profile_fk_field: str = "profile_id",
+    ) -> Any:
+        """
+        Apply profile name filtering with JOIN to Profile table.
+
+        Handles text-based filtering on Profile.name with operators:
+        contains, exact, equals, starts_with
+
+        Args:
+            stmt: SQLAlchemy Select-Statement
+            filters: List of ColumnFilter objects for profile_name field
+            base_model: Base model (Invoice or SummaryInvoice)
+            profile_model: Profile model class
+            profile_fk_field: Foreign key field name (default: "profile_id")
+
+        Returns:
+            Modified statement with JOIN and WHERE clauses for profile filtering
+
+        Raises:
+            ValueError: If operator is not supported for profile_name
+        """
+        if not filters:
+            return stmt
+
+        # Join to Profile table
+        stmt = stmt.join(
+            profile_model, getattr(base_model, profile_fk_field) == profile_model.id
+        )
+
+        for f in filters:
+            val = str(f.value)
+            op = f.operator
+            if op == "contains":
+                condition = profile_model.name.ilike(
+                    f"%{FilterService.escape_wildcards(val)}%", escape="\\"
+                )
+            elif op in ("exact", "equals"):
+                condition = profile_model.name.ilike(
+                    FilterService.escape_wildcards(val), escape="\\"
+                )
+            elif op == "starts_with":
+                condition = profile_model.name.ilike(
+                    f"{FilterService.escape_wildcards(val)}%", escape="\\"
+                )
+            else:
+                raise ValueError(f"Operator '{op}' not supported for profile_name")
+            stmt = stmt.where(condition)
+
+        # Avoid duplicates when multiple filters match
+        stmt = stmt.distinct()
+        log.debug(f"✅ Profile name filters applied: {len(filters)} filter(s)")
+
+        return stmt
+
+    @staticmethod
+    def apply_profile_name_sort(
+        stmt: Any,
+        sort_fields: list[SortField],
+        base_model: Type[SQLModel],
+        profile_model: Type[SQLModel],
+        profile_fk_field: str = "profile_id",
+        joined_profile: bool = False,
+    ) -> Any:
+        """
+        Apply profile name sorting with JOIN to Profile table.
+
+        Args:
+            stmt: SQLAlchemy Select-Statement
+            sort_fields: List of SortField objects for profile_name field
+            base_model: Base model (Invoice or SummaryInvoice)
+            profile_model: Profile model class
+            profile_fk_field: Foreign key field name (default: "profile_id")
+            joined_profile: Whether Profile table is already joined
+
+        Returns:
+            Modified statement with JOIN (if needed) and ORDER BY clauses
+        """
+        if not sort_fields:
+            return stmt
+
+        # Ensure Profile table is joined if not already
+        if not joined_profile:
+            stmt = stmt.join(
+                profile_model, getattr(base_model, profile_fk_field) == profile_model.id
+            )
+
+        # Apply ORDER BY on Profile.name
+        for s in sort_fields:
+            if s.direction == SortDirection.ASC:
+                stmt = stmt.order_by(profile_model.name.asc())
+            else:
+                stmt = stmt.order_by(profile_model.name.desc())
+
+        log.debug(f"✅ Profile name sort applied: {len(sort_fields)} sort(s)")
+
+        return stmt
+
 
 def paginate(
     session: Session,
