@@ -217,7 +217,13 @@ export const A6InvoiceDialog: React.FC<A6InvoiceDialogProps> = ({
                   >
                     <ul className="max-h-48 overflow-auto" role="listbox">
                       {customerSuggestions.map((customer) => (
-                        <li key={customer.id} role="option" aria-selected={false}>
+                        <li
+                          key={customer.id}
+                          role="option"
+                          aria-selected={
+                            selectedCustomer ? selectedCustomer.id === customer.id : undefined
+                          }
+                        >
                           <button
                             type="button"
                             className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
