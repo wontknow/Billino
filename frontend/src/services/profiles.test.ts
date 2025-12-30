@@ -21,7 +21,13 @@ describe("ProfilesService", () => {
       },
     ];
 
-    (ApiClient.get as jest.Mock).mockResolvedValueOnce(mockProfiles);
+    (ApiClient.get as jest.Mock).mockResolvedValueOnce({
+      items: mockProfiles,
+      total: 1,
+      page: 1,
+      pageSize: 50,
+      pageCount: 1,
+    });
 
     const result = await ProfilesService.list();
 

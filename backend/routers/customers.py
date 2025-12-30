@@ -3,7 +3,15 @@ from sqlmodel import Session, select
 
 from database import get_session
 from models import Customer
+from models.table_models import (
+    GlobalSearch,
+    PaginatedResponse,
+    SortDirection,
+    SortField,
+)
+from services.filter_service import FilterService, create_paginated_response, paginate
 from utils import logger
+from utils.router_utils import parse_filter_params, parse_sort_params
 
 router = APIRouter(prefix="/customers", tags=["customers"])
 
@@ -59,38 +67,141 @@ def create_customer(customer: Customer, session: Session = Depends(get_session))
     return customer
 
 
-@router.get("/", response_model=list[Customer])
-def list_customers(session: Session = Depends(get_session)):
+@router.get("/", response_model=PaginatedResponse[Customer])
+def list_customers(
+    session: Session = Depends(get_session),
+    # Filterung
+    filter: list[str] = Query(
+        None,
+        description="Filters as 'field:operator:value'. Example: 'name:contains:John' or 'id:equals:1'",
+    ),
+    # Sortierung
+    sort: list[str] = Query(
+        None,
+        description="Sort order as 'field:direction'. Example: 'name:asc' or 'created_at:desc'",
+    ),
+    # Globale Suche
+    q: str = Query(
+        None,
+        min_length=2,
+        description="Global search query (searches in name, address, city, note)",
+    ),
+    # Paginierung
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    pageSize: int = Query(10, ge=1, le=100, description="Items per page (max 100)"),
+):
     """
-    List all customers.
+    List customers with advanced filtering, sorting, and pagination.
 
-    Retrieves a list of all customers in the database.
+    Supports multi-column filtering, global search, and stable sorting.
+
+    **Query Parameters:**
+
+    **Filtering:**
+    - `filter` (repeatable): Filter as 'field:operator:value'
+      - Fields: `id`, `name`, `address`, `city`, `note`
+      - Operators: `contains`, `startsWith`, `exact`, `equals`, `between`, `in`, `gt`, `lt`, `gte`, `lte`
+      - Examples:
+        - `filter=name:contains:John` (contains 'John' case-insensitive)
+        - `filter=name:startsWith:A` (starts with 'A')
+        - `filter=id:equals:5` (exact match)
+        - `filter=id:gt:10` (greater than 10)
+
+    **Sorting:**
+    - `sort` (repeatable): Sort as 'field:direction'
+      - Fields: `id`, `name`, `address`, `city`, `note`
+      - Direction: `asc` (ascending) or `desc` (descending)
+      - Examples:
+        - `sort=name:asc` (sort by name ascending)
+        - `sort=id:desc` (sort by ID descending)
+        - Multiple: `sort=name:asc&sort=id:asc` (multi-column sort)
+
+    **Global Search:**
+    - `q` (string, optional): Search query (min 2 characters)
+      - Searches across: `name`, `address`, `city`, `note` (case-insensitive)
+      - Example: `q=Berlin`
+
+    **Pagination:**
+    - `page` (integer, default=1): Page number (1-indexed)
+    - `pageSize` (integer, default=10, max=100): Items per page
 
     **Returns:**
-    - List of Customer objects
+    - PaginatedResponse with items, total count, page info
 
-    **Example Response (200):**
+    **Example Requests:**
+    ```
+    GET /customers/?page=1&pageSize=10
+    GET /customers/?filter=name:contains:John&sort=name:asc&page=1
+    GET /customers/?q=Berlin&pageSize=20
+    GET /customers/?filter=id:gt:5&filter=name:startsWith:A&sort=id:desc
+    ```
+
+    **Example Response:**
     ```json
-    [
-        {
-            "id": 1,
-            "name": "John Doe",
-            "address": "123 Main Street",
-            "city": "Berlin"
-        },
-        {
-            "id": 2,
-            "name": "Jane Smith",
-            "address": "456 Oak Avenue",
-            "city": "Munich"
-        }
-    ]
+    {
+        "items": [
+            {"id": 1, "name": "John Doe", "address": "123 Main", "city": "Berlin", "note": null},
+            {"id": 2, "name": "Jane Smith", "address": "456 Oak", "city": "Munich", "note": null}
+        ],
+        "total": 2,
+        "page": 1,
+        "pageSize": 10,
+        "pageCount": 1
+    }
     ```
     """
-    logger.debug("👥 GET /customers - Listing all customers")
-    customers = session.exec(select(Customer)).all()
-    logger.debug(f"✅ Found {len(customers)} customers")
-    return customers
+    logger.debug("👥 GET /customers - Listing with filters/sort/pagination")
+
+    # Parse query parameters using shared utilities
+    filters = parse_filter_params(filter)
+    sort_fields = parse_sort_params(sort)
+
+    try:
+        # Start with base select
+        stmt = select(Customer)
+
+        # Apply Filters
+        if filters:
+            stmt = FilterService.apply_filters(
+                stmt,
+                filters,
+                Customer,
+                allowed_fields={"id", "name", "address", "city", "note"},
+            )
+
+        # Apply Global Search
+        if q:
+            stmt = FilterService.apply_global_search(
+                stmt,
+                GlobalSearch(query=q),
+                Customer,
+                search_fields={"name", "address", "city", "note"},
+            )
+
+        # Apply Sort
+        sort_fields_to_apply = (
+            sort_fields
+            if sort_fields
+            else [SortField(field="id", direction=SortDirection.ASC)]
+        )
+        stmt = FilterService.apply_sort(
+            stmt,
+            sort_fields_to_apply,
+            Customer,
+            primary_key_field="id",
+            allowed_fields={"id", "name", "address", "city", "note"},
+        )
+
+        # Paginate
+        items, total = paginate(session, stmt, Customer, page=page, page_size=pageSize)
+
+        response = create_paginated_response(items, total, page, pageSize)
+        logger.info(f"✅ Retrieved {len(items)}/{total} customers")
+        return response
+
+    except ValueError as e:
+        logger.error(f"❌ Invalid query parameters: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/search", response_model=list[Customer])

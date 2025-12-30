@@ -44,10 +44,26 @@ def create_summary_invoice(
     invoices = []
     for invoice_id in invoice_ids:
         invoice = session.get(Invoice, invoice_id)
-        if invoice and invoice.profile_id == profile_id:
-            invoices.append(invoice)
+        if invoice:
+            if invoice.profile_id == profile_id:
+                invoices.append(invoice)
+            else:
+                from utils import logger
+
+                logger.warning(
+                    f"Invoice {invoice_id} belongs to profile {invoice.profile_id}, not {profile_id}"
+                )
+        else:
+            from utils import logger
+
+            logger.warning(f"Invoice {invoice_id} not found in database")
 
     if not invoices:
+        from utils import logger
+
+        logger.error(
+            f"No valid invoices found. Requested: {invoice_ids}, Profile: {profile_id}"
+        )
         raise ValueError("No valid invoices found for the given IDs")
 
     # Calculate amounts: total_net, total_tax, total_gross, depending on if tax is included, tax rate and is_gross_amount

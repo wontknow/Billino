@@ -25,7 +25,13 @@ describe("InvoicesService", () => {
       },
     ];
 
-    (ApiClient.get as jest.Mock).mockResolvedValueOnce(mockInvoices);
+    (ApiClient.get as jest.Mock).mockResolvedValueOnce({
+      items: mockInvoices,
+      total: 1,
+      page: 1,
+      pageSize: 50,
+      pageCount: 1,
+    });
 
     const result = await InvoicesService.list();
 

@@ -221,7 +221,9 @@ def test_get_invoice_list():
     response = client.get("/invoices/")
     assert response.status_code == 200
     data = response.json()
-    assert isinstance(data, list)
+    assert isinstance(data, dict)
+    assert "items" in data
+    assert isinstance(data["items"], list)
 
 
 def test_delete_invoice():
