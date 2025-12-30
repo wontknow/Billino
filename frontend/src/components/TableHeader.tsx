@@ -5,6 +5,7 @@ import type React from "react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateRangePicker } from "@/components/ui/date-picker";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -273,6 +274,125 @@ export function TableHeader({
                               className="h-8 self-end"
                               onClick={() =>
                                 onFilterChange(filters.filter((f) => f.field !== column.id))
+                              }
+                            >
+                              Clear
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
+                      {column.filterType === "date" && (
+                        <div className="flex w-full flex-col gap-2">
+                          <DateRangePicker
+                            valueFrom={
+                              (filters.find((f) => f.field === `${column.id}_from`)?.value as
+                                | string
+                                | undefined) ||
+                              (filters.find((f) => f.field === column.id)?.value as
+                                | string
+                                | undefined)
+                            }
+                            valueTo={
+                              filters.find((f) => f.field === `${column.id}_to`)?.value as
+                                | string
+                                | undefined
+                            }
+                            onValueFromChange={(value) => {
+                              const currentTo = filters.find((f) => f.field === `${column.id}_to`)
+                                ?.value as string | undefined;
+
+                              // Remove all date-related filters
+                              const baseFilters = filters
+                                .filter((f) => f.field !== `${column.id}_from`)
+                                .filter((f) => f.field !== `${column.id}_to`)
+                                .filter((f) => f.field !== column.id);
+
+                              if (value) {
+                                if (currentTo && currentTo !== value) {
+                                  // Range: both dates different
+                                  baseFilters.push({
+                                    field: `${column.id}_from`,
+                                    operator: "gte",
+                                    value,
+                                  });
+                                  baseFilters.push({
+                                    field: `${column.id}_to`,
+                                    operator: "lte",
+                                    value: currentTo,
+                                  });
+                                } else {
+                                  // Single date: exact match
+                                  baseFilters.push({
+                                    field: column.id,
+                                    operator: "exact",
+                                    value,
+                                  });
+                                }
+                              }
+                              onFilterChange(baseFilters);
+                            }}
+                            onValueToChange={(value) => {
+                              const currentFrom =
+                                (filters.find((f) => f.field === `${column.id}_from`)?.value as
+                                  | string
+                                  | undefined) ||
+                                (filters.find((f) => f.field === column.id)?.value as
+                                  | string
+                                  | undefined);
+
+                              // Remove all date-related filters
+                              const baseFilters = filters
+                                .filter((f) => f.field !== `${column.id}_from`)
+                                .filter((f) => f.field !== `${column.id}_to`)
+                                .filter((f) => f.field !== column.id);
+
+                              if (value) {
+                                if (currentFrom && currentFrom !== value) {
+                                  // Range: both dates different
+                                  baseFilters.push({
+                                    field: `${column.id}_from`,
+                                    operator: "gte",
+                                    value: currentFrom,
+                                  });
+                                  baseFilters.push({
+                                    field: `${column.id}_to`,
+                                    operator: "lte",
+                                    value,
+                                  });
+                                } else {
+                                  // Single date: exact match
+                                  baseFilters.push({
+                                    field: column.id,
+                                    operator: "exact",
+                                    value,
+                                  });
+                                }
+                              } else if (currentFrom) {
+                                // Only from date remains: exact match
+                                baseFilters.push({
+                                  field: column.id,
+                                  operator: "exact",
+                                  value: currentFrom,
+                                });
+                              }
+                              onFilterChange(baseFilters);
+                            }}
+                          />
+                          {(filters.find((f) => f.field === `${column.id}_from`) ||
+                            filters.find((f) => f.field === `${column.id}_to`) ||
+                            filters.find((f) => f.field === column.id)) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 self-end"
+                              onClick={() =>
+                                onFilterChange(
+                                  filters
+                                    .filter((f) => f.field !== `${column.id}_from`)
+                                    .filter((f) => f.field !== `${column.id}_to`)
+                                    .filter((f) => f.field !== column.id)
+                                )
                               }
                             >
                               Clear

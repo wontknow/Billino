@@ -18,6 +18,8 @@ from models import (
     SummaryInvoiceRead,
 )
 from models.table_models import (
+    ColumnFilter,
+    FilterOperator,
     GlobalSearch,
     PaginatedResponse,
     SortDirection,
@@ -185,6 +187,29 @@ def list_summaries(
     """
     filters = parse_filter_params(filter)
     sort_fields = parse_sort_params(sort)
+
+    # Map date_from and date_to filters to date filters with gte/lte operators
+    # Also convert exact date filter to equals
+    mapped_filters = []
+    for f in filters or []:
+        if f.field == "date_from":
+            mapped_filters.append(
+                ColumnFilter(field="date", operator=FilterOperator.GTE, value=f.value)
+            )
+        elif f.field == "date_to":
+            mapped_filters.append(
+                ColumnFilter(field="date", operator=FilterOperator.LTE, value=f.value)
+            )
+        elif f.field == "date" and f.operator == FilterOperator.EXACT:
+            # Convert exact date filter to equals for proper date comparison
+            mapped_filters.append(
+                ColumnFilter(
+                    field="date", operator=FilterOperator.EQUALS, value=f.value
+                )
+            )
+        else:
+            mapped_filters.append(f)
+    filters = mapped_filters
 
     try:
         stmt = select(SummaryInvoice)

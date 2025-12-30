@@ -78,7 +78,7 @@ export const InvoicesContainer: React.FC<InvoicesContainerProps> = ({
   const invoiceColumns: ColumnConfig[] = useMemo(
     () => [
       { id: "number", label: "Nummer", sortable: true, filterable: true, filterType: "text" },
-      { id: "date", label: "Datum", sortable: true, filterable: true, filterType: "text" },
+      { id: "date", label: "Datum", sortable: true, filterable: true, filterType: "date" },
       {
         id: "customer_name",
         label: "Empfänger",
@@ -95,7 +95,7 @@ export const InvoicesContainer: React.FC<InvoicesContainerProps> = ({
   const summaryColumns: ColumnConfig[] = useMemo(
     () => [
       { id: "range_text", label: "Bereich", sortable: true, filterable: true, filterType: "text" },
-      { id: "date", label: "Datum", sortable: true, filterable: true, filterType: "text" },
+      { id: "date", label: "Datum", sortable: true, filterable: true, filterType: "date" },
       {
         id: "recipient_display_name",
         label: "Empfänger",
