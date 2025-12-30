@@ -432,7 +432,6 @@ def read_invoices(
             stmt = FilterService.apply_profile_name_filters(
                 stmt, profile_name_filters, Invoice, Profile
             )
-            joined_profile = True
 
         if other_filters:
             stmt = FilterService.apply_filters(
