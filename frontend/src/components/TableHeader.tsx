@@ -2,7 +2,7 @@
 
 import { ArrowDown, ArrowUp, ArrowUpDown, Filter } from "lucide-react";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -93,19 +93,21 @@ export function TableHeader({
   onSortChange,
   onFilterChange,
 }: TableHeaderProps) {
-  const [filterInputs, setFilterInputs] = useState<Record<string, string>>({});
+  // Track uncommitted filter inputs (user is typing but hasn't been debounced yet)
+  const [uncommittedInputs, setUncommittedInputs] = useState<Record<string, string>>({});
   const debounceRefs = useRef<Record<string, ReturnType<typeof setTimeout> | undefined>>({});
 
-  // Sync lokale Input-Werte mit aktiven Filtern (z.B. nach URL-Änderung/Reload)
-  useEffect(() => {
-    const next: Record<string, string> = {};
+  // Derive filter input values from filters prop, overlaying uncommitted changes
+  // Use useMemo to avoid recreating the object on every render
+  const filterInputs = useMemo(() => {
+    const inputs: Record<string, string> = {};
     for (const col of columns) {
       const af = filters.find((f) => f.field === col.id);
-      if (af) next[col.id] = String(af.value ?? "");
+      // Use uncommitted value if exists, otherwise use committed filter value
+      inputs[col.id] = uncommittedInputs[col.id] ?? (af ? String(af.value ?? "") : "");
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setFilterInputs((prev) => ({ ...prev, ...next }));
-  }, [filters, columns]);
+    return inputs;
+  }, [columns, filters, uncommittedInputs]);
 
   // Finde aktive Sortierung für eine Spalte
   const getColumnSort = useCallback(
@@ -154,7 +156,8 @@ export function TableHeader({
   // Handle Filter (Text-Input) mit Debounce, um Navigations-Reloads zu reduzieren
   const handleTextFilter = useCallback(
     (columnId: string, value: string) => {
-      setFilterInputs((prev) => ({ ...prev, [columnId]: value }));
+      // Set uncommitted input value immediately for responsive UI
+      setUncommittedInputs((prev) => ({ ...prev, [columnId]: value }));
 
       // clear previous timer for this column
       const t = debounceRefs.current[columnId];
@@ -169,6 +172,12 @@ export function TableHeader({
         } else {
           onFilterChange(filters.filter((f) => f.field !== columnId));
         }
+        // Clear uncommitted value once it's committed
+        setUncommittedInputs((prev) => {
+          const next = { ...prev };
+          delete next[columnId];
+          return next;
+        });
       }, 300);
     },
     [filters, onFilterChange]
@@ -217,7 +226,11 @@ export function TableHeader({
                               size="sm"
                               className="h-8"
                               onClick={() => {
-                                setFilterInputs((prev) => ({ ...prev, [column.id]: "" }));
+                                setUncommittedInputs((prev) => {
+                                  const next = { ...prev };
+                                  delete next[column.id];
+                                  return next;
+                                });
                                 onFilterChange(filters.filter((f) => f.field !== column.id));
                               }}
                             >
