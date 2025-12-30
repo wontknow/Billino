@@ -10,7 +10,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Invoice } from "@/types/invoice";
 import type { Profile } from "@/types/profile";
 import type { Customer } from "@/types/customer";
@@ -78,6 +84,19 @@ export const SummaryInvoiceDialog: React.FC<SummaryInvoiceDialogProps> = ({
     loadProfiles();
   }, [isOpen, selectedProfileId]);
 
+  // Reset selected invoices when profile changes
+  useEffect(() => {
+    // Clear selected invoices that don't belong to the newly selected profile
+    if (selectedProfileId) {
+      setSelectedInvoiceIds((prev) =>
+        prev.filter((id) => {
+          const invoice = invoices.find((inv) => inv.id === id);
+          return invoice && invoice.profile_id === selectedProfileId;
+        })
+      );
+    }
+  }, [selectedProfileId, invoices]);
+
   // Handle recipient search
   useEffect(() => {
     if (!recipientSearchQuery || recipientSearchQuery.length < 2) {
@@ -117,14 +136,17 @@ export const SummaryInvoiceDialog: React.FC<SummaryInvoiceDialogProps> = ({
   }, [isOpen]);
 
   const filteredInvoices = useMemo(() => {
-    if (!dateFrom && !dateTo) return invoices;
     return invoices.filter((invoice) => {
+      // Filter by selected profile
+      if (selectedProfileId && invoice.profile_id !== selectedProfileId) return false;
+
+      // Filter by date range
       const invoiceDate = invoice.date;
       if (dateFrom && invoiceDate < dateFrom) return false;
       if (dateTo && invoiceDate > dateTo) return false;
       return true;
     });
-  }, [invoices, dateFrom, dateTo]);
+  }, [invoices, dateFrom, dateTo, selectedProfileId]);
 
   const totalSelected = useMemo(() => selectedInvoiceIds.length, [selectedInvoiceIds]);
   const totalFiltered = useMemo(() => filteredInvoices.length, [filteredInvoices]);
@@ -199,7 +221,9 @@ export const SummaryInvoiceDialog: React.FC<SummaryInvoiceDialogProps> = ({
               onValueChange={(value) => setSelectedProfileId(Number(value))}
               disabled={isLoadingProfiles}
             >
-              <SelectTrigger className="w-full" />
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Profil auswählen" />
+              </SelectTrigger>
               <SelectContent>
                 {profiles.map((profile) => (
                   <SelectItem key={profile.id} value={String(profile.id)}>

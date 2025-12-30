@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { useEntityDialog } from "./useEntityDialog";
 import { logger } from "@/lib/logger";
 
@@ -43,13 +43,16 @@ describe("useEntityDialog", () => {
       const { result } = renderHook(() => useEntityDialog(defaultConfig));
 
       const payload = { name: "New Entity" };
-      const success = await result.current.handleSubmit(null, payload);
+      let success: boolean;
+      await act(async () => {
+        success = await result.current.handleSubmit(null, payload);
+      });
 
       expect(mockCreateFn).toHaveBeenCalledWith(payload);
       expect(mockUpdateFn).not.toHaveBeenCalled();
       expect(mockOnSuccess).toHaveBeenCalledWith(newEntity);
       expect(mockOnClose).toHaveBeenCalled();
-      expect(success).toBe(true);
+      expect(success!).toBe(true);
     });
 
     it("updates an existing entity when entity with id is provided", async () => {
@@ -60,13 +63,16 @@ describe("useEntityDialog", () => {
       const { result } = renderHook(() => useEntityDialog(defaultConfig));
 
       const payload = { name: "Updated Entity" };
-      const success = await result.current.handleSubmit(existingEntity, payload);
+      let success: boolean;
+      await act(async () => {
+        success = await result.current.handleSubmit(existingEntity, payload);
+      });
 
       expect(mockUpdateFn).toHaveBeenCalledWith(1, payload);
       expect(mockCreateFn).not.toHaveBeenCalled();
       expect(mockOnSuccess).toHaveBeenCalledWith(updatedEntity);
       expect(mockOnClose).toHaveBeenCalled();
-      expect(success).toBe(true);
+      expect(success!).toBe(true);
     });
 
     it("handles entity with string id correctly", async () => {
@@ -76,29 +82,42 @@ describe("useEntityDialog", () => {
 
       const { result } = renderHook(() => useEntityDialog(defaultConfig));
 
-      await result.current.handleSubmit(existingEntity, { name: "Updated" });
+      await act(async () => {
+        await result.current.handleSubmit(existingEntity, { name: "Updated" });
+      });
 
       expect(mockUpdateFn).toHaveBeenCalledWith("abc-123", { name: "Updated" });
     });
 
     it("sets isSubmitting to true during submission", async () => {
-      mockCreateFn.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({ id: 1 }), 100))
-      );
+      let resolvePromise: (value: unknown) => void;
+      const delayedPromise = new Promise<unknown>((resolve) => {
+        resolvePromise = resolve;
+      });
+      mockCreateFn.mockReturnValue(delayedPromise);
 
       const { result } = renderHook(() => useEntityDialog(defaultConfig));
 
       expect(result.current.isSubmitting).toBe(false);
 
-      const submitPromise = result.current.handleSubmit(null, { name: "Test" });
+      // Start submission in act
+      let submitPromise: Promise<boolean> | undefined;
+      act(() => {
+        submitPromise = result.current.handleSubmit(null, { name: "Test" });
+      });
 
-      // Check immediately after calling handleSubmit
+      // Check that isSubmitting is true while waiting
       await waitFor(() => {
         expect(result.current.isSubmitting).toBe(true);
       });
 
-      await submitPromise;
+      // Resolve the promise and wait for completion
+      await act(async () => {
+        resolvePromise!({ id: 1 });
+        await submitPromise!;
+      });
 
+      // Check that isSubmitting is false after completion
       expect(result.current.isSubmitting).toBe(false);
     });
 
@@ -108,12 +127,15 @@ describe("useEntityDialog", () => {
 
       const { result } = renderHook(() => useEntityDialog(defaultConfig));
 
-      const success = await result.current.handleSubmit(null, { name: "Test" });
+      let success: boolean;
+      await act(async () => {
+        success = await result.current.handleSubmit(null, { name: "Test" });
+      });
 
       expect(global.alert).toHaveBeenCalledWith("Fehler beim Speichern: Network error");
       expect(mockOnSuccess).not.toHaveBeenCalled();
       expect(mockOnClose).not.toHaveBeenCalled();
-      expect(success).toBe(false);
+      expect(success!).toBe(false);
     });
 
     it("handles unknown error type with generic message", async () => {
@@ -121,10 +143,13 @@ describe("useEntityDialog", () => {
 
       const { result } = renderHook(() => useEntityDialog(defaultConfig));
 
-      const success = await result.current.handleSubmit(null, { name: "Test" });
+      let success: boolean;
+      await act(async () => {
+        success = await result.current.handleSubmit(null, { name: "Test" });
+      });
 
       expect(global.alert).toHaveBeenCalledWith("Fehler beim Speichern: Unbekannter Fehler");
-      expect(success).toBe(false);
+      expect(success!).toBe(false);
     });
 
     it("logs error with scoped logger", async () => {
@@ -138,7 +163,9 @@ describe("useEntityDialog", () => {
 
       const { result } = renderHook(() => useEntityDialog(defaultConfig));
 
-      await result.current.handleSubmit(null, { name: "Test" });
+      await act(async () => {
+        await result.current.handleSubmit(null, { name: "Test" });
+      });
 
       expect(logger.createScoped).toHaveBeenCalledWith("🧪 TestDialog");
       expect(mockLog.error).toHaveBeenCalledWith("Failed to save entity", { error });
@@ -149,7 +176,9 @@ describe("useEntityDialog", () => {
 
       const { result } = renderHook(() => useEntityDialog(defaultConfig));
 
-      await result.current.handleSubmit(null, { name: "Test" });
+      await act(async () => {
+        await result.current.handleSubmit(null, { name: "Test" });
+      });
 
       expect(result.current.isSubmitting).toBe(false);
     });
@@ -159,7 +188,9 @@ describe("useEntityDialog", () => {
 
       const { result } = renderHook(() => useEntityDialog(defaultConfig));
 
-      await result.current.handleSubmit(null, { name: "Test" });
+      await act(async () => {
+        await result.current.handleSubmit(null, { name: "Test" });
+      });
 
       expect(mockOnSuccess).not.toHaveBeenCalled();
       expect(mockOnClose).not.toHaveBeenCalled();
@@ -172,7 +203,9 @@ describe("useEntityDialog", () => {
       const { result } = renderHook(() => useEntityDialog(defaultConfig));
 
       const partialPayload = { name: "Entity" };
-      await result.current.handleSubmit(null, partialPayload);
+      await act(async () => {
+        await result.current.handleSubmit(null, partialPayload);
+      });
 
       expect(mockCreateFn).toHaveBeenCalledWith(partialPayload);
     });

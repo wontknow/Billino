@@ -1,5 +1,5 @@
 export interface Profile {
-  id: number | string; // Backend liefert int
+  id: number; // Backend liefert int
   name: string;
   address?: string;
   city?: string;

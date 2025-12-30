@@ -3,7 +3,15 @@ from sqlmodel import Session, select
 
 from database import get_session
 from models import Profile
+from models.table_models import (
+    GlobalSearch,
+    PaginatedResponse,
+    SortDirection,
+    SortField,
+)
+from services.filter_service import FilterService, create_paginated_response, paginate
 from utils import logger
+from utils.router_utils import parse_filter_params, parse_sort_params
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
@@ -65,36 +73,118 @@ def create_profile(profile: Profile, session: Session = Depends(get_session)):
     return profile
 
 
-@router.get("/", response_model=list[Profile])
-def list_profiles(session: Session = Depends(get_session)):
+@router.get("/", response_model=PaginatedResponse[Profile])
+def list_profiles(
+    session: Session = Depends(get_session),
+    # Filterung
+    filter: list[str] = Query(
+        None,
+        description="Filters as 'field:operator:value'. Example: 'name:contains:GmbH'",
+    ),
+    # Sortierung
+    sort: list[str] = Query(
+        None,
+        description="Sort order as 'field:direction'. Example: 'name:asc'",
+    ),
+    # Globale Suche
+    q: str = Query(
+        None,
+        min_length=2,
+        description="Global search query (searches in name, address, city, tax_number)",
+    ),
+    # Paginierung
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    pageSize: int = Query(10, ge=1, le=100, description="Items per page (max 100)"),
+):
     """
-    List all profiles.
+    List profiles with advanced filtering, sorting, and pagination.
 
-    Retrieves a list of all company/seller profiles.
+    **Query Parameters:**
+
+    **Filtering:**
+    - `filter` (repeatable): Filter as 'field:operator:value'
+      - Fields: `id`, `name`, `address`, `city`, `bank_data`, `tax_number`, `include_tax`, `default_tax_rate`
+      - Examples: `filter=name:contains:GmbH`, `filter=include_tax:equals:true`
+
+    **Sorting:**
+    - `sort` (repeatable): Sort as 'field:direction'
+      - Examples: `sort=name:asc`, `sort=id:desc`
+
+    **Global Search:**
+    - `q` (string, optional): Searches in name, address, city, tax_number
+
+    **Pagination:**
+    - `page` (integer, default=1): Page number
+    - `pageSize` (integer, default=10, max=100): Items per page
 
     **Returns:**
-    - List of Profile objects
-
-    **Example Response (200):**
-    ```json
-    [
-        {
-            "id": 1,
-            "name": "Tech Solutions GmbH",
-            "address": "Hauptstrasse 123",
-            "city": "Berlin",
-            "bank_data": "DE89370400440532013000",
-            "tax_number": "DE123456789",
-            "include_tax": true,
-            "default_tax_rate": 0.19
-        }
-    ]
-    ```
+    - PaginatedResponse with Profile items
     """
-    logger.debug("📋 GET /profiles - Listing all profiles")
-    profiles = session.exec(select(Profile)).all()
-    logger.debug(f"✅ Found {len(profiles)} profiles")
-    return profiles
+    logger.debug("📋 GET /profiles - Listing with filters/sort/pagination")
+
+    filters = parse_filter_params(filter)
+
+    sort_fields = parse_sort_params(sort)
+
+    try:
+        stmt = select(Profile)
+
+        if filters:
+            stmt = FilterService.apply_filters(
+                stmt,
+                filters,
+                Profile,
+                allowed_fields={
+                    "id",
+                    "name",
+                    "address",
+                    "city",
+                    "bank_data",
+                    "tax_number",
+                    "include_tax",
+                    "default_tax_rate",
+                },
+            )
+
+        if q:
+            stmt = FilterService.apply_global_search(
+                stmt,
+                GlobalSearch(query=q),
+                Profile,
+                search_fields={"name", "address", "city", "tax_number"},
+            )
+
+        sort_fields_to_apply = (
+            sort_fields
+            if sort_fields
+            else [SortField(field="id", direction=SortDirection.ASC)]
+        )
+        stmt = FilterService.apply_sort(
+            stmt,
+            sort_fields_to_apply,
+            Profile,
+            primary_key_field="id",
+            allowed_fields={
+                "id",
+                "name",
+                "address",
+                "city",
+                "bank_data",
+                "tax_number",
+                "include_tax",
+                "default_tax_rate",
+            },
+        )
+
+        items, total = paginate(session, stmt, Profile, page=page, page_size=pageSize)
+
+        response = create_paginated_response(items, total, page, pageSize)
+        logger.info(f"✅ Retrieved {len(items)}/{total} profiles")
+        return response
+
+    except ValueError as e:
+        logger.error(f"❌ Invalid query parameters: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/search", response_model=list[Profile])

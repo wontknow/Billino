@@ -6,8 +6,10 @@ Testet:
 - BackupScheduler: Initialisierung, Status, Trigger
 """
 
+import gc
 import sqlite3
 import tempfile
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -46,6 +48,10 @@ class TestBackupHandler:
                 "data_dir": data_dir,
                 "db_file": db_file,
             }
+
+            # Windows-spezifisch: Sicherstellen, dass alle SQLite-Dateihandles geschlossen sind
+            gc.collect()
+            time.sleep(0.1)  # Kurze Pause, damit Windows Dateihandles freigeben kann
 
     def test_backup_handler_initialization(self, temp_dirs):
         """Test: BackupHandler wird korrekt initialisiert."""

@@ -1,5 +1,6 @@
 import { ApiClient } from "./base";
 import type { Profile } from "@/types/profile";
+import type { PaginatedResponse } from "@/types/table-filters";
 import { logger } from "@/lib/logger";
 
 const log = logger.createScoped("⚙️ PROFILES");
@@ -24,7 +25,8 @@ export interface ProfileCreatePayload {
 export class ProfilesService {
   static async list(): Promise<Profile[]> {
     log.debug("Fetching profiles list");
-    return ApiClient.get<Profile[]>("/profiles/");
+    const resp = await ApiClient.get<PaginatedResponse<Profile>>("/profiles/");
+    return resp.items;
   }
 
   static async create(payload: ProfileCreatePayload): Promise<Profile> {

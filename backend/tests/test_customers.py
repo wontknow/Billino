@@ -108,7 +108,7 @@ def test_list_customers(client):
     resp = client.get("/customers")
     assert resp.status_code == 200
     data = resp.json()
-    assert any(c["name"] == "Peter Schmidt" for c in data)
+    assert any(c["name"] == "Peter Schmidt" for c in data["items"])
 
 
 def test_list_customers_includes_note(client):
@@ -123,7 +123,7 @@ def test_list_customers_includes_note(client):
     )
     resp = client.get("/customers")
     assert resp.status_code == 200
-    customers = resp.json()
+    customers = resp.json()["items"]
     found = next((c for c in customers if c["name"] == "Hinweis AG"), None)
     assert found is not None
     assert found["note"] == "Kunde bevorzugt Sammelrechnungen"
@@ -150,7 +150,8 @@ def test_update_customer(client):
 
     # Prüfen ob GET-Liste auch geupdatet ist
     resp3 = client.get("/customers")
-    names = [c["name"] for c in resp3.json()]
+    data = resp3.json()
+    names = [c["name"] for c in data["items"]]
     assert "Maxi Mustermann" in names
 
 
@@ -224,7 +225,8 @@ def test_delete_customer(client):
 
     # Prüfen, dass Kunde nicht mehr in Liste ist
     resp3 = client.get("/customers")
-    ids = [c["id"] for c in resp3.json()]
+    data = resp3.json()
+    ids = [c["id"] for c in data["items"]]
     assert cust["id"] not in ids
 
 

@@ -61,7 +61,9 @@ def test_get_profile_list():
     response = client.get("/profiles/")
     assert response.status_code == 200
     data = response.json()
-    assert isinstance(data, list)
+    assert isinstance(data, dict)
+    assert "items" in data
+    assert isinstance(data["items"], list)
 
 
 def test_update_profile():
