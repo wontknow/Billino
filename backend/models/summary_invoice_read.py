@@ -17,3 +17,4 @@ class SummaryInvoiceRead(SQLModel):
     # Recipient (if present) and display helper
     recipient_customer_id: Optional[int] = None
     recipient_display_name: Optional[str] = None
+    profile_name: Optional[str] = None

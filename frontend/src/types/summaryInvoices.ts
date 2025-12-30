@@ -9,6 +9,7 @@ export type SummaryInvoiceResponse = {
   invoice_ids: number[];
   recipient_customer_id?: number;
   recipient_display_name?: string;
+  profile_name?: string;
 };
 
 export type SummaryInvoiceCompact = {
@@ -19,6 +20,7 @@ export type SummaryInvoiceCompact = {
   total_gross: number;
   profile_id: number;
   recipient_display_name?: string;
+  profile_name?: string;
 };
 
 export type SummaryInvoiceCreatePayload = {

@@ -96,6 +96,7 @@ export const InvoicesTable: React.FC<InvoicesTableProps> = ({
                   <TableHead className="sticky top-0 z-10 bg-background">Nummer</TableHead>
                   <TableHead className="sticky top-0 z-10 bg-background">Datum</TableHead>
                   <TableHead className="sticky top-0 z-10 bg-background">Empfänger</TableHead>
+                  <TableHead className="sticky top-0 z-10 bg-background">Profil</TableHead>
                   <TableHead className="sticky top-0 z-10 bg-background text-right min-w-[5.5rem] px-2 pr-5">
                     Netto
                   </TableHead>
@@ -124,6 +125,7 @@ export const InvoicesTable: React.FC<InvoicesTableProps> = ({
                     <TableCell className="font-medium">{inv.number}</TableCell>
                     <TableCell>{formatDate(inv.date)}</TableCell>
                     <TableCell>{inv.customer_name ?? "—"}</TableCell>
+                    <TableCell>{inv.profile_name ?? "—"}</TableCell>
                     <TableCell className="text-right tabular-nums min-w-[5.5rem] px-2 pr-5">
                       {formatAmount(inv.total_net)}
                     </TableCell>

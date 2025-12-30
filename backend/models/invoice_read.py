@@ -23,8 +23,8 @@ class InvoiceRead(SQLModel):
     include_tax: Optional[bool] = None
     tax_rate: Optional[float] = None
     is_gross_amount: bool = True
-    # Computed fields for frontend consumption (backend is source of truth)
     total_net: Optional[float] = None
     total_tax: Optional[float] = None
     total_gross: Optional[float] = None
     customer_name: Optional[str] = None
+    profile_name: Optional[str] = None
