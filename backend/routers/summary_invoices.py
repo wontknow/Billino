@@ -294,7 +294,6 @@ def list_summaries(
             stmt = FilterService.apply_profile_name_filters(
                 stmt, profile_name_filters, SummaryInvoice, Profile
             )
-            joined_profile = True
 
         if other_filters:
             stmt = FilterService.apply_filters(
