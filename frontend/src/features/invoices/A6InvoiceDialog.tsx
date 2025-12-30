@@ -204,7 +204,7 @@ export const A6InvoiceDialog: React.FC<A6InvoiceDialogProps> = ({
                   onFocus={() => customerSearchQuery.length >= 2 && setShowCustomerDropdown(true)}
                   disabled={isSubmitting}
                   role="combobox"
-                  aria-expanded={showCustomerDropdown && customerSuggestions.length > 0}
+                  aria-expanded={showCustomerDropdown}
                   aria-controls="customer-listbox"
                   aria-autocomplete="list"
                 />
