@@ -384,12 +384,20 @@ def read_invoices(
     try:
         stmt = select(Invoice)
         joined_customer = False
+        joined_profile = False
 
-        # Sonderfall-Filter: customer_name (benötigt Join auf Customer)
+        # Sonderfall-Filter: customer_name und profile_name (benötigen Joins)
         customer_name_filters = (
             [f for f in filters if f.field == "customer_name"] if filters else []
         )
-        other_filters = [f for f in (filters or []) if f.field != "customer_name"]
+        profile_name_filters = (
+            [f for f in filters if f.field == "profile_name"] if filters else []
+        )
+        other_filters = [
+            f
+            for f in (filters or [])
+            if f.field not in ("customer_name", "profile_name")
+        ]
 
         if customer_name_filters:
             # Join auf Customer und Filter auf Customer.name anwenden
@@ -419,6 +427,30 @@ def read_invoices(
             # Duplikate vermeiden, falls mehrere Invoices den gleichen Customer haben
             stmt = stmt.distinct()
 
+        if profile_name_filters:
+            # Join auf Profile und Filter auf Profile.name anwenden
+            stmt = stmt.join(Profile, Invoice.profile_id == Profile.id)
+            joined_profile = True
+            for f in profile_name_filters:
+                val = str(f.value)
+                op = f.operator
+                if op == "contains":
+                    condition = Profile.name.ilike(
+                        f"%{FilterService.escape_wildcards(val)}%", escape="\\"
+                    )
+                elif op in ("exact", "equals"):
+                    condition = Profile.name.ilike(
+                        FilterService.escape_wildcards(val), escape="\\"
+                    )
+                elif op == "starts_with":
+                    condition = Profile.name.ilike(
+                        f"{FilterService.escape_wildcards(val)}%", escape="\\"
+                    )
+                else:
+                    raise ValueError(f"Operator '{op}' not supported for profile_name")
+                stmt = stmt.where(condition)
+            stmt = stmt.distinct()
+
         if other_filters:
             stmt = FilterService.apply_filters(
                 stmt,
@@ -446,7 +478,7 @@ def read_invoices(
                 search_fields={"number"},
             )
 
-        # Sortierung anwenden, inkl. Sonderfall: customer_name (Join + ORDER BY Customer.name)
+        # Sortierung anwenden, inkl. Sonderfall: customer_name und profile_name (Joins + ORDER BY)
         sort_fields_to_apply = (
             sort_fields
             if sort_fields
@@ -456,7 +488,14 @@ def read_invoices(
         customer_name_sorts = [
             s for s in sort_fields_to_apply if s.field == "customer_name"
         ]
-        other_sorts = [s for s in sort_fields_to_apply if s.field != "customer_name"]
+        profile_name_sorts = [
+            s for s in sort_fields_to_apply if s.field == "profile_name"
+        ]
+        other_sorts = [
+            s
+            for s in sort_fields_to_apply
+            if s.field not in ("customer_name", "profile_name")
+        ]
 
         # Falls nach customer_name sortiert werden soll, Join sicherstellen und ORDER BY auf Customer.name setzen
         if customer_name_sorts:
@@ -468,6 +507,17 @@ def read_invoices(
                     stmt = stmt.order_by(Customer.name.asc())
                 else:
                     stmt = stmt.order_by(Customer.name.desc())
+
+        # Falls nach profile_name sortiert werden soll, Join sicherstellen und ORDER BY auf Profile.name setzen
+        if profile_name_sorts:
+            if not joined_profile:
+                stmt = stmt.join(Profile, Invoice.profile_id == Profile.id)
+                joined_profile = True
+            for s in profile_name_sorts:
+                if s.direction == SortDirection.ASC:
+                    stmt = stmt.order_by(Profile.name.asc())
+                else:
+                    stmt = stmt.order_by(Profile.name.desc())
 
         # Übrige Sortierfelder normal anwenden (nur erlaubte Invoice-Felder)
         stmt = FilterService.apply_sort(
@@ -519,6 +569,7 @@ def read_invoices(
             gross = round(gross, 2)
 
             customer = session.get(Customer, inv.customer_id)
+            profile = session.get(Profile, inv.profile_id)
 
             result.append(
                 InvoiceRead(
@@ -535,6 +586,7 @@ def read_invoices(
                     total_tax=tax,
                     total_gross=gross,
                     customer_name=(customer.name if customer else None),
+                    profile_name=(profile.name if profile else None),
                     invoice_items=[
                         InvoiceItemRead(
                             id=item.id,
@@ -633,6 +685,7 @@ def read_invoice(invoice_id: int, session: Session = Depends(get_session)):
     gross = round(gross, 2)
 
     cust = session.get(Customer, invoice.customer_id)
+    prof = session.get(Profile, invoice.profile_id)
 
     return InvoiceRead(
         id=invoice.id,
@@ -648,6 +701,7 @@ def read_invoice(invoice_id: int, session: Session = Depends(get_session)):
         total_tax=tax,
         total_gross=gross,
         customer_name=(cust.name if cust else None),
+        profile_name=(prof.name if prof else None),
         invoice_items=[
             InvoiceItemRead(
                 id=item.id,

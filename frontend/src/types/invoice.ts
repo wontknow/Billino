@@ -12,4 +12,5 @@ export interface Invoice {
   total_tax?: number;
   total_gross?: number;
   customer_name?: string;
+  profile_name?: string;
 }

@@ -12,6 +12,7 @@ from database import get_session
 from models import (
     Customer,
     Invoice,
+    Profile,
     SummaryInvoice,
     SummaryInvoiceCreate,
     SummaryInvoiceLink,
@@ -214,16 +215,19 @@ def list_summaries(
     try:
         stmt = select(SummaryInvoice)
         joined_customer = False
+        joined_profile = False
 
-        # Sonderfall-Filter: recipient_display_name (benötigt Join auf Customer)
-        # Exklusive OR Logik:
-        # 1. Hat direkten recipient (recipient_customer_id IS NOT NULL) -> filtere NUR auf diesen
-        # 2. Hat KEINEN direkten recipient (recipient_customer_id IS NULL) -> filtere auf Kunden der verlinkten Rechnungen
+        # Sonderfall-Filter: recipient_display_name und profile_name
+        # recipient_display_name benötigt komplexe Logik (recipient VS linked invoices)
+        # profile_name benötigt Join auf Profile
         recipient_filters = [
             f for f in (filters or []) if f.field == "recipient_display_name"
         ]
+        profile_name_filters = [f for f in (filters or []) if f.field == "profile_name"]
         other_filters = [
-            f for f in (filters or []) if f.field != "recipient_display_name"
+            f
+            for f in (filters or [])
+            if f.field not in ("recipient_display_name", "profile_name")
         ]
 
         if recipient_filters:
@@ -285,6 +289,30 @@ def list_summaries(
                 )
             stmt = stmt.distinct()
 
+        if profile_name_filters:
+            # Join auf Profile und Filter auf Profile.name anwenden
+            stmt = stmt.join(Profile, SummaryInvoice.profile_id == Profile.id)
+            joined_profile = True
+            for f in profile_name_filters:
+                val = str(f.value)
+                op = f.operator
+                if op == "contains":
+                    condition = Profile.name.ilike(
+                        f"%{FilterService.escape_wildcards(val)}%", escape="\\"
+                    )
+                elif op in ("exact", "equals"):
+                    condition = Profile.name.ilike(
+                        FilterService.escape_wildcards(val), escape="\\"
+                    )
+                elif op == "starts_with":
+                    condition = Profile.name.ilike(
+                        f"{FilterService.escape_wildcards(val)}%", escape="\\"
+                    )
+                else:
+                    raise ValueError(f"Operator '{op}' not supported for profile_name")
+                stmt = stmt.where(condition)
+            stmt = stmt.distinct()
+
         if other_filters:
             stmt = FilterService.apply_filters(
                 stmt,
@@ -310,7 +338,7 @@ def list_summaries(
                 search_fields={"range_text"},
             )
 
-        # Sortierung anwenden, inkl. Sonderfall: recipient_display_name
+        # Sortierung anwenden, inkl. Sonderfall: recipient_display_name und profile_name
         sort_fields_to_apply = (
             sort_fields
             if sort_fields
@@ -320,8 +348,13 @@ def list_summaries(
         recipient_name_sorts = [
             s for s in sort_fields_to_apply if s.field == "recipient_display_name"
         ]
+        profile_name_sorts = [
+            s for s in sort_fields_to_apply if s.field == "profile_name"
+        ]
         other_sorts = [
-            s for s in sort_fields_to_apply if s.field != "recipient_display_name"
+            s
+            for s in sort_fields_to_apply
+            if s.field not in ("recipient_display_name", "profile_name")
         ]
 
         # Falls nach Empfängername sortiert werden soll, outer join auf Customer
@@ -358,6 +391,17 @@ def list_summaries(
                     stmt = stmt.order_by(coalesced_name.asc())
                 else:
                     stmt = stmt.order_by(coalesced_name.desc())
+
+        # Falls nach profile_name sortiert werden soll, Join sicherstellen und ORDER BY auf Profile.name setzen
+        if profile_name_sorts:
+            if not joined_profile:
+                stmt = stmt.join(Profile, SummaryInvoice.profile_id == Profile.id)
+                joined_profile = True
+            for s in profile_name_sorts:
+                if s.direction == SortDirection.ASC:
+                    stmt = stmt.order_by(Profile.name.asc())
+                else:
+                    stmt = stmt.order_by(Profile.name.desc())
 
         # Übrige Sortierfelder normal anwenden (nur erlaubte SummaryInvoice-Felder)
         stmt = FilterService.apply_sort(
@@ -420,6 +464,11 @@ def list_summaries(
                     invoice_ids=invoice_ids,
                     recipient_customer_id=summary.recipient_customer_id,
                     recipient_display_name=recipient_display,
+                    profile_name=(
+                        session.get(Profile, summary.profile_id).name
+                        if session.get(Profile, summary.profile_id)
+                        else None
+                    ),
                 )
             )
 
@@ -491,6 +540,11 @@ def list_summaries_by_profile(profile_id: int, session: Session = Depends(get_se
                 total_tax=summary.total_tax,
                 total_gross=summary.total_gross,
                 invoice_ids=invoice_ids,
+                profile_name=(
+                    session.get(Profile, summary.profile_id).name
+                    if session.get(Profile, summary.profile_id)
+                    else None
+                ),
             )
         )
     return summary_invoices
@@ -570,6 +624,11 @@ def read_summary(summary_id: int, session: Session = Depends(get_session)):
         invoice_ids=invoice_ids,
         recipient_customer_id=summary.recipient_customer_id,
         recipient_display_name=recipient_display,
+        profile_name=(
+            session.get(Profile, summary.profile_id).name
+            if session.get(Profile, summary.profile_id)
+            else None
+        ),
     )
     return summary_invoice
 
