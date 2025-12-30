@@ -28,4 +28,3 @@ class InvoiceRead(SQLModel):
     total_gross: Optional[float] = None
     customer_name: Optional[str] = None
     profile_name: Optional[str] = None
-    profile_name: Optional[str] = None
