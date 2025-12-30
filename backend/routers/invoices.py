@@ -510,9 +510,7 @@ def read_invoices(
 
         # Falls nach profile_name sortiert werden soll, Join sicherstellen und ORDER BY auf Profile.name setzen
         if profile_name_sorts:
-            if not joined_profile:
-                stmt = stmt.join(Profile, Invoice.profile_id == Profile.id)
-                joined_profile = True
+            stmt = stmt.join(Profile, Invoice.profile_id == Profile.id)
             for s in profile_name_sorts:
                 if s.direction == SortDirection.ASC:
                     stmt = stmt.order_by(Profile.name.asc())
