@@ -322,7 +322,7 @@ class FilterService:
         if not filters:
             return stmt
 
-        # Join auf Profile
+        # Join to Profile table
         stmt = stmt.join(
             profile_model, getattr(base_model, profile_fk_field) == profile_model.id
         )
@@ -346,7 +346,7 @@ class FilterService:
                 raise ValueError(f"Operator '{op}' not supported for profile_name")
             stmt = stmt.where(condition)
 
-        # Duplikate vermeiden
+        # Avoid duplicates when multiple filters match
         stmt = stmt.distinct()
         log.debug(f"✅ Profile name filters applied: {len(filters)} filter(s)")
 
@@ -378,13 +378,13 @@ class FilterService:
         if not sort_fields:
             return stmt
 
-        # Join sicherstellen (falls noch nicht gejoint)
+        # Ensure Profile table is joined if not already
         if not joined_profile:
             stmt = stmt.join(
                 profile_model, getattr(base_model, profile_fk_field) == profile_model.id
             )
 
-        # ORDER BY auf Profile.name setzen
+        # Apply ORDER BY on Profile.name
         for s in sort_fields:
             if s.direction == SortDirection.ASC:
                 stmt = stmt.order_by(profile_model.name.asc())
