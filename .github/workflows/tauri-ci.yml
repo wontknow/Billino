@@ -1,0 +1,122 @@
+name: Tauri CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-tauri:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ------------------------------------------------------------
+      # 1. Checkout
+      # ------------------------------------------------------------
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # ------------------------------------------------------------
+      # 2. Node + pnpm
+      # ------------------------------------------------------------
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      # ------------------------------------------------------------
+      # 3. Rust (Tauri)
+      # ------------------------------------------------------------
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      # ------------------------------------------------------------
+      # 4. System deps for Tauri (Linux)
+      # ------------------------------------------------------------
+      - name: Install Tauri Linux dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            libssl-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      # ------------------------------------------------------------
+      # 5. Python (Backend)
+      # ------------------------------------------------------------
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # ------------------------------------------------------------
+      # 6. Frontend: install + static export
+      # ------------------------------------------------------------
+      - name: Install frontend deps
+        working-directory: frontend
+        run: pnpm install
+
+      - name: Build frontend static export
+        working-directory: frontend
+        run: pnpm export
+
+      - name: Validate frontend export
+        run: |
+          test -f frontend/out/index.html
+
+      # ------------------------------------------------------------
+      # 7. Backend: build sidecar binary
+      # ------------------------------------------------------------
+      - name: Install backend deps
+        working-directory: backend
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build backend sidecar
+        working-directory: backend
+        run: |
+          source .venv/bin/activate
+          pyinstaller \
+            --onefile \
+            --name billino-backend \
+            -p . \
+            -p app \
+            app/main.py
+
+      # ------------------------------------------------------------
+      # 8. Copy sidecar into src-tauri/bin
+      # ------------------------------------------------------------
+      - name: Prepare sidecar for Tauri
+        run: |
+          mkdir -p src-tauri/bin
+          cp backend/dist/billino-backend src-tauri/bin/billino-backend
+          chmod +x src-tauri/bin/billino-backend
+
+      - name: Validate sidecar binary
+        run: |
+          test -f src-tauri/bin/billino-backend
+
+      # ------------------------------------------------------------
+      # 9. Tauri build (Smoke Test)
+      # ------------------------------------------------------------
+      - name: Tauri build
+        run: pnpm tauri build
+
+      # ------------------------------------------------------------
+      # 10. Validate bundle output
+      # ------------------------------------------------------------
+      - name: Validate Tauri bundle
+        run: |
+          ls src-tauri/target/release/bundle
