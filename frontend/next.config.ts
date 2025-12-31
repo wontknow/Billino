@@ -18,6 +18,9 @@ const nextConfig: NextConfig = {
   output: isStaticExport ? "export" : undefined,
   basePath: normalizedBasePath,
   assetPrefix: process.env.NEXT_ASSET_PREFIX ?? (isStaticExport ? "./" : undefined),
+  turbopack: {
+    root: __dirname,
+  },
   // Trailing slashes improve file:// compatibility for static exports
   trailingSlash,
   images: { unoptimized: isStaticExport },
