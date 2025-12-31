@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Billino",
-  description: "MVP UI Skeleton (Next.js + shadcn/ui)",
+  description: "Release v1.2.0 UI Skeleton (Next.js + shadcn/ui)",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
