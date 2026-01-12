@@ -95,36 +95,19 @@ class BackupScheduler:
         logger.info("✅ Backup-Scheduler gestoppt")
 
     @classmethod
-    def trigger_backup_now(cls) -> dict:
+    def trigger_backup_now(cls, include_pdfs: bool = True) -> dict:
         """
         Triggere Backup sofort (nicht periodisch).
 
         Useful für manuelle Backups über API.
 
+        Args:
+            include_pdfs: PDFs zusätzlich sichern (default: True)
+
         Returns:
             Status-Dict mit Backup-Informationen
         """
-        if cls._handler is None:
-            logger.error("❌ BackupHandler nicht verfügbar")
-            return {"success": False, "error": "BackupHandler nicht verfügbar"}
-
-        try:
-            backup_path = cls._handler.backup_database()
-            if backup_path:
-                return {
-                    "success": True,
-                    "backup_path": str(backup_path),
-                    "timestamp": datetime.now().isoformat(),
-                }
-            else:
-                return {"success": False, "error": "Backup fehlgeschlagen"}
-        except Exception as e:
-            # Log the detailed exception server-side, but do not expose it to the client.
-            logger.error(f"❌ Fehler beim manuellen Backup: {e}")
-            return {
-                "success": False,
-                "error": "Backup fehlgeschlagen (interner Fehler)",
-            }
+        return cls._perform_backup(source="manual", include_pdfs=include_pdfs)
 
     @classmethod
     def get_status(cls) -> dict:
@@ -176,6 +159,45 @@ class BackupScheduler:
 
         return cls._handler.list_backups()
 
+    @classmethod
+    def backup_on_shutdown(cls) -> dict:
+        """Führe ein letztes Backup beim Shutdown aus (DB + PDFs)."""
+        return cls._perform_backup(source="shutdown", include_pdfs=True)
+
+    @classmethod
+    def _perform_backup(cls, source: str, include_pdfs: bool = True) -> dict:
+        """Interner Helper für alle Backup-Trigger."""
+        if cls._handler is None:
+            logger.error("❌ BackupHandler nicht verfügbar")
+            return {"success": False, "error": "BackupHandler nicht verfügbar"}
+
+        try:
+            logger.debug(f"🔍 Starte {source}-Backup (include_pdfs={include_pdfs})")
+            backup_path = cls._handler.backup_database()
+
+            if backup_path and include_pdfs:
+                cls._handler.backup_pdfs()
+
+            if backup_path:
+                logger.info(
+                    f"✅ {source.capitalize()}-Backup erfolgreich: {backup_path}"
+                )
+                return {
+                    "success": True,
+                    "backup_path": str(backup_path),
+                    "timestamp": datetime.now().isoformat(),
+                }
+
+            logger.error("❌ Backup fehlgeschlagen")
+            return {"success": False, "error": "Backup fehlgeschlagen"}
+
+        except Exception as e:
+            logger.error(f"❌ Fehler beim {source}-Backup: {e}")
+            return {
+                "success": False,
+                "error": "Backup fehlgeschlagen (interner Fehler)",
+            }
+
     @staticmethod
     def _run_backup() -> None:
         """
@@ -183,19 +205,4 @@ class BackupScheduler:
 
         Wird vom Scheduler aufgerufen.
         """
-        if BackupScheduler._handler is None:
-            logger.error("❌ BackupHandler nicht verfügbar für Schedule-Job")
-            return
-
-        try:
-            logger.debug("🔍 Starte geplantes Datenbank-Backup")
-            backup_path = BackupScheduler._handler.backup_database()
-
-            if backup_path:
-                # Optional: PDF-Backup auch machen
-                BackupScheduler._handler.backup_pdfs()
-                logger.info(f"✅ Geplantes Backup erfolgreich: {backup_path}")
-            else:
-                logger.error("❌ Backup fehlgeschlagen")
-        except Exception as e:
-            logger.error(f"❌ Fehler im Backup-Job: {e}")
+        BackupScheduler._perform_backup(source="scheduled", include_pdfs=True)
