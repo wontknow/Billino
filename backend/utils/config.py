@@ -150,6 +150,10 @@ class BackendConfig(BaseModel):
         """Return the full server URL."""
         return f"http://{self.host}:{self.port}"
 
+    def health_url(self) -> str:
+        """Return the health check URL."""
+        return f"{self.server_url()}/health"
+
     def is_port_available(self) -> bool:
         """
         Check if the configured port is available.
@@ -162,7 +166,6 @@ class BackendConfig(BaseModel):
         """
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            # Allow reuse of port in TIME_WAIT state (cross-platform)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind((self.host, self.port))
             sock.close()
@@ -226,8 +229,10 @@ def validate_startup_conditions(config: BackendConfig) -> dict:
                     f"❌ Database path exists but is not a directory: {db_dir}"
                 )
 
-    # Check log directory
-    log_dir = Path(__file__).parent.parent / "logs"
+    # Check log directory (respektiert DATA_DIR)
+    from database import get_data_dir
+
+    log_dir = get_data_dir() / "logs"
     if not log_dir.exists():
         try:
             log_dir.mkdir(parents=True, exist_ok=True)
