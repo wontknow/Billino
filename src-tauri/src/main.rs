@@ -60,7 +60,7 @@ fn main() {
 
             // Spawn backend process
             log::info!("🔄 Spawning backend process...");
-            let child = match backend::spawn::spawn_backend(&config) {
+            let child = match backend::spawn::spawn_backend(&config, app.handle()) {
                 Ok(c) => {
                     log::info!("✅ Backend process spawned");
                     c

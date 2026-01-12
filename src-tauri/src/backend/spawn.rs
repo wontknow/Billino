@@ -3,16 +3,29 @@
 
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
+use tauri::Manager;
 
 use super::config::BackendConfig;
 use super::error::BackendError;
 
 /// Spawn the backend process
-pub fn spawn_backend(config: &BackendConfig) -> Result<Child, BackendError> {
+pub fn spawn_backend(config: &BackendConfig, app_handle: &tauri::AppHandle) -> Result<Child, BackendError> {
     log::info!(
         "🔄 Spawning backend process: {:?}",
         config.binary_path
     );
+
+    // Get AppData directory for Tauri
+    let app_data_dir = app_handle.path()
+        .app_data_dir()
+        .map_err(|e| BackendError::Internal(format!("Cannot get AppData directory: {}", e)))?
+        .join("Billino");
+    
+    log::info!("📂 Using data directory: {:?}", app_data_dir);
+    
+    // Ensure data directory exists
+    std::fs::create_dir_all(&app_data_dir)
+        .map_err(|e| BackendError::Internal(format!("Cannot create data directory: {}", e)))?;
 
     // Check if this is a Python file (.py) - use Python interpreter
     let mut cmd = if config.binary_path.extension().and_then(|s| s.to_str()) == Some("py") {
@@ -58,6 +71,7 @@ pub fn spawn_backend(config: &BackendConfig) -> Result<Child, BackendError> {
     cmd.env("BACKEND_HOST", &config.host);
     cmd.env("BACKEND_PORT", config.port.to_string());
     cmd.env("TAURI_ENABLED", "true");
+    cmd.env("DATA_DIR", app_data_dir.to_string_lossy().to_string());
 
     // Pass through additional env vars
     for (key, value) in &config.env_vars {

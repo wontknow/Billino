@@ -2,7 +2,7 @@
 Backup Service für Datenbanken und PDFs.
 
 Unterstützt zwei Modi:
-1. Tauri: Desktop-App Backups (später implementiert)
+1. Tauri: Desktop-App Backups (nutzt AppData)
 2. Basic: Einfache Datei-basierte Backups im Backend-Ordner
 """
 
@@ -13,10 +13,28 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
+from database import get_data_dir
 from utils.logger import logger
 
 # Backend-Root Verzeichnis (wo main.py liegt)
 BACKEND_ROOT = Path(__file__).parent.parent
+
+
+def get_backup_paths():
+    """
+    Gibt Backup-Pfade zurück (respektiert DATA_DIR).
+
+    - Tauri Desktop-App: AppData/Roaming/Billino/backups/
+    - Standalone FE/BE: backend/data/backups/
+    """
+    data_dir = get_data_dir()
+    return {
+        "backup_root": data_dir / "backups",
+        "backup_daily": data_dir / "backups" / "daily",
+        "pdf_archive": data_dir / "pdfs" / "archive",
+        "pdf_invoices": data_dir / "pdfs" / "invoices",
+        "pdf_summary": data_dir / "pdfs" / "summary_invoices",
+    }
 
 
 class BackupHandler:
@@ -25,16 +43,6 @@ class BackupHandler:
 
     Erkennt automatisch Tauri-Umgebung und wählt entsprechende Backup-Strategie.
     """
-
-    # Backup-Verzeichnis-Struktur (relativ zu Backend-Root, im data/ Ordner)
-    BACKUP_ROOT = BACKEND_ROOT / "data" / "backups"
-    BACKUP_DAILY = BACKUP_ROOT / "daily"
-    PDF_ARCHIVE = BACKEND_ROOT / "data" / "pdfs" / "archive"
-
-    # Datenbank-Pfad (relativ zu Backend-Root)
-    DB_PATH = BACKEND_ROOT / "data" / "billino.db"
-    PDF_INVOICES_PATH = BACKEND_ROOT / "data" / "pdfs" / "invoices"
-    PDF_SUMMARY_PATH = BACKEND_ROOT / "data" / "pdfs" / "summary_invoices"
 
     def __init__(
         self,
@@ -47,17 +55,21 @@ class BackupHandler:
         Initialisiere BackupHandler.
 
         Args:
-            backup_root: Root-Verzeichnis für Backups (standard: ./backups)
-            db_path: Pfad zur Datenbank (standard: ./data/billino.db)
+            backup_root: Root-Verzeichnis für Backups (standard: get_backup_paths())
+            db_path: Pfad zur Datenbank (standard: get_db_file())
             tauri_enabled: Tauri-Modus aktiviert (default: False)
             retention_days: Tage, bis alte Backups gelöscht werden (default: 30)
         """
-        if backup_root:
-            self.BACKUP_ROOT = backup_root
-            self.BACKUP_DAILY = backup_root / "daily"
+        from database import get_db_file
 
-        if db_path:
-            self.DB_PATH = db_path
+        paths = get_backup_paths()
+
+        self.BACKUP_ROOT = backup_root or paths["backup_root"]
+        self.BACKUP_DAILY = self.BACKUP_ROOT / "daily"
+        self.PDF_ARCHIVE = paths["pdf_archive"]
+        self.DB_PATH = db_path or get_db_file()
+        self.PDF_INVOICES_PATH = paths["pdf_invoices"]
+        self.PDF_SUMMARY_PATH = paths["pdf_summary"]
 
         self.tauri_enabled = self._detect_tauri_enabled(tauri_enabled)
         self.retention_days = retention_days
