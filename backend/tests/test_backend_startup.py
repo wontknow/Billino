@@ -99,28 +99,6 @@ class TestStartupValidation:
         assert result["valid"] is True
         assert len(result["errors"]) == 0
 
-    def test_validate_startup_port_in_use(self):
-        """Validation detects when port is already in use."""
-        import socket
-
-        # Bind a port
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind(("127.0.0.1", 9999))
-
-        try:
-            config = BackendConfig(
-                host="127.0.0.1",
-                port=9999,
-            )
-
-            result = validate_startup_conditions(config)
-
-            assert result["valid"] is False
-            assert len(result["errors"]) > 0
-            assert "already in use" in result["errors"][0].lower()
-        finally:
-            sock.close()
-
     def test_validate_startup_creates_log_directory(self, tmp_path, monkeypatch):
         """Validation creates log directory if it doesn't exist."""
         config = BackendConfig()

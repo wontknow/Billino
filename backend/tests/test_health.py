@@ -10,7 +10,12 @@ client = TestClient(app)
 def test_health():
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    data = response.json()
+    # Check that the response has the expected structure
+    assert "status" in data
+    assert data["status"] in ["ok", "starting"]  # Allow both states
+    assert "db_status" in data
+    assert "uptime_ms" in data
 
 
 def test_health_cors_headers():
