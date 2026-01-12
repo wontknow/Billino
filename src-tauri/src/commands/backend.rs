@@ -4,7 +4,6 @@
 use serde::{Deserialize, Serialize};
 
 use crate::backend::monitor;
-use crate::backend::state::BackendState;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BackendStatus {

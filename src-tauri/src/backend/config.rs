@@ -6,6 +6,7 @@ use std::net::TcpListener;
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
+use tauri::Manager;
 
 use super::error::BackendError;
 
@@ -176,7 +177,15 @@ fn resolve_binary_path(app: &tauri::AppHandle) -> Result<PathBuf, BackendError> 
         .resource_dir()
         .map_err(|e| BackendError::Internal(e.to_string()))?;
 
-    // Determine binary name based on platform
+    // In development, use Python directly instead of exe
+    // Look for backend/main.py for development mode
+    let dev_backend_path = resource_dir.join("../../../backend/main.py");
+    if dev_backend_path.exists() {
+        log::info!("✅ Using development Python backend: {:?}", dev_backend_path);
+        return Ok(dev_backend_path);
+    }
+
+    // Fallback to bundled exe for production
     #[cfg(target_os = "windows")]
     let binary_name = "billino-backend.exe";
     #[cfg(not(target_os = "windows"))]
@@ -190,7 +199,11 @@ fn resolve_binary_path(app: &tauri::AppHandle) -> Result<PathBuf, BackendError> 
     } else {
         // Try looking in common paths
         let fallback_paths = vec![
+            // Dev mode: bin directory
+            resource_dir.join(format!("../../bin/{}", binary_name)),
+            // Dev mode: backend dist
             resource_dir.join("../../../backend/dist/billino-backend"),
+            // System-wide installations
             PathBuf::from(format!("/usr/local/bin/{}", binary_name)),
             PathBuf::from(format!("C:\\Program Files\\Billino\\{}", binary_name)),
         ];

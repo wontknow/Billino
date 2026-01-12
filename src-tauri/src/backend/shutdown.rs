@@ -2,8 +2,6 @@
 // Graceful backend shutdown
 
 use std::process::Command;
-use std::time::Duration;
-use std::thread;
 
 use super::error::BackendError;
 

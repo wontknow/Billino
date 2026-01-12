@@ -34,14 +34,13 @@ pub fn wait_until_healthy_blocking(config: &BackendConfig) -> Result<HealthStatu
         }
 
         if Instant::now() >= deadline {
-            let error_msg = last_error.unwrap_or_else(|| "Unknown error".to_string());
+            let _error_msg = last_error.unwrap_or_else(|| "Unknown error".to_string());
             return Err(BackendError::HealthCheckTimeout {
                 duration_secs: config.startup_timeout_secs,
             });
         }
 
-        // Exponential backoff with max 2 seconds between attempts
-        let backoff = std::cmp::min(
+        let backoff = std::cmp::max(
             (2_u64).pow(std::cmp::min(attempt / 3, 3)),
             2,
         );

@@ -2,6 +2,7 @@
 // Tauri event emissions to frontend
 
 use serde_json::json;
+use tauri::Emitter;
 
 /// Emit when backend has started and is healthy
 pub fn emit_backend_ready(app: &tauri::AppHandle) {

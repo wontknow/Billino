@@ -1,27 +1,58 @@
 // src-tauri/src/backend/spawn.rs
 // Backend process spawning
 
-use std::process::{Command, Stdio};
-
-use tauri_plugin_shell::process::CommandChild;
+use std::path::PathBuf;
+use std::process::{Child, Command, Stdio};
 
 use super::config::BackendConfig;
 use super::error::BackendError;
 
 /// Spawn the backend process
-pub fn spawn_backend(config: &BackendConfig) -> Result<CommandChild, BackendError> {
+pub fn spawn_backend(config: &BackendConfig) -> Result<Child, BackendError> {
     log::info!(
         "🔄 Spawning backend process: {:?}",
         config.binary_path
     );
 
-    // Build command
-    let mut cmd = Command::new(&config.binary_path);
-
-    // Set working directory to backend folder
-    if let Some(parent) = config.binary_path.parent() {
-        cmd.current_dir(parent);
-    }
+    // Check if this is a Python file (.py) - use Python interpreter
+    let mut cmd = if config.binary_path.extension().and_then(|s| s.to_str()) == Some("py") {
+        log::info!("📝 Detected Python script, using uvicorn directly");
+        
+        // Find Python in virtual environment
+        let backend_dir = config.binary_path.parent()
+            .ok_or_else(|| BackendError::Internal("Cannot determine backend directory".to_string()))?;
+        
+        #[cfg(target_os = "windows")]
+        let python_path = backend_dir.join(".venv/Scripts/python.exe");
+        #[cfg(not(target_os = "windows"))]
+        let python_path = backend_dir.join(".venv/bin/python");
+        
+        let python_exe = if python_path.exists() {
+            log::info!("✅ Using venv Python: {:?}", python_path);
+            python_path
+        } else {
+            log::warn!("⚠️ venv not found, using system Python");
+            PathBuf::from("python")
+        };
+        
+        let mut python_cmd = Command::new(&python_exe);
+        python_cmd.args(&["-m", "uvicorn", "main:app", "--host", &config.host, "--port", &config.port.to_string()]);
+        
+        // Set working directory to backend folder
+        python_cmd.current_dir(backend_dir);
+        
+        python_cmd
+    } else {
+        // Binary executable
+        let mut bin_cmd = Command::new(&config.binary_path);
+        
+        // Set working directory to backend folder
+        if let Some(parent) = config.binary_path.parent() {
+            bin_cmd.current_dir(parent);
+        }
+        
+        bin_cmd
+    };
 
     // Set environment variables
     cmd.env("BACKEND_HOST", &config.host);
@@ -33,35 +64,15 @@ pub fn spawn_backend(config: &BackendConfig) -> Result<CommandChild, BackendErro
         cmd.env(key, value);
     }
 
-    // Configure stdio
-    cmd.stdout(Stdio::piped());
-    cmd.stderr(Stdio::piped());
+    // Configure stdio - inherit for console output
+    cmd.stdout(Stdio::inherit());
+    cmd.stderr(Stdio::inherit());
 
-    // Spawn process using tauri_plugin_shell
-    use tauri_plugin_shell::ShellExt;
+    // Spawn process
+    let child = cmd
+        .spawn()
+        .map_err(|e| BackendError::SpawnFailed(e.to_string()))?;
 
-    let (rx, mut child) = tauri::async_runtime::block_on(async {
-        match cmd.spawn() {
-            Ok((rx, child)) => (rx, child),
-            Err(e) => {
-                return Err(BackendError::SpawnFailed(e.to_string()));
-            }
-        }
-    })?;
-
-    // Log stdout/stderr
-    tauri::async_runtime::spawn(async move {
-        use futures::io::AsyncReadExt;
-        let mut output = String::new();
-        let mut rx = rx;
-        while let Ok(Some(line)) = rx.read_line().await {
-            output.push_str(&line);
-        }
-        if !output.is_empty() {
-            log::debug!("Backend output: {}", output);
-        }
-    });
-
-    log::info!("✅ Backend process spawned (PID: {:?})", child.pid());
+    log::info!("✅ Backend process spawned (PID: {:?})", child.id());
     Ok(child)
 }

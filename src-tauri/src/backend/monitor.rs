@@ -1,10 +1,9 @@
 // src-tauri/src/backend/monitor.rs
 // Continuous backend process monitoring
 
+use std::process::Child;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-
-use tauri_plugin_shell::process::CommandChild;
 
 use super::config::BackendConfig;
 use super::state::BackendState;
@@ -35,7 +34,7 @@ lazy_static::lazy_static! {
     static ref MONITOR: BackendMonitor = BackendMonitor::new();
 }
 
-pub fn monitor_backend(config: &BackendConfig, app: &tauri::AppHandle, mut child: CommandChild) {
+pub fn monitor_backend(config: &BackendConfig, app: &tauri::AppHandle, mut child: Child) {
     log::info!("👁️ Starting backend monitoring...");
 
     MONITOR.set_state(BackendState::Starting);
@@ -47,13 +46,13 @@ pub fn monitor_backend(config: &BackendConfig, app: &tauri::AppHandle, mut child
     std::thread::spawn(move || {
         // Wait for process to exit
         match child.wait() {
-            Ok(output) => {
+            Ok(status) => {
                 log::error!(
                     "❌ Backend process exited with status: {:?}",
-                    output.code()
+                    status.code()
                 );
 
-                if output.code() == Some(0) {
+                if status.code() == Some(0) {
                     MONITOR.set_state(BackendState::StoppedClean);
                     crate::events::emit_backend_stopped(&app_handle);
                 } else {

@@ -8,8 +8,7 @@ mod commands;
 mod error;
 mod events;
 
-use tauri::{Manager, WindowEvent};
-use std::sync::Arc;
+use tauri::WindowEvent;
 
 fn main() {
     tauri::Builder::default()
@@ -27,10 +26,10 @@ fn main() {
                 }
                 Err(e) => {
                     log::error!("❌ Failed to load configuration: {}", e);
-                    events::emit_backend_error(app.handle(), &e);
-                    return Err(tauri::Error::Io(std::io::Error::new(
+                    events::emit_backend_error(app.handle(), &e.to_string());
+                    return Err(Box::new(std::io::Error::new(
                         std::io::ErrorKind::InvalidInput,
-                        e,
+                        e.to_string(),
                     )));
                 }
             };
@@ -39,9 +38,9 @@ fn main() {
             if let Err(e) = config.validate() {
                 log::error!("❌ Configuration validation failed: {}", e);
                 events::emit_backend_error(app.handle(), &format!("Validation: {}", e));
-                return Err(tauri::Error::Io(std::io::Error::new(
+                return Err(Box::new(std::io::Error::new(
                     std::io::ErrorKind::InvalidInput,
-                    e,
+                    e.to_string(),
                 )));
             }
 
@@ -53,7 +52,7 @@ fn main() {
                 );
                 log::error!("❌ {}", err);
                 events::emit_backend_error(app.handle(), &err);
-                return Err(tauri::Error::Io(std::io::Error::new(
+                return Err(Box::new(std::io::Error::new(
                     std::io::ErrorKind::AddrInUse,
                     err,
                 )));
@@ -68,10 +67,10 @@ fn main() {
                 }
                 Err(e) => {
                     log::error!("❌ Failed to spawn backend: {}", e);
-                    events::emit_backend_error(app.handle(), &e);
-                    return Err(tauri::Error::Io(std::io::Error::new(
+                    events::emit_backend_error(app.handle(), &e.to_string());
+                    return Err(Box::new(std::io::Error::new(
                         std::io::ErrorKind::Other,
-                        e,
+                        e.to_string(),
                     )));
                 }
             };
@@ -85,15 +84,15 @@ fn main() {
                     config_clone.startup_timeout_secs
                 );
 
-                match std::thread::sleep(std::time::Duration::from_secs(1));
-                backend::health::wait_until_healthy_blocking(&config_clone) {
-                    Ok(health) => {
+                std::thread::sleep(std::time::Duration::from_secs(1));
+                match backend::health::wait_until_healthy_blocking(&config_clone) {
+                    Ok(_health) => {
                         log::info!("✅ Backend is healthy!");
                         events::emit_backend_ready(&app_handle);
                     }
                     Err(e) => {
                         log::error!("❌ Backend health check failed: {}", e);
-                        events::emit_backend_error(&app_handle, &e);
+                        events::emit_backend_error(&app_handle, &e.to_string());
                     }
                 }
             });
