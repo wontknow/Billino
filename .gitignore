@@ -44,6 +44,7 @@ docs/tickets/
 # Environment files
 .env
 .env.local
+.env.tauri
 
 # Package manager lock files (auto-generated)
 frontend/package-lock.json

@@ -25,8 +25,8 @@ def create_profile(profile: Profile, session: Session = Depends(get_session)):
 
     **Request Body:**
     - `name` (string, required): Company/profile name
-    - `address` (string, required): Company address
-    - `city` (string, required): Company city
+    - `address` (string, optional): Company address
+    - `city` (string, optional): Company city
     - `bank_data` (string, optional): Bank account information
     - `tax_number` (string, optional): Tax/VAT number
     - `include_tax` (boolean, optional): Whether to include VAT (default: true)
@@ -63,9 +63,9 @@ def create_profile(profile: Profile, session: Session = Depends(get_session)):
     ```
     """
     logger.info(f"📋 POST /profiles - Creating profile: {profile.name}")
-    if not profile.name or not profile.address:
-        logger.error(f"❌ Profile creation failed - Missing required fields")
-        raise HTTPException(status_code=400, detail="Missing required fields")
+    if not profile.name:
+        logger.error(f"❌ Profile creation failed - Profile name is required")
+        raise HTTPException(status_code=400, detail="Profile name is required")
     session.add(profile)
     session.commit()
     session.refresh(profile)

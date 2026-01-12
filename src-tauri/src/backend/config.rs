@@ -225,7 +225,7 @@ fn resolve_binary_path(app: &tauri::AppHandle) -> Result<PathBuf, BackendError> 
 fn load_env_file(app: &tauri::AppHandle) -> Result<HashMap<String, String>, BackendError> {
     let mut env_vars = HashMap::new();
 
-    // Try to load from .env in app data directory
+    // Try to load from .env in app data directory (production)
     if let Ok(app_dir) = app.path().app_data_dir() {
         let env_path = app_dir.join(".env");
         if env_path.exists() {
@@ -245,23 +245,60 @@ fn load_env_file(app: &tauri::AppHandle) -> Result<HashMap<String, String>, Back
         }
     }
 
-    // Try to load from backend .env (for development)
+    // Try to load from backend/.env.tauri (Tauri development, preferred)
     #[cfg(debug_assertions)]
     {
-        let dev_env_path = PathBuf::from("./backend/.env");
-        if dev_env_path.exists() {
-            if let Ok(content) = std::fs::read_to_string(&dev_env_path) {
-                for line in content.lines() {
-                    if let Some((key, value)) = line.split_once('=') {
-                        let key = key.trim().to_string();
-                        let value = value.trim().trim_matches('"').to_string();
-                        if !key.is_empty() && !key.starts_with('#') {
-                            env_vars.insert(key, value);
+        // Calculate project root: resource_dir -> ../../.. -> project root
+        if let Ok(resource_dir) = app.path().resource_dir() {
+            if let Some(project_root) = resource_dir.parent()
+                .and_then(|p| p.parent())
+                .and_then(|p| p.parent())
+            {
+                let tauri_env_path = project_root.join("backend/.env.tauri");
+                if tauri_env_path.exists() {
+                    if let Ok(content) = std::fs::read_to_string(&tauri_env_path) {
+                        for line in content.lines() {
+                            if let Some((key, value)) = line.split_once('=') {
+                                let key = key.trim().to_string();
+                                let value = value.trim().trim_matches('"').to_string();
+                                if !key.is_empty() && !key.starts_with('#') {
+                                    env_vars.insert(key, value);
+                                }
+                            }
                         }
+                        log::info!("✅ Loaded {} environment variables from backend/.env.tauri (Tauri-specific)", env_vars.len());
+                        return Ok(env_vars);
                     }
                 }
-                log::info!("✅ Loaded {} environment variables from backend/.env", env_vars.len());
-                return Ok(env_vars);
+            }
+        }
+    }
+
+    // Try to load from backend/.env (fallback for development)
+    #[cfg(debug_assertions)]
+    {
+        // Calculate project root: resource_dir -> ../../.. -> project root
+        if let Ok(resource_dir) = app.path().resource_dir() {
+            if let Some(project_root) = resource_dir.parent()
+                .and_then(|p| p.parent())
+                .and_then(|p| p.parent())
+            {
+                let dev_env_path = project_root.join("backend/.env");
+                if dev_env_path.exists() {
+                    if let Ok(content) = std::fs::read_to_string(&dev_env_path) {
+                        for line in content.lines() {
+                            if let Some((key, value)) = line.split_once('=') {
+                                let key = key.trim().to_string();
+                                let value = value.trim().trim_matches('"').to_string();
+                                if !key.is_empty() && !key.starts_with('#') {
+                                    env_vars.insert(key, value);
+                                }
+                            }
+                        }
+                        log::info!("✅ Loaded {} environment variables from backend/.env", env_vars.len());
+                        return Ok(env_vars);
+                    }
+                }
             }
         }
     }
