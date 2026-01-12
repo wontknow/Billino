@@ -1,16 +1,12 @@
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
+// src-tauri/src/lib.rs
+// Billino Desktop - Library Entry Point
+
+pub mod backend;
+pub mod commands;
+pub mod error;
+pub mod events;
+
 pub fn run() {
-  tauri::Builder::default()
-    .setup(|app| {
-      if cfg!(debug_assertions) {
-        app.handle().plugin(
-          tauri_plugin_log::Builder::default()
-            .level(log::LevelFilter::Info)
-            .build(),
-        )?;
-      }
-      Ok(())
-    })
-    .run(tauri::generate_context!())
-    .expect("error while running tauri application");
+    // This function is called from main.rs via app_lib::run()
+    // The actual app initialization happens in main.rs
 }

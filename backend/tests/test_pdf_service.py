@@ -161,9 +161,8 @@ class TestPDFDataService:
 
         # Check basic structure
         assert isinstance(pdf_data, PDFInvoiceData)
-        assert pdf_data.invoice_number.startswith(
-            "25 |"
-        )  # Invoice number is auto-generated
+        # Invoice number is auto-generated with current year
+        assert " | " in pdf_data.invoice_number  # Format: "YY | NNN"
         assert pdf_data.date == date(2025, 10, 20)
 
         # Check profile data - use flexible checks since tests may interfere
