@@ -10,12 +10,14 @@ use super::state::BackendState;
 
 pub struct BackendMonitor {
     state: Arc<Mutex<BackendState>>,
+    child: Arc<Mutex<Option<Child>>>,
 }
 
 impl BackendMonitor {
     pub fn new() -> Self {
         Self {
             state: Arc::new(Mutex::new(BackendState::NotStarted)),
+            child: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -27,6 +29,24 @@ impl BackendMonitor {
         *self.state.lock().unwrap() = state;
         log::info!("📊 Backend state changed: {}", state);
     }
+
+    pub fn set_child(&self, child: Child) {
+        *self.child.lock().unwrap() = Some(child);
+        log::info!("💾 Backend process stored");
+    }
+
+    pub fn kill_child(&self) -> Result<(), String> {
+        let mut child_lock = self.child.lock().unwrap();
+        if let Some(mut child) = child_lock.take() {
+            log::info!("🛑 Terminating backend process...");
+            child.kill().map_err(|e| format!("Failed to kill process: {}", e))?;
+            log::info!("✅ Backend process terminated");
+            Ok(())
+        } else {
+            log::warn!("⚠️ No child process to terminate");
+            Ok(())
+        }
+    }
 }
 
 // Global monitor instance
@@ -34,46 +54,11 @@ lazy_static::lazy_static! {
     static ref MONITOR: BackendMonitor = BackendMonitor::new();
 }
 
-pub fn monitor_backend(config: &BackendConfig, app: &tauri::AppHandle, mut child: Child) {
+pub fn monitor_backend(config: &BackendConfig, app: &tauri::AppHandle, child: Child) {
     log::info!("👁️ Starting backend monitoring...");
 
     MONITOR.set_state(BackendState::Starting);
-
-    // Monitor process exit
-    let app_handle = app.clone();
-    let config_clone = config.clone();
-
-    std::thread::spawn(move || {
-        // Wait for process to exit
-        match child.wait() {
-            Ok(status) => {
-                log::error!(
-                    "❌ Backend process exited with status: {:?}",
-                    status.code()
-                );
-
-                if status.code() == Some(0) {
-                    MONITOR.set_state(BackendState::StoppedClean);
-                    crate::events::emit_backend_stopped(&app_handle);
-                } else {
-                    MONITOR.set_state(BackendState::Crashed);
-                    crate::events::emit_backend_crashed(&app_handle, "Unexpected exit");
-
-                    // Try auto-restart
-                    if config_clone.auto_restart {
-                        log::info!("🔄 Attempting automatic restart...");
-                        // Note: In production, you'd want to track restart attempts
-                        // and abort after max_restart_attempts
-                    }
-                }
-            }
-            Err(e) => {
-                log::error!("❌ Error waiting for backend process: {}", e);
-                MONITOR.set_state(BackendState::Crashed);
-                crate::events::emit_backend_error(&app_handle, &e.to_string());
-            }
-        }
-    });
+    MONITOR.set_child(child); // Store child process for later termination
 
     // Periodic health checks
     let app_handle = app.clone();
@@ -105,7 +90,7 @@ pub fn monitor_backend(config: &BackendConfig, app: &tauri::AppHandle, mut child
                     if consecutive_failures >= 3 {
                         if MONITOR.get_state() != BackendState::Unhealthy {
                             log::warn!(
-                                "⚠️ Backend is unhealthy ({}  consecutive failures)",
+                                "⚠️ Backend is unhealthy ({} consecutive failures)",
                                 consecutive_failures
                             );
                             MONITOR.set_state(BackendState::Unhealthy);
@@ -120,4 +105,8 @@ pub fn monitor_backend(config: &BackendConfig, app: &tauri::AppHandle, mut child
 
 pub fn get_backend_state() -> BackendState {
     MONITOR.get_state()
+}
+
+pub fn kill_backend() -> Result<(), String> {
+    MONITOR.kill_child()
 }
