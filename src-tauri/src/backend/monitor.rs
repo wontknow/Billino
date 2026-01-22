@@ -120,45 +120,71 @@ pub fn kill_backend() -> Result<(), String> {
 
 /// Trigger a backup via API and then terminate backend
 /// 
-/// This function waits for the backup to complete OR for the shutdown timeout to expire
-/// before killing the backend process. This ensures backups have enough time to complete.
+/// This function initiates a backup request in a separate thread and waits a short bounded time
+/// (up to 500ms) to ensure the request has been attempted before terminating the backend.
+/// This avoids blocking the shutdown process while giving the backup request a reasonable chance to be sent.
 pub fn trigger_backup_and_shutdown() -> Result<(), String> {
-    // Try to trigger manual backup first (best-effort)
+    // Try to trigger manual backup first (best-effort with bounded wait)
     if let Some(cfg) = MONITOR.config.lock().unwrap().clone() {
         let url = format!("{}/backups/trigger", cfg.backend_url());
-        let timeout_secs = cfg.shutdown_timeout_secs;
         
         log::info!("🧩 Triggering manual backup before shutdown: {}", url);
-        log::info!("⏱️ Waiting up to {} seconds for backup to complete", timeout_secs);
         
-        let client = reqwest::blocking::Client::new();
-        let res = client
-            .post(url)
-            .timeout(Duration::from_secs(timeout_secs))
-            .send();
+        // Use a channel to signal when the request attempt has completed
+        let (tx, rx) = std::sync::mpsc::sync_channel(1);
         
-        match res {
-            Ok(r) => {
-                if r.status().is_success() {
-                    log::info!("✅ Manual backup completed successfully before shutdown");
-                } else {
-                    log::warn!("⚠️ Manual backup returned status {} - proceeding with shutdown", r.status());
+        // Spawn thread for backup request
+        std::thread::spawn(move || {
+            let client = match reqwest::blocking::Client::builder()
+                .connect_timeout(Duration::from_millis(150))  // Short connect timeout  
+                .timeout(Duration::from_millis(400))          // Max 400ms total - enough to dispatch but not block shutdown
+                .build()
+            {
+                Ok(c) => c,
+                Err(e) => {
+                    log::error!("❌ Failed to build HTTP client for backup request: {}", e);
+                    // Don't signal yet - this is a setup error, not a request attempt
+                    return;
+                }
+            };
+            
+            // Attempt to send the request (will timeout quickly if backend is slow)
+            let result = client.post(&url).send();
+            
+            // Signal that the request has been attempted (sent or failed)
+            // This is the only place we signal to avoid race conditions
+            let _ = tx.send(());
+            
+            // Log the outcome
+            match result {
+                Ok(r) => {
+                    if r.status().is_success() {
+                        log::info!("✅ Manual backup request completed successfully");
+                    } else {
+                        log::warn!("⚠️ Manual backup returned status {}", r.status());
+                    }
+                }
+                Err(e) => {
+                    log::warn!("⚠️ Manual backup request failed: {}", e);
                 }
             }
-            Err(e) => {
-                // Check if it was a timeout error
-                if e.is_timeout() {
-                    log::warn!("⚠️ Manual backup timed out after {} seconds - proceeding with shutdown", timeout_secs);
-                } else {
-                    log::warn!("⚠️ Manual backup failed: {} - proceeding with shutdown", e);
-                }
+        });
+        
+        // Wait up to 500ms for the request to be attempted
+        // This gives the thread time to connect and send the request (400ms timeout + margin)
+        match rx.recv_timeout(Duration::from_millis(500)) {
+            Ok(()) => {
+                log::info!("⏱️ Backup request attempted, proceeding with shutdown");
+            }
+            Err(_) => {
+                log::warn!("⚠️ Backup request attempt timed out, proceeding with shutdown");
             }
         }
     } else {
         log::warn!("⚠️ No backend config available for manual backup trigger");
     }
 
-    // Only kill the backend after backup completed or timeout expired
-    log::info!("🛑 Terminating backend process after backup attempt");
+    // Terminate backend process after bounded wait
+    log::info!("🛑 Terminating backend process");
     kill_backend()
 }

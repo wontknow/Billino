@@ -27,7 +27,7 @@ pub struct BackendConfig {
     /// Startup timeout in seconds
     pub startup_timeout_secs: u64,
 
-    /// Graceful shutdown timeout in seconds
+    /// Graceful shutdown timeout in seconds (reserved for future use)
     pub shutdown_timeout_secs: u64,
 
     /// Health check interval in seconds
@@ -92,9 +92,9 @@ impl BackendConfig {
             ));
         }
 
-        if self.shutdown_timeout_secs < 10 {
+        if self.shutdown_timeout_secs < 1 {
             return Err(BackendError::ConfigError(
-                "Shutdown timeout must be at least 10 seconds to allow time for backups".to_string(),
+                "Shutdown timeout must be at least 1 second".to_string(),
             ));
         }
 
@@ -132,7 +132,7 @@ pub fn load_config(app: &tauri::AppHandle) -> Result<BackendConfig, BackendError
     let shutdown_timeout_secs = env_vars
         .get("BACKEND_SHUTDOWN_TIMEOUT")
         .and_then(|t| t.parse().ok())
-        .unwrap_or(30); // Default to 30s to allow time for DB+PDF backups
+        .unwrap_or(30); // Default 30s (reserved for future use)
 
     let health_check_interval_secs = env_vars
         .get("BACKEND_HEALTH_INTERVAL")
