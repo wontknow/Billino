@@ -2,7 +2,6 @@
 // Graceful backend shutdown
 
 use super::error::BackendError;
-use super::monitor;
 
 /// Stop backend gracefully
 pub fn stop_backend_gracefully() -> Result<(), BackendError> {
