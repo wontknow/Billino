@@ -166,9 +166,9 @@ async def lifespan(app: FastAPI):
     logger.info("📊 App marked as not ready (rejecting new requests)")
 
     try:
-        if BackupScheduler._handler is not None:
-            logger.info("💾 Running shutdown backup (DB + PDFs)...")
-            BackupScheduler.backup_on_shutdown()
+        logger.info("💾 Running shutdown backup (DB + PDFs)...")
+        shutdown_backup_result = BackupScheduler.backup_on_shutdown()
+        logger.info(f"💾 Shutdown backup result: {shutdown_backup_result}")
 
         if BackupScheduler._scheduler is not None:
             logger.info("⏳ Stopping backup scheduler...")
