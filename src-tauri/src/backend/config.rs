@@ -132,7 +132,7 @@ pub fn load_config(app: &tauri::AppHandle) -> Result<BackendConfig, BackendError
     let shutdown_timeout_secs = env_vars
         .get("BACKEND_SHUTDOWN_TIMEOUT")
         .and_then(|t| t.parse().ok())
-        .unwrap_or(30); // Default to 30s to allow time for DB+PDF backups
+        .unwrap_or(30); // Default 30s (reserved for future use)
 
     let health_check_interval_secs = env_vars
         .get("BACKEND_HEALTH_INTERVAL")

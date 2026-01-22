@@ -121,8 +121,8 @@ pub fn kill_backend() -> Result<(), String> {
 /// Trigger a backup via API and then terminate backend
 /// 
 /// This function initiates a backup request in a separate thread and waits a short bounded time
-/// (up to 500ms) to ensure the request has been dispatched before terminating the backend.
-/// This avoids blocking the shutdown process while still giving the backup request a chance to succeed.
+/// (up to 400ms) to ensure the request has been attempted before terminating the backend.
+/// This avoids blocking the shutdown process while giving the backup request a reasonable chance to be sent.
 pub fn trigger_backup_and_shutdown() -> Result<(), String> {
     // Try to trigger manual backup first (best-effort with bounded wait)
     if let Some(cfg) = MONITOR.config.lock().unwrap().clone() {
@@ -130,31 +130,35 @@ pub fn trigger_backup_and_shutdown() -> Result<(), String> {
         
         log::info!("🧩 Triggering manual backup before shutdown: {}", url);
         
-        // Use a channel to signal when the request has been dispatched
-        let (tx, rx) = std::sync::mpsc::channel();
+        // Use a channel to signal when the request attempt has completed
+        let (tx, rx) = std::sync::mpsc::sync_channel(1);
         
         // Spawn thread for backup request
         std::thread::spawn(move || {
             let client = match reqwest::blocking::Client::builder()
-                .connect_timeout(Duration::from_millis(300))  // Short connect timeout
-                .timeout(Duration::from_secs(2))              // Max 2s total
+                .connect_timeout(Duration::from_millis(200))  // Short connect timeout  
+                .timeout(Duration::from_millis(300))          // Max 300ms total - enough to dispatch but not block shutdown
                 .build()
             {
                 Ok(c) => c,
                 Err(e) => {
                     log::error!("❌ Failed to build HTTP client for backup request: {}", e);
-                    let _ = tx.send(false); // Signal failure
+                    let _ = tx.send(()); // Signal that we tried
                     return;
                 }
             };
             
-            // Signal that we're about to send the request
-            let _ = tx.send(true);
+            // Attempt to send the request (will timeout quickly if backend is slow)
+            let result = client.post(&url).send();
             
-            match client.post(&url).send() {
+            // Signal that the request has been attempted (sent or failed)
+            let _ = tx.send(());
+            
+            // Log the outcome
+            match result {
                 Ok(r) => {
                     if r.status().is_success() {
-                        log::info!("✅ Manual backup request sent successfully");
+                        log::info!("✅ Manual backup request completed successfully");
                     } else {
                         log::warn!("⚠️ Manual backup returned status {}", r.status());
                     }
@@ -165,16 +169,14 @@ pub fn trigger_backup_and_shutdown() -> Result<(), String> {
             }
         });
         
-        // Wait up to 500ms for the request to be dispatched
-        match rx.recv_timeout(Duration::from_millis(500)) {
-            Ok(true) => {
-                log::info!("⏱️ Backup request dispatched, proceeding with shutdown");
-            }
-            Ok(false) => {
-                log::warn!("⚠️ Failed to dispatch backup request, proceeding with shutdown");
+        // Wait up to 400ms for the request to be attempted
+        // This gives the thread time to connect and send the request
+        match rx.recv_timeout(Duration::from_millis(400)) {
+            Ok(()) => {
+                log::info!("⏱️ Backup request attempted, proceeding with shutdown");
             }
             Err(_) => {
-                log::warn!("⚠️ Backup request dispatch timed out, proceeding with shutdown");
+                log::warn!("⚠️ Backup request attempt timed out, proceeding with shutdown");
             }
         }
     } else {
