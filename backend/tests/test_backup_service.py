@@ -349,14 +349,17 @@ class TestBackupScheduler:
             # Kann fehlschlag haben wegen Pfad-Unterschieden, aber nicht crashen
             assert isinstance(result, dict)
 
-    def test_backup_on_shutdown(self):
-        """Test: Shutdown-Backup (DB) wird korrekt ausgeführt."""
+    def test_backup_on_shutdown(self, monkeypatch):
+        """Test: Shutdown-Backup (DB + PDFs) wird korrekt ausgeführt."""
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
             backup_dir = tmpdir / "backups"
             data_dir = tmpdir / "data"
             (data_dir / "pdfs" / "invoices").mkdir(parents=True)
             (data_dir / "pdfs" / "summary_invoices").mkdir(parents=True)
+
+            # Setze DATA_DIR Umgebungsvariable für isolierten Test
+            monkeypatch.setenv("DATA_DIR", str(data_dir))
 
             # Erstelle echte SQLite-Datenbank
             db_file = data_dir / "billino.db"
@@ -369,6 +372,8 @@ class TestBackupScheduler:
             # Erstelle Test-PDFs
             invoice_dir = data_dir / "pdfs" / "invoices"
             (invoice_dir / "test_invoice.pdf").write_text("Invoice PDF content")
+            summary_dir = data_dir / "pdfs" / "summary_invoices"
+            (summary_dir / "summary_invoice.pdf").write_text("Summary PDF content")
 
             # Initialisiere Scheduler mit Handler
             handler = BackupHandler(
@@ -381,7 +386,7 @@ class TestBackupScheduler:
             # Führe Shutdown-Backup aus
             result = BackupScheduler.backup_on_shutdown()
 
-            # Assertions
+            # Assertions für Backup-Ergebnis
             assert result is not None
             assert isinstance(result, dict)
             assert "success" in result
@@ -393,6 +398,11 @@ class TestBackupScheduler:
             backup_path = Path(result["backup_path"])
             assert backup_path.exists()
             assert backup_path.name.startswith("billino_")
+
+            # Verifiziere, dass PDF-Backup (Archivierung) durchgeführt wurde
+            pdf_archive = data_dir / "pdfs" / "archive"
+            assert (pdf_archive / "invoices" / "test_invoice.pdf").exists()
+            assert (pdf_archive / "summary_invoices" / "summary_invoice.pdf").exists()
             assert backup_path.stat().st_size > 0
 
             # Windows-spezifisch: Cleanup
