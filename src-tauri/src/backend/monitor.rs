@@ -118,73 +118,52 @@ pub fn kill_backend() -> Result<(), String> {
     MONITOR.kill_child()
 }
 
-/// Trigger a backup via API and then terminate backend
+/// Trigger graceful shutdown via API
 /// 
-/// This function initiates a backup request in a separate thread and waits a short bounded time
-/// (up to 500ms) to ensure the request has been attempted before terminating the backend.
-/// This avoids blocking the shutdown process while giving the backup request a reasonable chance to be sent.
+/// This function initiates a shutdown request in a separate thread.
+/// The UI can close immediately while the backend performs shutdown backup asynchronously.
 pub fn trigger_backup_and_shutdown() -> Result<(), String> {
-    // Try to trigger manual backup first (best-effort with bounded wait)
+    // Try to trigger graceful shutdown (fire-and-forget)
     if let Some(cfg) = MONITOR.config.lock().unwrap().clone() {
-        let url = format!("{}/backups/trigger", cfg.backend_url());
+        let url = format!("{}/shutdown", cfg.backend_url());
         
-        log::info!("🧩 Triggering manual backup before shutdown: {}", url);
+        log::info!("🛑 Triggering graceful shutdown: {}", url);
         
-        // Use a channel to signal when the request attempt has completed
-        let (tx, rx) = std::sync::mpsc::sync_channel(1);
-        
-        // Spawn thread for backup request
+        // Spawn thread for shutdown request (don't wait for completion)
         std::thread::spawn(move || {
             let client = match reqwest::blocking::Client::builder()
-                .connect_timeout(Duration::from_millis(150))  // Short connect timeout  
-                .timeout(Duration::from_millis(400))          // Max 400ms total - enough to dispatch but not block shutdown
+                .connect_timeout(Duration::from_millis(500))  
+                .timeout(Duration::from_millis(1000))          
                 .build()
             {
                 Ok(c) => c,
                 Err(e) => {
-                    log::error!("❌ Failed to build HTTP client for backup request: {}", e);
-                    // Don't signal yet - this is a setup error, not a request attempt
+                    log::error!("❌ Failed to build HTTP client for shutdown request: {}", e);
                     return;
                 }
             };
             
-            // Attempt to send the request (will timeout quickly if backend is slow)
+            // Attempt to send the request
             let result = client.post(&url).send();
-            
-            // Signal that the request has been attempted (sent or failed)
-            // This is the only place we signal to avoid race conditions
-            let _ = tx.send(());
             
             // Log the outcome
             match result {
                 Ok(r) => {
                     if r.status().is_success() {
-                        log::info!("✅ Manual backup request completed successfully");
+                        log::info!("✅ Shutdown request sent successfully");
                     } else {
-                        log::warn!("⚠️ Manual backup returned status {}", r.status());
+                        log::warn!("⚠️ Shutdown request returned status {}", r.status());
                     }
                 }
                 Err(e) => {
-                    log::warn!("⚠️ Manual backup request failed: {}", e);
+                    log::warn!("⚠️ Shutdown request failed: {}", e);
                 }
             }
         });
-        
-        // Wait up to 500ms for the request to be attempted
-        // This gives the thread time to connect and send the request (400ms timeout + margin)
-        match rx.recv_timeout(Duration::from_millis(500)) {
-            Ok(()) => {
-                log::info!("⏱️ Backup request attempted, proceeding with shutdown");
-            }
-            Err(_) => {
-                log::warn!("⚠️ Backup request attempt timed out, proceeding with shutdown");
-            }
-        }
     } else {
-        log::warn!("⚠️ No backend config available for manual backup trigger");
+        log::warn!("⚠️ No backend config available for graceful shutdown trigger");
     }
 
-    // Terminate backend process after bounded wait
-    log::info!("🛑 Terminating backend process");
-    kill_backend()
+    // Don't wait - let UI close immediately, backend will shutdown itself
+    Ok(())
 }

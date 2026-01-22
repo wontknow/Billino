@@ -115,3 +115,40 @@ def health() -> HealthResponse:
         version="0.1.0",
         environment=os.getenv("ENV", "development"),
     )
+
+
+@router.post("/shutdown", tags=["health"])
+def shutdown(background_tasks: BackgroundTasks):
+    """
+    Trigger graceful shutdown of the backend.
+
+    This endpoint runs shutdown backup and then terminates the backend process.
+
+    **Used by Tauri desktop app** to gracefully terminate the backend
+    process during application shutdown.
+
+    **Response:** No content (204) - shutdown initiated
+    """
+    logger.warning("🛑 Shutdown requested via API, running shutdown backup...")
+    
+    # Run shutdown backup synchronously
+    from services.backup_scheduler import BackupScheduler
+    try:
+        result = BackupScheduler.backup_on_shutdown()
+        logger.info(f"💾 Shutdown backup completed: {result}")
+    except Exception as e:
+        logger.error(f"❌ Shutdown backup failed: {e}")
+    
+    # Schedule backend shutdown after response
+    background_tasks.add_task(shutdown_backend)
+    
+    # Return response first
+    return {"message": "Shutdown initiated"}
+
+def shutdown_backend():
+    """Shutdown the backend after a short delay."""
+    import time
+    time.sleep(0.1)  # Brief delay to ensure response is sent
+    logger.info("✅ Backend shutting down after backup")
+    import os
+    os._exit(0)

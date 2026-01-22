@@ -40,11 +40,12 @@ pub fn spawn_backend(config: &BackendConfig, app_handle: &tauri::AppHandle) -> R
         #[cfg(not(target_os = "windows"))]
         let python_path = backend_dir.join(".venv/bin/python");
         
+        log::info!("Checking venv at: {:?}", python_path);
         let python_exe = if python_path.exists() {
             log::info!("✅ Using venv Python: {:?}", python_path);
             python_path
         } else {
-            log::warn!("⚠️ venv not found, using system Python");
+            log::warn!("⚠️ venv not found at {:?}, using system Python", python_path);
             PathBuf::from("python")
         };
         
@@ -76,6 +77,13 @@ pub fn spawn_backend(config: &BackendConfig, app_handle: &tauri::AppHandle) -> R
     // Pass through additional env vars
     for (key, value) in &config.env_vars {
         cmd.env(key, value);
+    }
+
+    // On Windows, use python.exe with no window
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
     }
 
     // Configure stdio - inherit for console output
