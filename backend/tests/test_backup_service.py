@@ -350,7 +350,7 @@ class TestBackupScheduler:
             assert isinstance(result, dict)
 
     def test_backup_on_shutdown(self):
-        """Test: Shutdown-Backup wird korrekt ausgeführt (DB + PDFs)."""
+        """Test: Shutdown-Backup (DB) wird korrekt ausgeführt."""
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
             backup_dir = tmpdir / "backups"
