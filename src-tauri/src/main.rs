@@ -123,7 +123,15 @@ fn main() {
         .on_window_event(|_window, event| match event {
             WindowEvent::Destroyed => {
                 log::info!("🛑 Main window destroyed, initiating graceful shutdown...");
-                backend::shutdown::stop_backend_gracefully();
+                // Use scoped thread with join to ensure cleanup completes before process exit
+                // while still being non-blocking to the event loop
+                std::thread::scope(|s| {
+                    s.spawn(|| {
+                        if let Err(err) = backend::shutdown::stop_backend_gracefully() {
+                            log::error!("❌ Failed to stop backend gracefully: {err}");
+                        }
+                    });
+                });
             }
             _ => {}
         })
