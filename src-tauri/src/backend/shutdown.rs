@@ -2,14 +2,15 @@
 // Graceful backend shutdown
 
 use super::error::BackendError;
+use super::monitor;
 
 /// Stop backend gracefully
 pub fn stop_backend_gracefully() -> Result<(), BackendError> {
     log::info!("🛑 Initiating graceful backend shutdown...");
 
-    // Kill the stored child process directly
-    if let Err(e) = super::monitor::kill_backend() {
-        log::error!("❌ {}", e);
+    // Minimal but safer shutdown: trigger backup then kill
+    if let Err(e) = super::monitor::trigger_backup_and_shutdown() {
+        log::error!("❌ Failed during backup+shutdown: {}", e);
         return Err(BackendError::Internal(e));
     }
 

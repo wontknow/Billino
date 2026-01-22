@@ -11,6 +11,7 @@ use super::state::BackendState;
 pub struct BackendMonitor {
     state: Arc<Mutex<BackendState>>,
     child: Arc<Mutex<Option<Child>>>,
+    config: Arc<Mutex<Option<BackendConfig>>>,
 }
 
 impl BackendMonitor {
@@ -18,6 +19,7 @@ impl BackendMonitor {
         Self {
             state: Arc::new(Mutex::new(BackendState::NotStarted)),
             child: Arc::new(Mutex::new(None)),
+            config: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -33,6 +35,10 @@ impl BackendMonitor {
     pub fn set_child(&self, child: Child) {
         *self.child.lock().unwrap() = Some(child);
         log::info!("💾 Backend process stored");
+    }
+
+    pub fn set_config(&self, cfg: BackendConfig) {
+        *self.config.lock().unwrap() = Some(cfg);
     }
 
     pub fn kill_child(&self) -> Result<(), String> {
@@ -59,6 +65,7 @@ pub fn monitor_backend(config: &BackendConfig, app: &tauri::AppHandle, child: Ch
 
     MONITOR.set_state(BackendState::Starting);
     MONITOR.set_child(child); // Store child process for later termination
+    MONITOR.set_config(config.clone());
 
     // Periodic health checks
     let app_handle = app.clone();
@@ -109,4 +116,35 @@ pub fn get_backend_state() -> BackendState {
 
 pub fn kill_backend() -> Result<(), String> {
     MONITOR.kill_child()
+}
+
+/// Trigger a backup via API and then terminate backend
+pub fn trigger_backup_and_shutdown() -> Result<(), String> {
+    // Try to trigger manual backup first (best-effort)
+    if let Some(cfg) = MONITOR.config.lock().unwrap().clone() {
+        let url = format!("{}/backups/trigger", cfg.backend_url());
+        log::info!("🧩 Triggering manual backup before shutdown: {}", url);
+        let client = reqwest::blocking::Client::new();
+        let res = client
+            .post(url)
+            .timeout(Duration::from_secs(3))
+            .send();
+        match res {
+            Ok(r) => {
+                if r.status().is_success() {
+                    log::info!("✅ Manual backup triggered successfully");
+                } else {
+                    log::warn!("⚠️ Manual backup trigger returned status {}", r.status());
+                }
+            }
+            Err(e) => {
+                log::warn!("⚠️ Manual backup trigger failed: {}", e);
+            }
+        }
+    } else {
+        log::warn!("⚠️ No backend config available for manual backup trigger");
+    }
+
+    // Then kill the backend process
+    kill_backend()
 }
