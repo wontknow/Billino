@@ -348,3 +348,53 @@ class TestBackupScheduler:
             assert "success" in result
             # Kann fehlschlag haben wegen Pfad-Unterschieden, aber nicht crashen
             assert isinstance(result, dict)
+
+    def test_backup_on_shutdown(self):
+        """Test: Shutdown-Backup wird korrekt ausgeführt (DB + PDFs)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            backup_dir = tmpdir / "backups"
+            data_dir = tmpdir / "data"
+            (data_dir / "pdfs" / "invoices").mkdir(parents=True)
+            (data_dir / "pdfs" / "summary_invoices").mkdir(parents=True)
+
+            # Erstelle echte SQLite-Datenbank
+            db_file = data_dir / "billino.db"
+            conn = sqlite3.connect(str(db_file))
+            conn.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, data TEXT)")
+            conn.execute("INSERT INTO test (data) VALUES ('test shutdown data')")
+            conn.commit()
+            conn.close()
+
+            # Erstelle Test-PDFs
+            invoice_dir = data_dir / "pdfs" / "invoices"
+            (invoice_dir / "test_invoice.pdf").write_text("Invoice PDF content")
+
+            # Initialisiere Scheduler mit Handler
+            handler = BackupHandler(
+                backup_root=backup_dir,
+                db_path=db_file,
+                tauri_enabled=False,
+            )
+            BackupScheduler._handler = handler
+
+            # Führe Shutdown-Backup aus
+            result = BackupScheduler.backup_on_shutdown()
+
+            # Assertions
+            assert result is not None
+            assert isinstance(result, dict)
+            assert "success" in result
+            assert result["success"] is True
+            assert "backup_path" in result
+            assert "timestamp" in result
+
+            # Verifiziere, dass DB-Backup erstellt wurde
+            backup_path = Path(result["backup_path"])
+            assert backup_path.exists()
+            assert backup_path.name.startswith("billino_")
+            assert backup_path.stat().st_size > 0
+
+            # Windows-spezifisch: Cleanup
+            gc.collect()
+            time.sleep(0.1)
