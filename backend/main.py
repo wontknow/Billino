@@ -10,6 +10,7 @@ This module initializes and configures the FastAPI application with:
 - Enhanced health checking for Tauri desktop integration
 """
 
+import asyncio
 import os
 import signal
 from contextlib import asynccontextmanager
@@ -167,7 +168,9 @@ async def lifespan(app: FastAPI):
 
     try:
         logger.info("💾 Running shutdown backup (DB + PDFs)...")
-        shutdown_backup_result = BackupScheduler.backup_on_shutdown()
+        shutdown_backup_result = await asyncio.to_thread(
+            BackupScheduler.backup_on_shutdown
+        )
         logger.info(f"💾 Shutdown backup result: {shutdown_backup_result}")
 
         if BackupScheduler._scheduler is not None:
