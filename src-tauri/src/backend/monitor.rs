@@ -130,13 +130,19 @@ pub fn trigger_backup_and_shutdown() -> Result<(), String> {
         
         log::info!("🧩 Triggering manual backup before shutdown (fire-and-forget): {}", url);
         
-        // Spawn thread for non-blocking backup request
+        // Spawn thread for non-blocking backup request (fire-and-forget)
         std::thread::spawn(move || {
-            let client = reqwest::blocking::Client::builder()
+            let client = match reqwest::blocking::Client::builder()
                 .connect_timeout(Duration::from_millis(500))  // Short connect timeout
                 .timeout(Duration::from_secs(2))              // Max 2s total
                 .build()
-                .unwrap();
+            {
+                Ok(c) => c,
+                Err(e) => {
+                    log::error!("❌ Failed to build HTTP client for backup request: {}", e);
+                    return;
+                }
+            };
             
             match client.post(&url).send() {
                 Ok(r) => {
