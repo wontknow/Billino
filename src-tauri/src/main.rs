@@ -123,7 +123,10 @@ fn main() {
         .on_window_event(|_window, event| match event {
             WindowEvent::Destroyed => {
                 log::info!("🛑 Main window destroyed, initiating graceful shutdown...");
-                backend::shutdown::stop_backend_gracefully();
+                // Run shutdown on background thread so UI closes immediately
+                std::thread::spawn(|| {
+                    let _ = backend::shutdown::stop_backend_gracefully();
+                });
             }
             _ => {}
         })
