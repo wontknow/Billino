@@ -119,32 +119,46 @@ pub fn kill_backend() -> Result<(), String> {
 }
 
 /// Trigger a backup via API and then terminate backend
+/// 
+/// This function waits for the backup to complete OR for the shutdown timeout to expire
+/// before killing the backend process. This ensures backups have enough time to complete.
 pub fn trigger_backup_and_shutdown() -> Result<(), String> {
     // Try to trigger manual backup first (best-effort)
     if let Some(cfg) = MONITOR.config.lock().unwrap().clone() {
         let url = format!("{}/backups/trigger", cfg.backend_url());
+        let timeout_secs = cfg.shutdown_timeout_secs;
+        
         log::info!("🧩 Triggering manual backup before shutdown: {}", url);
+        log::info!("⏱️ Waiting up to {} seconds for backup to complete", timeout_secs);
+        
         let client = reqwest::blocking::Client::new();
         let res = client
             .post(url)
-            .timeout(Duration::from_secs(3))
+            .timeout(Duration::from_secs(timeout_secs))
             .send();
+        
         match res {
             Ok(r) => {
                 if r.status().is_success() {
-                    log::info!("✅ Manual backup triggered successfully");
+                    log::info!("✅ Manual backup completed successfully before shutdown");
                 } else {
-                    log::warn!("⚠️ Manual backup trigger returned status {}", r.status());
+                    log::warn!("⚠️ Manual backup returned status {} - proceeding with shutdown", r.status());
                 }
             }
             Err(e) => {
-                log::warn!("⚠️ Manual backup trigger failed: {}", e);
+                // Check if it was a timeout error
+                if e.is_timeout() {
+                    log::warn!("⚠️ Manual backup timed out after {} seconds - proceeding with shutdown", timeout_secs);
+                } else {
+                    log::warn!("⚠️ Manual backup failed: {} - proceeding with shutdown", e);
+                }
             }
         }
     } else {
         log::warn!("⚠️ No backend config available for manual backup trigger");
     }
 
-    // Then kill the backend process
+    // Only kill the backend after backup completed or timeout expired
+    log::info!("🛑 Terminating backend process after backup attempt");
     kill_backend()
 }
