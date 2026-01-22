@@ -27,7 +27,7 @@ pub struct BackendConfig {
     /// Startup timeout in seconds
     pub startup_timeout_secs: u64,
 
-    /// Graceful shutdown timeout in seconds
+    /// Graceful shutdown timeout in seconds (reserved for future use)
     pub shutdown_timeout_secs: u64,
 
     /// Health check interval in seconds
@@ -92,9 +92,9 @@ impl BackendConfig {
             ));
         }
 
-        if self.shutdown_timeout_secs < 10 {
+        if self.shutdown_timeout_secs < 1 {
             return Err(BackendError::ConfigError(
-                "Shutdown timeout must be at least 10 seconds to allow time for backups".to_string(),
+                "Shutdown timeout must be at least 1 second".to_string(),
             ));
         }
 

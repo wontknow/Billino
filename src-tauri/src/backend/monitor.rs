@@ -120,29 +120,36 @@ pub fn kill_backend() -> Result<(), String> {
 
 /// Trigger a backup via API and then terminate backend
 /// 
-/// This function uses fire-and-forget semantics to avoid blocking the shutdown process.
-/// The backup request is sent in a separate thread with a short connect timeout,
-/// and the backend is terminated immediately without waiting for the backup to complete.
+/// This function initiates a backup request in a separate thread and waits a short bounded time
+/// (up to 500ms) to ensure the request has been dispatched before terminating the backend.
+/// This avoids blocking the shutdown process while still giving the backup request a chance to succeed.
 pub fn trigger_backup_and_shutdown() -> Result<(), String> {
-    // Try to trigger manual backup first (best-effort, fire-and-forget)
+    // Try to trigger manual backup first (best-effort with bounded wait)
     if let Some(cfg) = MONITOR.config.lock().unwrap().clone() {
         let url = format!("{}/backups/trigger", cfg.backend_url());
         
-        log::info!("🧩 Triggering manual backup before shutdown (fire-and-forget): {}", url);
+        log::info!("🧩 Triggering manual backup before shutdown: {}", url);
         
-        // Spawn thread for non-blocking backup request (fire-and-forget)
+        // Use a channel to signal when the request has been dispatched
+        let (tx, rx) = std::sync::mpsc::channel();
+        
+        // Spawn thread for backup request
         std::thread::spawn(move || {
             let client = match reqwest::blocking::Client::builder()
-                .connect_timeout(Duration::from_millis(500))  // Short connect timeout
+                .connect_timeout(Duration::from_millis(300))  // Short connect timeout
                 .timeout(Duration::from_secs(2))              // Max 2s total
                 .build()
             {
                 Ok(c) => c,
                 Err(e) => {
                     log::error!("❌ Failed to build HTTP client for backup request: {}", e);
+                    let _ = tx.send(false); // Signal failure
                     return;
                 }
             };
+            
+            // Signal that we're about to send the request
+            let _ = tx.send(true);
             
             match client.post(&url).send() {
                 Ok(r) => {
@@ -157,11 +164,24 @@ pub fn trigger_backup_and_shutdown() -> Result<(), String> {
                 }
             }
         });
+        
+        // Wait up to 500ms for the request to be dispatched
+        match rx.recv_timeout(Duration::from_millis(500)) {
+            Ok(true) => {
+                log::info!("⏱️ Backup request dispatched, proceeding with shutdown");
+            }
+            Ok(false) => {
+                log::warn!("⚠️ Failed to dispatch backup request, proceeding with shutdown");
+            }
+            Err(_) => {
+                log::warn!("⚠️ Backup request dispatch timed out, proceeding with shutdown");
+            }
+        }
     } else {
         log::warn!("⚠️ No backend config available for manual backup trigger");
     }
 
-    // Terminate backend process immediately (don't wait for backup)
+    // Terminate backend process after bounded wait
     log::info!("🛑 Terminating backend process");
     kill_backend()
 }
