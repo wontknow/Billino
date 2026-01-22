@@ -121,7 +121,7 @@ pub fn kill_backend() -> Result<(), String> {
 /// Trigger a backup via API and then terminate backend
 /// 
 /// This function initiates a backup request in a separate thread and waits a short bounded time
-/// (up to 400ms) to ensure the request has been attempted before terminating the backend.
+/// (up to 500ms) to ensure the request has been attempted before terminating the backend.
 /// This avoids blocking the shutdown process while giving the backup request a reasonable chance to be sent.
 pub fn trigger_backup_and_shutdown() -> Result<(), String> {
     // Try to trigger manual backup first (best-effort with bounded wait)
@@ -136,14 +136,14 @@ pub fn trigger_backup_and_shutdown() -> Result<(), String> {
         // Spawn thread for backup request
         std::thread::spawn(move || {
             let client = match reqwest::blocking::Client::builder()
-                .connect_timeout(Duration::from_millis(200))  // Short connect timeout  
-                .timeout(Duration::from_millis(300))          // Max 300ms total - enough to dispatch but not block shutdown
+                .connect_timeout(Duration::from_millis(150))  // Short connect timeout  
+                .timeout(Duration::from_millis(400))          // Max 400ms total - enough to dispatch but not block shutdown
                 .build()
             {
                 Ok(c) => c,
                 Err(e) => {
                     log::error!("❌ Failed to build HTTP client for backup request: {}", e);
-                    let _ = tx.send(()); // Signal that we tried
+                    // Don't signal yet - this is a setup error, not a request attempt
                     return;
                 }
             };
@@ -152,6 +152,7 @@ pub fn trigger_backup_and_shutdown() -> Result<(), String> {
             let result = client.post(&url).send();
             
             // Signal that the request has been attempted (sent or failed)
+            // This is the only place we signal to avoid race conditions
             let _ = tx.send(());
             
             // Log the outcome
@@ -169,9 +170,9 @@ pub fn trigger_backup_and_shutdown() -> Result<(), String> {
             }
         });
         
-        // Wait up to 400ms for the request to be attempted
-        // This gives the thread time to connect and send the request
-        match rx.recv_timeout(Duration::from_millis(400)) {
+        // Wait up to 500ms for the request to be attempted
+        // This gives the thread time to connect and send the request (400ms timeout + margin)
+        match rx.recv_timeout(Duration::from_millis(500)) {
             Ok(()) => {
                 log::info!("⏱️ Backup request attempted, proceeding with shutdown");
             }
