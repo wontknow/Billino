@@ -166,30 +166,68 @@ class BackupScheduler:
 
     @classmethod
     def _perform_backup(cls, source: str, include_pdfs: bool = True) -> dict:
-        """Interner Helper für alle Backup-Trigger."""
+        """
+        Interner Helper für alle Backup-Trigger.
+
+        Führt DB- und PDF-Backups unabhängig voneinander aus.
+        Bei Shutdown-Safety: PDF-Backup läuft auch wenn DB-Backup fehlschlägt.
+        """
         if cls._handler is None:
             logger.error("❌ BackupHandler nicht verfügbar")
             return {"success": False, "error": "BackupHandler nicht verfügbar"}
 
         try:
             logger.debug(f"🔍 Starte {source}-Backup (include_pdfs={include_pdfs})")
+
+            # Run DB backup
             backup_path = cls._handler.backup_database()
+            db_success = backup_path is not None
 
-            if backup_path and include_pdfs:
-                cls._handler.backup_pdfs()
+            # Run PDF backup independently (even if DB backup failed)
+            pdf_stats = None
+            pdf_success = True
+            if include_pdfs:
+                try:
+                    pdf_stats = cls._handler.backup_pdfs()
+                    pdf_success = pdf_stats is not None
+                except Exception as pdf_error:
+                    logger.error(f"❌ PDF-Backup fehlgeschlagen: {pdf_error}")
+                    pdf_success = False
 
-            if backup_path:
-                logger.info(
-                    f"✅ {source.capitalize()}-Backup erfolgreich: {backup_path}"
-                )
-                return {
-                    "success": True,
-                    "backup_path": str(backup_path),
-                    "timestamp": datetime.now().isoformat(),
+            # Determine overall success and build result
+            overall_success = db_success or (include_pdfs and pdf_success)
+            result = {
+                "success": overall_success,
+                "timestamp": datetime.now().isoformat(),
+                "db_backup": {
+                    "success": db_success,
+                    "path": str(backup_path) if backup_path else None,
+                },
+            }
+
+            if include_pdfs:
+                result["pdf_backup"] = {
+                    "success": pdf_success,
+                    "stats": pdf_stats,
                 }
 
-            logger.error("❌ Backup fehlgeschlagen")
-            return {"success": False, "error": "Backup fehlgeschlagen"}
+            # Log appropriate message
+            if db_success and (not include_pdfs or pdf_success):
+                logger.info(f"✅ {source.capitalize()}-Backup erfolgreich")
+            elif db_success and not pdf_success:
+                logger.warning(
+                    f"⚠️ {source.capitalize()}-Backup teilweise erfolgreich: "
+                    f"DB OK, PDFs fehlgeschlagen"
+                )
+            elif not db_success and pdf_success:
+                logger.warning(
+                    f"⚠️ {source.capitalize()}-Backup teilweise erfolgreich: "
+                    f"DB fehlgeschlagen, PDFs OK"
+                )
+            else:
+                logger.error(f"❌ {source.capitalize()}-Backup fehlgeschlagen")
+
+            return result
 
         except Exception as e:
             logger.error(f"❌ Fehler beim {source}-Backup: {e}")

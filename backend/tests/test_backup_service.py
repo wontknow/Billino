@@ -7,6 +7,7 @@ Testet:
 """
 
 import gc
+import os
 import sqlite3
 import tempfile
 import time
@@ -391,11 +392,22 @@ class TestBackupScheduler:
             assert isinstance(result, dict)
             assert "success" in result
             assert result["success"] is True
-            assert "backup_path" in result
             assert "timestamp" in result
 
+            # Check DB backup result
+            assert "db_backup" in result
+            assert result["db_backup"]["success"] is True
+            assert "path" in result["db_backup"]
+            backup_path = Path(result["db_backup"]["path"])
+
+            # Check PDF backup result
+            assert "pdf_backup" in result
+            assert result["pdf_backup"]["success"] is True
+            assert "stats" in result["pdf_backup"]
+            assert result["pdf_backup"]["stats"]["invoices"] == 1
+            assert result["pdf_backup"]["stats"]["summary_invoices"] == 1
+
             # Verifiziere, dass DB-Backup erstellt wurde
-            backup_path = Path(result["backup_path"])
             assert backup_path.exists()
             assert backup_path.name.startswith("billino_")
 
@@ -404,6 +416,120 @@ class TestBackupScheduler:
             assert (pdf_archive / "invoices" / "test_invoice.pdf").exists()
             assert (pdf_archive / "summary_invoices" / "summary_invoice.pdf").exists()
             assert backup_path.stat().st_size > 0
+
+            # Windows-spezifisch: Cleanup
+            gc.collect()
+            time.sleep(0.1)
+
+    def test_backup_on_shutdown_with_db_failure(self, monkeypatch):
+        """Test: PDF-Backup läuft auch wenn DB-Backup fehlschlägt (Shutdown Safety)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            backup_dir = tmpdir / "backups"
+            data_dir = tmpdir / "data"
+            (data_dir / "pdfs" / "invoices").mkdir(parents=True)
+            (data_dir / "pdfs" / "summary_invoices").mkdir(parents=True)
+
+            # Setze DATA_DIR Umgebungsvariable für isolierten Test
+            monkeypatch.setenv("DATA_DIR", str(data_dir))
+
+            # KEINE SQLite-Datenbank erstellen -> DB-Backup wird fehlschlagen
+            db_file = data_dir / "billino.db"
+
+            # Erstelle Test-PDFs
+            invoice_dir = data_dir / "pdfs" / "invoices"
+            (invoice_dir / "test_invoice.pdf").write_text("Invoice PDF content")
+            summary_dir = data_dir / "pdfs" / "summary_invoices"
+            (summary_dir / "summary_invoice.pdf").write_text("Summary PDF content")
+
+            # Initialisiere Scheduler mit Handler (DB existiert nicht)
+            handler = BackupHandler(
+                backup_root=backup_dir,
+                db_path=db_file,
+                tauri_enabled=False,
+            )
+            BackupScheduler._handler = handler
+
+            # Führe Shutdown-Backup aus
+            result = BackupScheduler.backup_on_shutdown()
+
+            # Assertions: Backup sollte partiell erfolgreich sein (nur PDFs)
+            assert result is not None
+            assert isinstance(result, dict)
+            assert "success" in result
+            assert result["success"] is True  # Erfolgreich weil PDF-Backup lief
+
+            # Check DB backup result (sollte fehlgeschlagen sein)
+            assert "db_backup" in result
+            assert result["db_backup"]["success"] is False
+            assert result["db_backup"]["path"] is None
+
+            # Check PDF backup result (sollte erfolgreich sein)
+            assert "pdf_backup" in result
+            assert result["pdf_backup"]["success"] is True
+            assert "stats" in result["pdf_backup"]
+            assert result["pdf_backup"]["stats"]["invoices"] == 1
+            assert result["pdf_backup"]["stats"]["summary_invoices"] == 1
+
+            # Verifiziere, dass PDF-Backup (Archivierung) trotzdem durchgeführt wurde
+            pdf_archive = data_dir / "pdfs" / "archive"
+            assert (pdf_archive / "invoices" / "test_invoice.pdf").exists()
+            assert (pdf_archive / "summary_invoices" / "summary_invoice.pdf").exists()
+
+            # Windows-spezifisch: Cleanup
+            gc.collect()
+            time.sleep(0.1)
+
+    def test_pdf_archive_cleanup(self):
+        """Test: Alte archivierte PDFs werden gelöscht."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            backup_dir = tmpdir / "backups"
+            data_dir = tmpdir / "data"
+            (data_dir / "pdfs" / "invoices").mkdir(parents=True)
+            (data_dir / "pdfs" / "summary_invoices").mkdir(parents=True)
+
+            # Erstelle echte SQLite-Datenbank
+            db_file = data_dir / "billino.db"
+            conn = sqlite3.connect(str(db_file))
+            conn.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, data TEXT)")
+            conn.execute("INSERT INTO test (data) VALUES ('test data')")
+            conn.commit()
+            conn.close()
+
+            handler = BackupHandler(
+                backup_root=backup_dir,
+                db_path=db_file,
+                tauri_enabled=False,
+                retention_days=5,
+            )
+
+            # Override PDF-Pfade
+            handler.PDF_INVOICES_PATH = data_dir / "pdfs" / "invoices"
+            handler.PDF_SUMMARY_PATH = data_dir / "pdfs" / "summary_invoices"
+            handler.PDF_ARCHIVE = backup_dir / "pdfs" / "archive"
+
+            # Erstelle alte archivierte PDFs
+            archive_invoices = handler.PDF_ARCHIVE / "invoices"
+            archive_invoices.mkdir(parents=True, exist_ok=True)
+            old_pdf = archive_invoices / "old_invoice.pdf"
+            old_pdf.write_text("Old PDF content")
+
+            # Setze mtime auf älter als 5 Tage
+            old_timestamp = (datetime.now() - timedelta(days=10)).timestamp()
+            os.utime(old_pdf, (old_timestamp, old_timestamp))
+
+            # Erstelle neue PDFs
+            (handler.PDF_INVOICES_PATH / "new_invoice.pdf").write_text("New PDF")
+
+            # Führe Backup aus (sollte auch Cleanup triggern)
+            stats = handler.backup_pdfs()
+
+            # Neue archivierte PDF sollte existieren
+            assert (archive_invoices / "new_invoice.pdf").exists()
+
+            # Alte archivierte PDF sollte gelöscht worden sein
+            assert not old_pdf.exists()
 
             # Windows-spezifisch: Cleanup
             gc.collect()
