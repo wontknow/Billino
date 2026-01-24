@@ -195,7 +195,14 @@ class BackupScheduler:
                     pdf_success = False
 
             # Determine overall success and build result
-            overall_success = db_success or (include_pdfs and pdf_success)
+            # For shutdown safety: partial success is acceptable (at least one backup succeeded)
+            # - If include_pdfs=False: success = db_success
+            # - If include_pdfs=True: success = db_success OR pdf_success
+            if include_pdfs:
+                overall_success = db_success or pdf_success
+            else:
+                overall_success = db_success
+
             result = {
                 "success": overall_success,
                 "timestamp": datetime.now().isoformat(),

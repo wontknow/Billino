@@ -534,3 +534,48 @@ class TestBackupScheduler:
             # Windows-spezifisch: Cleanup
             gc.collect()
             time.sleep(0.1)
+
+    def test_backup_overall_success_logic(self, monkeypatch):
+        """Test: Overall success logic works correctly for different scenarios."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            backup_dir = tmpdir / "backups"
+            data_dir = tmpdir / "data"
+            (data_dir / "pdfs" / "invoices").mkdir(parents=True)
+
+            # Test 1: DB success, no PDFs requested -> overall success
+            db_file = data_dir / "billino.db"
+            conn = sqlite3.connect(str(db_file))
+            conn.execute("CREATE TABLE test (id INTEGER)")
+            conn.close()
+
+            handler = BackupHandler(
+                backup_root=backup_dir, db_path=db_file, tauri_enabled=False
+            )
+            BackupScheduler._handler = handler
+
+            result = BackupScheduler._perform_backup(source="test", include_pdfs=False)
+            assert result["success"] is True
+            assert result["db_backup"]["success"] is True
+            assert "pdf_backup" not in result
+
+            # Test 2: DB failure, no PDFs requested -> overall failure
+            handler.DB_PATH = Path("/nonexistent/db.db")
+            result = BackupScheduler._perform_backup(source="test", include_pdfs=False)
+            assert result["success"] is False
+            assert result["db_backup"]["success"] is False
+
+            # Test 3: DB success, PDF success -> overall success
+            handler.DB_PATH = db_file
+            handler.PDF_INVOICES_PATH = data_dir / "pdfs" / "invoices"
+            (handler.PDF_INVOICES_PATH / "test.pdf").write_text("PDF")
+            handler.PDF_ARCHIVE = backup_dir / "pdfs" / "archive"
+
+            result = BackupScheduler._perform_backup(source="test", include_pdfs=True)
+            assert result["success"] is True
+            assert result["db_backup"]["success"] is True
+            assert result["pdf_backup"]["success"] is True
+
+            # Windows-spezifisch: Cleanup
+            gc.collect()
+            time.sleep(0.1)
