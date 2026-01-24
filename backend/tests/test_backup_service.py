@@ -576,6 +576,13 @@ class TestBackupScheduler:
             assert result["db_backup"]["success"] is True
             assert result["pdf_backup"]["success"] is True
 
+            # Test 4: DB failure, PDF success -> overall success (shutdown safety!)
+            handler.DB_PATH = Path("/nonexistent/db.db")
+            result = BackupScheduler._perform_backup(source="test", include_pdfs=True)
+            assert result["success"] is True  # Overall success because PDF succeeded
+            assert result["db_backup"]["success"] is False
+            assert result["pdf_backup"]["success"] is True
+
             # Windows-spezifisch: Cleanup
             gc.collect()
             time.sleep(0.1)

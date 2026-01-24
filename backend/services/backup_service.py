@@ -182,7 +182,8 @@ class BackupHandler:
                 archive_invoices.mkdir(parents=True, exist_ok=True)
 
                 for pdf_file in self.PDF_INVOICES_PATH.glob("*.pdf"):
-                    shutil.copy2(pdf_file, archive_invoices / pdf_file.name)
+                    # Use shutil.copy (not copy2) to set mtime to archive time, not original time
+                    shutil.copy(pdf_file, archive_invoices / pdf_file.name)
                     stats["invoices"] += 1
 
                 logger.debug(f"✅ {stats['invoices']} Invoice-PDFs archiviert")
@@ -196,7 +197,8 @@ class BackupHandler:
                 archive_summary.mkdir(parents=True, exist_ok=True)
 
                 for pdf_file in self.PDF_SUMMARY_PATH.glob("*.pdf"):
-                    shutil.copy2(pdf_file, archive_summary / pdf_file.name)
+                    # Use shutil.copy (not copy2) to set mtime to archive time, not original time
+                    shutil.copy(pdf_file, archive_summary / pdf_file.name)
                     stats["summary_invoices"] += 1
 
                 logger.debug(
