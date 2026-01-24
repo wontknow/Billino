@@ -398,6 +398,11 @@ pnpm format
 pnpm lint
 pnpm typecheck
 pnpm test
+
+cd ..
+cd backend
+black .
+isort .
 ```
 
 ## Security Best Practices
