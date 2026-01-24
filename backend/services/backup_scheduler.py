@@ -171,6 +171,25 @@ class BackupScheduler:
 
         Führt DB- und PDF-Backups unabhängig voneinander aus.
         Bei Shutdown-Safety: PDF-Backup läuft auch wenn DB-Backup fehlschlägt.
+
+        Args:
+            source: Technische Bezeichnung des Triggers (z.B. "manual", "scheduled", "shutdown").
+            include_pdfs: Ob zusätzlich zum DB-Backup auch ein PDF-Backup ausgeführt werden soll.
+
+        Returns:
+            dict: Ergebnisobjekt mit folgender Struktur:
+                - success (bool): Gesamterfolg des Backups.
+                  - Wenn ``include_pdfs`` False ist: entspricht dem DB-Backup-Erfolg.
+                  - Wenn ``include_pdfs`` True ist: True, wenn entweder DB- oder PDF-Backup
+                    (oder beide) erfolgreich waren.
+                - timestamp (str): ISO-8601-Zeitstempel des Backup-Versuchs.
+                - db_backup (dict): Informationen zum Datenbank-Backup:
+                    - success (bool): Ob das DB-Backup erfolgreich war.
+                    - path (str | None): Pfad zur erzeugten Backup-Datei oder None bei Fehler.
+                - pdf_backup (dict, optional): Nur vorhanden, wenn ``include_pdfs`` True ist:
+                    - success (bool): Ob das PDF-Backup erfolgreich war.
+                    - stats: Vom ``BackupHandler.backup_pdfs`` zurückgegebene Statistik
+                      (z.B. Anzahl kopierter Dateien) oder None bei Fehler.
         """
         if cls._handler is None:
             logger.error("❌ BackupHandler nicht verfügbar")
