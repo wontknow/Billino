@@ -523,7 +523,7 @@ class TestBackupScheduler:
             (handler.PDF_INVOICES_PATH / "new_invoice.pdf").write_text("New PDF")
 
             # Führe Backup aus (sollte auch Cleanup triggern)
-            stats = handler.backup_pdfs()
+            handler.backup_pdfs()
 
             # Neue archivierte PDF sollte existieren
             assert (archive_invoices / "new_invoice.pdf").exists()
