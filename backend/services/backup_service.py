@@ -168,6 +168,8 @@ class BackupHandler:
         - data/pdfs/invoices/ → data/pdfs/archive/invoices/
         - data/pdfs/summary_invoices/ → data/pdfs/archive/summary_invoices/
 
+        Führt anschließend Cleanup alter archivierter PDFs durch.
+
         Returns:
             Dict mit Statistiken: {"invoices": count, "summary_invoices": count}
         """
@@ -180,7 +182,8 @@ class BackupHandler:
                 archive_invoices.mkdir(parents=True, exist_ok=True)
 
                 for pdf_file in self.PDF_INVOICES_PATH.glob("*.pdf"):
-                    shutil.copy2(pdf_file, archive_invoices / pdf_file.name)
+                    # Use shutil.copy (not copy2) to set mtime to archive time, not original time
+                    shutil.copy(pdf_file, archive_invoices / pdf_file.name)
                     stats["invoices"] += 1
 
                 logger.debug(f"✅ {stats['invoices']} Invoice-PDFs archiviert")
@@ -194,7 +197,8 @@ class BackupHandler:
                 archive_summary.mkdir(parents=True, exist_ok=True)
 
                 for pdf_file in self.PDF_SUMMARY_PATH.glob("*.pdf"):
-                    shutil.copy2(pdf_file, archive_summary / pdf_file.name)
+                    # Use shutil.copy (not copy2) to set mtime to archive time, not original time
+                    shutil.copy(pdf_file, archive_summary / pdf_file.name)
                     stats["summary_invoices"] += 1
 
                 logger.debug(
@@ -205,6 +209,9 @@ class BackupHandler:
 
         if stats["invoices"] > 0 or stats["summary_invoices"] > 0:
             logger.info(f"✅ PDF-Backup abgeschlossen: {sum(stats.values())} Dateien")
+
+        # Cleanup alte archivierte PDFs
+        self._cleanup_old_pdf_archives()
 
         return stats
 
@@ -239,6 +246,54 @@ class BackupHandler:
                 )
         except OSError as e:
             logger.error(f"❌ Fehler beim Löschen alter Backups: {e}")
+
+    def _cleanup_old_pdf_archives(self) -> None:
+        """
+        Lösche archivierte PDFs älter als `retention_days`.
+
+        Verhindert unbegrenztes Wachstum des PDF-Archivs.
+        Prüft mtime (modification time) der Dateien.
+        """
+        cutoff_timestamp = (
+            datetime.now() - timedelta(days=self.retention_days)
+        ).timestamp()
+        deleted_count = 0
+
+        try:
+            # Cleanup archived invoices
+            archive_invoices = self.PDF_ARCHIVE / "invoices"
+            if archive_invoices.exists():
+                for pdf_file in archive_invoices.glob("*.pdf"):
+                    try:
+                        if pdf_file.stat().st_mtime < cutoff_timestamp:
+                            pdf_file.unlink()
+                            deleted_count += 1
+                            logger.debug(
+                                f"🗑️ Altes archiviertes Invoice-PDF gelöscht: {pdf_file.name}"
+                            )
+                    except OSError as e:
+                        logger.error(f"❌ Fehler beim Löschen von {pdf_file.name}: {e}")
+
+            # Cleanup archived summary invoices
+            archive_summary = self.PDF_ARCHIVE / "summary_invoices"
+            if archive_summary.exists():
+                for pdf_file in archive_summary.glob("*.pdf"):
+                    try:
+                        if pdf_file.stat().st_mtime < cutoff_timestamp:
+                            pdf_file.unlink()
+                            deleted_count += 1
+                            logger.debug(
+                                f"🗑️ Altes archiviertes Summary-PDF gelöscht: {pdf_file.name}"
+                            )
+                    except OSError as e:
+                        logger.error(f"❌ Fehler beim Löschen von {pdf_file.name}: {e}")
+
+            if deleted_count > 0:
+                logger.info(
+                    f"✅ {deleted_count} alte archivierte PDFs gelöscht (älter als {self.retention_days} Tage)"
+                )
+        except OSError as e:
+            logger.error(f"❌ Fehler beim Cleanup alter PDF-Archive: {e}")
 
     def get_backup_status(self) -> dict:
         """
