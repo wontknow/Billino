@@ -15,7 +15,7 @@ def get_data_dir() -> Path:
     """
     Gibt das Daten-Verzeichnis zurück.
 
-    - Tauri Desktop-App: Nutzt DATA_DIR Umgebungsvariable (AppData)
+    - Electron Desktop-App: Nutzt DATA_DIR Umgebungsvariable (AppData/Roaming)
     - Standalone FE/BE: Nutzt backend/data/ (default)
     """
     data_dir = os.getenv("DATA_DIR")

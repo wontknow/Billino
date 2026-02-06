@@ -27,4 +27,4 @@ labels: ["feature"]
 - shadcn/ui Combobox: https://ui.shadcn.com/docs/components/combobox  <!-- :contentReference[oaicite:20]{index=20} -->
 - ReportLab Guide (PDF): https://www.reportlab.com/docs/reportlab-userguide.pdf  <!-- :contentReference[oaicite:21]{index=21} -->
 - SQLModel: https://sqlmodel.tiangolo.com  <!-- :contentReference[oaicite:22]{index=22} -->
-- Tauri Shell/Sidecar: https://v2.tauri.app/plugin/shell/  <!-- :contentReference[oaicite:23]{index=23} -->
+- Electron: https://www.electronjs.org/docs  <!-- Desktop App -->

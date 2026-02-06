@@ -38,7 +38,7 @@ def set_app_ready(ready: bool) -> None:
 @router.get("/health", tags=["health"], response_model=HealthResponse)
 def health() -> HealthResponse:
     """
-    Enhanced health check endpoint for Tauri backend integration.
+    Enhanced health check endpoint for Electron desktop integration.
 
     This endpoint serves as both a **Liveness Probe** (is the service running?)
     and **Readiness Probe** (is it ready for traffic?).
@@ -69,7 +69,7 @@ def health() -> HealthResponse:
     }
     ```
 
-    **Used by Tauri to:**
+    **Used by Electron to:**
     1. Detect when backend has fully started
     2. Monitor health during application runtime
     3. Trigger alerts if degraded

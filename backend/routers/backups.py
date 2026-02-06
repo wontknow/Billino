@@ -65,7 +65,7 @@ def get_backup_status():
     - backup_status (object):
         - last_db_backup (number): Unix-Timestamp des letzten Backups
         - backup_count (number): Anzahl verfügbarer Backups
-        - tauri_enabled (boolean): Tauri-Modus aktiviert
+        - desktop_enabled (boolean): Desktop-Modus aktiviert (Electron)
         - backup_path (string): Pfad zum Backup-Verzeichnis
         - retention_days (number): Tage bis Backup-Löschung
 
@@ -76,7 +76,7 @@ def get_backup_status():
         "backup_status": {
             "last_db_backup": 1735314645.123,
             "backup_count": 7,
-            "tauri_enabled": false,
+            "desktop_enabled": false,
             "backup_path": "./backups/daily",
             "retention_days": 30
         }

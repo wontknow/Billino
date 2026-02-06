@@ -19,14 +19,13 @@ FE:
 # --- INFRA / CI ---
 Infra:
   - any:
-      - "src-tauri/**"
-      - "src-tauri/**/*.rs"
-      - "src-tauri/tauri.conf.json"
+      - "electron/**"
+      - "electron/**/*.ts"
+      - "electron/package.json"
       - ".github/**"
       - ".github/workflows/**"
       - "**/pyproject.toml"
       - "**/package-lock.json"
-      - "**/Cargo.toml"
 
 # --- DOCS ---
 Docs:
