@@ -10,7 +10,7 @@
 
 <!-- Docs & Tech -->
 [![Docs](https://img.shields.io/badge/docs-passing-success)](https://github.com/wontknow/Billino/wiki)
-![Tech](https://img.shields.io/badge/stack-FastAPI%20|%20Next.js%20|%20Tauri-orange)
+![Tech](https://img.shields.io/badge/stack-FastAPI%20|%20Next.js%20|%20Electron-orange)
 
 <!-- Repo activity -->
 ![GitHub issues](https://img.shields.io/github/issues/wontknow/Billino)
@@ -113,8 +113,8 @@ Ein over-engineered **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trenn
 
 ### 🚧 Geplant
 - E-Rechnung (XRechnung / ZUGFeRD)
-- Desktop-App: Tauri v2 bündelt Backend + Frontend + DB in **eine ausführbare Datei**
-- Backup Strategie für Tauri Version
+- Desktop-App: Electron bündelt Backend + Frontend + DB in **eine ausführbare Datei**
+- Backup Strategie für Desktop-Version (Electron)
 
 ### 📦 Version History
 - **v1.2.0** ✅ (Dezember 2025): Komplexe Filter und Sortierung der Tabellen
@@ -130,7 +130,7 @@ Alle **✅ Implementiert** Features = **Release Complete**. Alle neuen 🚧 Feat
 - **Frontend**: [Next.js 16](https://nextjs.org/docs/app) (App Router, Static Export), React 19, [shadcn/ui](https://ui.shadcn.com) (Radix UI + Tailwind), TypeScript (pnpm)
 - **Backend**: [FastAPI](https://fastapi.tiangolo.com), [SQLite](https://sqlite.org), [ReportLab](https://www.reportlab.com/docs/reportlab-userguide.pdf) (PDF)
 - **E-Rechnung**: XRechnung (KoSIT Specs), ZUGFeRD (PDF/A-3 + XML)
-- **Desktop-App**: [Tauri v2](https://v2.tauri.app/) mit Python-Sidecar (via [PyInstaller](https://pyinstaller.org/))
+- **Desktop-App**: [Electron](https://www.electronjs.org/) mit Python-Backend (via [PyInstaller](https://pyinstaller.org/))
 
 ---
 
@@ -154,7 +154,7 @@ backend/          # FastAPI, SQLite, Services
 └── requirements.txt
 
 frontend/         # Next.js 16 + React 19 + shadcn/ui + Tailwind v4 (pnpm)
-src-tauri/        # Tauri App-Shell, Sidecar-Konfig
+electron/         # Electron App-Shell, Desktop-Packaging
 .github/          # CI/CD, Issue-Templates, PR-Template
 README.md
 ```
@@ -233,7 +233,7 @@ ENV=development              # oder: production
 LOG_LEVEL=DEBUG              # oder: INFO (Production)
 
 # CORS – Lokale Entwicklung
-ALLOWED_ORIGINS=http://localhost:3000,tauri://localhost,http://192.168.2.116:3000
+ALLOWED_ORIGINS=http://localhost:3000,http://192.168.2.116:3000
 
 # Für Produktion (Deployment)
 # ENV=production
@@ -396,10 +396,14 @@ Frontend-Routen (Auszug):
 
 ---
 
-### Desktop (Tauri v2)
+### Desktop (Electron)
 ```bash
-cd src-tauri
-cargo tauri dev
+# Dev-Modus (Backend muss separat laufen)
+cd electron
+npm run dev
+
+# Installer bauen (Frontend + Backend müssen vorher gebaut werden)
+npm run dist:win
 ```
 
 ---
@@ -824,6 +828,7 @@ erDiagram
 - React 19 Docs: https://react.dev  
 
 ### Desktop & E-Invoice
-- Tauri v2 Docs: https://v2.tauri.app/  
+- Electron Docs: https://www.electronjs.org/docs  
+- electron-builder: https://www.electron.build/  
 - PyInstaller: https://pyinstaller.org/  
 - XRechnung (KoSIT FAQ): https://en.e-rechnung-bund.de/e-invoicing-faq/xrechnung/  

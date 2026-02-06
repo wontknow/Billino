@@ -44,7 +44,7 @@ class BackendConfig(BaseModel):
 
     # Feature Flags
     backup_enabled: bool = True
-    tauri_enabled: bool = False
+    desktop_enabled: bool = False
 
     # Backup Configuration
     backup_schedule_hour: int = 2
@@ -106,7 +106,7 @@ class BackendConfig(BaseModel):
         - ENV: Environment (development|production|testing, default: development)
         - BILLINO_DB_URL: Database URL override (optional)
         - BACKUP_ENABLED: Enable backup system (default: true)
-        - TAURI_ENABLED: Is running in Tauri context (default: false)
+        - DESKTOP_ENABLED: Is running in Electron desktop context (default: false)
         - BACKUP_SCHEDULE_HOUR: Hour for daily backup (0-23, default: 2)
         - BACKUP_SCHEDULE_MINUTE: Minute for daily backup (0-59, default: 0)
         - BACKUP_RETENTION_DAYS: Days to keep backups (default: 30)
@@ -126,7 +126,7 @@ class BackendConfig(BaseModel):
         env = os.getenv("ENV", "development")
         db_url = os.getenv("BILLINO_DB_URL")
         backup_enabled = os.getenv("BACKUP_ENABLED", "true").lower() == "true"
-        tauri_enabled = os.getenv("TAURI_ENABLED", "false").lower() == "true"
+        desktop_enabled = os.getenv("DESKTOP_ENABLED", "false").lower() == "true"
         backup_hour = int(os.getenv("BACKUP_SCHEDULE_HOUR", "2"))
         backup_minute = int(os.getenv("BACKUP_SCHEDULE_MINUTE", "0"))
         retention_days = int(os.getenv("BACKUP_RETENTION_DAYS", "30"))
@@ -139,7 +139,7 @@ class BackendConfig(BaseModel):
             environment=Environment(env),
             db_url=db_url,
             backup_enabled=backup_enabled,
-            tauri_enabled=tauri_enabled,
+            desktop_enabled=desktop_enabled,
             backup_schedule_hour=backup_hour,
             backup_schedule_minute=backup_minute,
             backup_retention_days=retention_days,

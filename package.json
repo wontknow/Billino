@@ -1,5 +1,9 @@
 {
-	"devDependencies": {
-		"@tauri-apps/cli": "^2.9.6"
+	"scripts": {
+		"electron:dev": "cd electron && npm run dev",
+		"electron:build": "cd electron && npm run build",
+		"electron:dist": "cd electron && npm run dist",
+		"frontend:export": "cd frontend && pnpm run export",
+		"desktop:build": "pnpm run frontend:export && pnpm run electron:dist"
 	}
 }

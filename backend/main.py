@@ -7,7 +7,7 @@ This module initializes and configures the FastAPI application with:
 - CORS middleware for cross-origin requests
 - Graceful startup/shutdown lifecycle
 - Background services (backup scheduler, PDF generation)
-- Enhanced health checking for Tauri desktop integration
+- Enhanced health checking for Electron desktop integration
 """
 
 import os
@@ -40,7 +40,7 @@ def setup_signal_handlers() -> None:
     Register OS signal handlers for graceful shutdown.
 
     Registers handlers for SIGTERM and SIGINT to ensure the application
-    can be terminated cleanly by the desktop environment (Tauri) or by
+    can be terminated cleanly by the desktop environment (Electron) or by
     system signals, triggering the FastAPI lifespan shutdown sequence.
     """
 
@@ -124,7 +124,7 @@ async def lifespan(app: FastAPI):
                     backup_hour=config.backup_schedule_hour,
                     backup_minute=config.backup_schedule_minute,
                     retention_days=config.backup_retention_days,
-                    tauri_enabled=config.tauri_enabled,
+                    desktop_enabled=config.desktop_enabled,
                 )
                 BackupScheduler.start()
                 logger.info("✅ Backup-Scheduler started")
@@ -136,7 +136,7 @@ async def lifespan(app: FastAPI):
         else:
             logger.info("⏸️ Backup system disabled (BACKUP_ENABLED=false)")
 
-        # Mark app as ready (important for Tauri health checks)
+        # Mark app as ready (important for Electron health checks)
         health.set_app_ready(True)
         logger.info("=" * 60)
         logger.info("✅ Backend fully operational and ready for traffic!")
@@ -295,7 +295,7 @@ if __name__ == "__main__":
     """
     Entry point for the Billino backend server.
 
-    This is used when running the backend standalone or from Tauri.
+    This is used when running the backend standalone or from Electron.
     - Registers OS signal handlers for graceful shutdown
     - Starts uvicorn server on the configured host:port
     - Host and port are configurable via environment variables

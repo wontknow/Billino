@@ -1,0 +1,17 @@
+# Electron
+node_modules/
+dist/
+out/
+
+# Build outputs
+*.exe
+*.dmg
+*.AppImage
+*.snap
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

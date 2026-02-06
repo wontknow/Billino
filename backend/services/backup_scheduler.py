@@ -32,7 +32,7 @@ class BackupScheduler:
         backup_hour: int = 2,
         backup_minute: int = 0,
         retention_days: int = 30,
-        tauri_enabled: bool = False,
+        desktop_enabled: bool = False,
     ) -> None:
         """
         Initialisiere Scheduler mit Konfiguration.
@@ -41,7 +41,7 @@ class BackupScheduler:
             backup_hour: Stunde für tägliches Backup (UTC, default: 2)
             backup_minute: Minute für tägliches Backup (default: 0)
             retention_days: Tage, bis alte Backups gelöscht werden (default: 30)
-            tauri_enabled: Tauri-Modus (default: False)
+            desktop_enabled: Desktop-Modus / Electron (default: False)
         """
         if cls._scheduler is not None:
             logger.warning("⚠️ Scheduler bereits initialisiert, ignoriere Init")
@@ -49,7 +49,7 @@ class BackupScheduler:
 
         # Erstelle BackupHandler
         cls._handler = BackupHandler(
-            tauri_enabled=tauri_enabled,
+            desktop_enabled=desktop_enabled,
             retention_days=retention_days,
         )
 

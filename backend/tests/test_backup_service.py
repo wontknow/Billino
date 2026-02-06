@@ -58,34 +58,34 @@ class TestBackupHandler:
         handler = BackupHandler(
             backup_root=temp_dirs["backup_dir"],
             db_path=temp_dirs["db_file"],
-            tauri_enabled=False,
+            desktop_enabled=False,
         )
 
-        assert handler.tauri_enabled is False
+        assert handler.desktop_enabled is False
         assert handler.retention_days == 30
         assert temp_dirs["backup_dir"].exists()
         assert (temp_dirs["backup_dir"] / "daily").exists()
 
-    def test_tauri_detection_environment_variable(self, temp_dirs, monkeypatch):
-        """Test: Tauri-Detection über Umgebungsvariable."""
-        monkeypatch.setenv("TAURI_ENABLED", "true")
+    def test_desktop_detection_environment_variable(self, temp_dirs, monkeypatch):
+        """Test: Desktop-Detection über Umgebungsvariable."""
+        monkeypatch.setenv("DESKTOP_ENABLED", "true")
 
         handler = BackupHandler(
             backup_root=temp_dirs["backup_dir"],
             db_path=temp_dirs["db_file"],
         )
 
-        assert handler.tauri_enabled is True
+        assert handler.desktop_enabled is True
 
-    def test_tauri_detection_explicit(self, temp_dirs):
-        """Test: Tauri-Detection mit explizitem Wert."""
+    def test_desktop_detection_explicit(self, temp_dirs):
+        """Test: Desktop-Detection mit explizitem Wert."""
         handler = BackupHandler(
             backup_root=temp_dirs["backup_dir"],
             db_path=temp_dirs["db_file"],
-            tauri_enabled=True,
+            desktop_enabled=True,
         )
 
-        assert handler.tauri_enabled is True
+        assert handler.desktop_enabled is True
 
     def test_database_backup_creation(self, temp_dirs):
         """Test: Datenbank-Backup wird erstellt."""
@@ -206,7 +206,7 @@ class TestBackupHandler:
 
         assert "last_db_backup" in status
         assert "backup_count" in status
-        assert status["tauri_enabled"] is False
+        assert status["desktop_enabled"] is False
         assert status["retention_days"] == 30
         assert status["backup_count"] == 1
 
@@ -284,7 +284,7 @@ class TestBackupScheduler:
             backup_hour=3,
             backup_minute=30,
             retention_days=7,
-            tauri_enabled=False,
+            desktop_enabled=False,
         )
 
         assert BackupScheduler._scheduler is not None

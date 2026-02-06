@@ -2,7 +2,7 @@
 Backup Service für Datenbanken und PDFs.
 
 Unterstützt zwei Modi:
-1. Tauri: Desktop-App Backups (nutzt AppData)
+1. Desktop: Electron Desktop-App Backups (nutzt AppData/Roaming)
 2. Basic: Einfache Datei-basierte Backups im Backend-Ordner
 """
 
@@ -24,7 +24,7 @@ def get_backup_paths():
     """
     Gibt Backup-Pfade zurück (respektiert DATA_DIR).
 
-    - Tauri Desktop-App: AppData/Roaming/Billino/backups/
+    - Electron Desktop-App: AppData/Roaming/Billino/backups/
     - Standalone FE/BE: backend/data/backups/
     """
     data_dir = get_data_dir()
@@ -41,14 +41,14 @@ class BackupHandler:
     """
     Zentrale Backup-Handler Klasse für DB und PDFs.
 
-    Erkennt automatisch Tauri-Umgebung und wählt entsprechende Backup-Strategie.
+    Erkennt automatisch Desktop-Umgebung (Electron) und wählt entsprechende Backup-Strategie.
     """
 
     def __init__(
         self,
         backup_root: Optional[Path] = None,
         db_path: Optional[Path] = None,
-        tauri_enabled: bool = False,
+        desktop_enabled: bool = False,
         retention_days: int = 30,
     ):
         """
@@ -57,7 +57,7 @@ class BackupHandler:
         Args:
             backup_root: Root-Verzeichnis für Backups (standard: get_backup_paths())
             db_path: Pfad zur Datenbank (standard: get_db_file())
-            tauri_enabled: Tauri-Modus aktiviert (default: False)
+            desktop_enabled: Desktop-Modus aktiviert / Electron (default: False)
             retention_days: Tage, bis alte Backups gelöscht werden (default: 30)
         """
         from database import get_db_file
@@ -71,39 +71,41 @@ class BackupHandler:
         self.PDF_INVOICES_PATH = paths["pdf_invoices"]
         self.PDF_SUMMARY_PATH = paths["pdf_summary"]
 
-        self.tauri_enabled = self._detect_tauri_enabled(tauri_enabled)
+        self.desktop_enabled = self._detect_desktop_enabled(desktop_enabled)
         self.retention_days = retention_days
 
         # Erstelle Backup-Verzeichnisse, falls nicht vorhanden
         self._ensure_backup_directories()
 
     @staticmethod
-    def _detect_tauri_enabled(tauri_enabled: bool) -> bool:
+    def _detect_desktop_enabled(desktop_enabled: bool) -> bool:
         """
-        Erkenne Tauri-Umgebung automatisch.
+        Erkenne Desktop-Umgebung (Electron) automatisch.
 
         Prüft auf:
-        - TAURI_ENABLED Umgebungsvariable
-        - Tauri-spezifische Prozess-Variablen
+        - DESKTOP_ENABLED Umgebungsvariable
+        - APP_ENV=desktop Umgebungsvariable
 
         Args:
-            tauri_enabled: Explizit gesetzter Wert (überschreibt Auto-Detection)
+            desktop_enabled: Explizit gesetzter Wert (überschreibt Auto-Detection)
 
         Returns:
-            True wenn Tauri aktiviert ist, sonst False
+            True wenn Desktop-Modus aktiviert ist, sonst False
         """
         # Expliziter Wert hat Vorrang
-        if tauri_enabled:
+        if desktop_enabled:
             return True
 
         # Auto-Detection über Umgebungsvariable
-        env_tauri = os.getenv("TAURI_ENABLED", "false").lower()
-        if env_tauri == "true":
-            logger.info("🖥️ Tauri-Modus erkannt (Umgebungsvariable)")
+        env_desktop = os.getenv("DESKTOP_ENABLED", "false").lower()
+        if env_desktop == "true":
+            logger.info("🖥️ Desktop-Modus erkannt (Umgebungsvariable)")
             return True
 
-        # Weitere Tauri-Indikatoren könnten hier geprüft werden
-        # (z.B. Prozess-Variablen, spezifische Dateien)
+        # Electron setzt APP_ENV=desktop
+        if os.getenv("APP_ENV", "").lower() == "desktop":
+            logger.info("🖥️ Desktop-Modus erkannt (APP_ENV=desktop)")
+            return True
 
         logger.info("💾 Basic-Modus aktiviert (lokal, dateibasiert)")
         return False
@@ -248,7 +250,7 @@ class BackupHandler:
             Dict mit:
             - last_db_backup: Datum/Zeit des letzten DB-Backups oder None
             - backup_count: Anzahl vorhandener Backups
-            - tauri_enabled: Boolean ob Tauri aktiv ist
+            - desktop_enabled: Boolean ob Desktop-Modus (Electron) aktiv ist
             - backup_path: Pfad zum Backup-Verzeichnis
         """
         backup_files = sorted(self.BACKUP_DAILY.glob("billino_*.db"), reverse=True)
@@ -260,7 +262,7 @@ class BackupHandler:
         return {
             "last_db_backup": last_backup,
             "backup_count": len(backup_files),
-            "tauri_enabled": self.tauri_enabled,
+            "desktop_enabled": self.desktop_enabled,
             "backup_path": str(self.BACKUP_DAILY),
             "retention_days": self.retention_days,
         }
