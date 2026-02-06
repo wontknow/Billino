@@ -45,7 +45,7 @@ backend/services/*.pdf
 docs/pr/
 docs/issues/
 docs/tickets/
-
+docs/release-notes/
 # Environment files
 .env
 .env.local
