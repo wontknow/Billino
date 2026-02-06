@@ -20,7 +20,8 @@ const nextConfig: NextConfig = {
   basePath: normalizedBasePath,
   // Desktop builds use the app:// custom protocol which handles absolute paths.
   // Non-desktop static exports use "./" for file:// or relative hosting compatibility.
-  assetPrefix: process.env.NEXT_ASSET_PREFIX ?? (isStaticExport && !isDesktopBuild ? "./" : undefined),
+  assetPrefix:
+    process.env.NEXT_ASSET_PREFIX ?? (isStaticExport && !isDesktopBuild ? "./" : undefined),
   turbopack: {
     root: __dirname,
   },
