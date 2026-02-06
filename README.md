@@ -1,6 +1,7 @@
 # ✂️ Invoice Tool für Kleinunternehmer 
 
 <!-- Core badges -->
+[![Download Setup](https://img.shields.io/badge/⬇_Download-Billino_Setup_v2.0.0-blue?style=for-the-badge)](https://github.com/wontknow/Billino/releases/latest/download/Billino.Setup.2.0.0.exe)
 [![BE Build Status](https://github.com/wontknow/Billino/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/wontknow/Billino/actions)
 [![FE Build Status](https://github.com/wontknow/Billino/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/wontknow/Billino/actions)
 [![Coverage Status](https://img.shields.io/codecov/c/github/wontknow/Billino?logo=codecov)](https://codecov.io/gh/wontknow/Billino)
