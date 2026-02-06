@@ -184,7 +184,7 @@ load_dotenv(dotenv_path=Path(__file__).parent / ".env", override=False)
 
 app = FastAPI(
     title="Billino Backend API",
-    version="0.1.0",
+    version="2.0.0",
     description="""
 # Billino Invoice Management API
 
