@@ -12,9 +12,14 @@ __pycache__/
 venv/
 env/
 *.db
+/backend/build/
+*/billino-backend.spec
 
-# Tauri / Rust
-target/
+app-builder-bin.tgz
+
+# Electron
+electron/dist/
+electron/node_modules/
 
 # OS/Editor
 .DS_Store
@@ -40,10 +45,12 @@ backend/services/*.pdf
 docs/pr/
 docs/issues/
 docs/tickets/
-
+docs/release-notes/
 # Environment files
 .env
 .env.local
+.env.desktop
 
 # Package manager lock files (auto-generated)
 frontend/package-lock.json
+electron/app-builder-bin-4.2.0.tgz

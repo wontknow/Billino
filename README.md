@@ -10,7 +10,7 @@
 
 <!-- Docs & Tech -->
 [![Docs](https://img.shields.io/badge/docs-passing-success)](https://github.com/wontknow/Billino/wiki)
-![Tech](https://img.shields.io/badge/stack-FastAPI%20|%20Next.js%20|%20Tauri-orange)
+![Tech](https://img.shields.io/badge/stack-FastAPI%20|%20Next.js%20|%20Electron-orange)
 
 <!-- Repo activity -->
 ![GitHub issues](https://img.shields.io/github/issues/wontknow/Billino)
@@ -39,7 +39,7 @@ Ein over-engineered **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trenn
 
 ## ✨ Features
 
-### ✅ Implementiert (v1.1.0 und später)
+### ✅ Implementiert (v1.0.0 – v2.0.0)
 
 #### Core Features (v1.0.0 MVP)
 - **Kundenverwaltung**: CRUD API für Stammkunden (Name, Adresse, Stadt)
@@ -110,19 +110,31 @@ Ein over-engineered **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trenn
 #### Neue Features (v1.2.0)
 - **Komplexe Filter & Sortierung**: Sortieren und Filtern der Tabellen nach ausgewählten Spalten
 
+#### Neue Features (v2.0.0)
+- **Desktop-App (Electron)**: Vollständige Desktop-Version als Windows-Installer
+  - 🖥️ Electron bündelt Backend + Frontend + SQLite in **eine Setup-Datei**
+  - 🚀 PyInstaller-gebundeltes FastAPI-Backend startet automatisch
+  - 📂 Daten in `%APPDATA%/Billino` (DB, Backups, PDFs, Logs)
+  - 💾 Automatisches Backup bei jedem App-Schließen
+  - 🔒 Offline-fähig – keine Internetverbindung nötig
+  - 📦 NSIS-Installer mit Deinstallation über Windows-Einstellungen
+  - 🔄 Custom `app://` Protocol für SPA-Routing im Static Export
+  - 📊 Renderer-Logging in electron-log für Debugging
+
 
 ### 🚧 Geplant
 - E-Rechnung (XRechnung / ZUGFeRD)
-- Desktop-App: Tauri v2 bündelt Backend + Frontend + DB in **eine ausführbare Datei**
-- Backup Strategie für Tauri Version
+- Datenexport (CSV/XLSX)
+- Cloud-Sync & Multi-Device
 
 ### 📦 Version History
+- **v2.0.0** ✅ (Februar 2026): Desktop-App mit Electron + PyInstaller-Bundle
 - **v1.2.0** ✅ (Dezember 2025): Komplexe Filter und Sortierung der Tabellen
 - **v1.1.0** ✅ (Dezember 2025): PDF Viewer, Customer Management, Profile Management, Backup System
 - **v1.0.0** ✅ (November 2025): MVP Complete - Invoicing Core, Profile Management, PDF Generation
 
-### 🎯 MVP v1.0.0 Status: ✅ RELEASED (November 2025) | v1.1.0 Status: ✅ RELEASED (Dezember 2025) | v1.2.0 Status: ✅ RELEASED (Dezember 2025)
-Alle **✅ Implementiert** Features = **Release Complete**. Alle neuen 🚧 Features = **Post-v1.2.0**.
+### 🎯 v2.0.0 Status: ✅ RELEASED (Februar 2026)
+Alle **✅ Implementiert** Features = **Release Complete**. Alle neuen 🚧 Features = **Post-v2.0.0**.
 
 ---
 
@@ -130,7 +142,7 @@ Alle **✅ Implementiert** Features = **Release Complete**. Alle neuen 🚧 Feat
 - **Frontend**: [Next.js 16](https://nextjs.org/docs/app) (App Router, Static Export), React 19, [shadcn/ui](https://ui.shadcn.com) (Radix UI + Tailwind), TypeScript (pnpm)
 - **Backend**: [FastAPI](https://fastapi.tiangolo.com), [SQLite](https://sqlite.org), [ReportLab](https://www.reportlab.com/docs/reportlab-userguide.pdf) (PDF)
 - **E-Rechnung**: XRechnung (KoSIT Specs), ZUGFeRD (PDF/A-3 + XML)
-- **Desktop-App**: [Tauri v2](https://v2.tauri.app/) mit Python-Sidecar (via [PyInstaller](https://pyinstaller.org/))
+- **Desktop-App**: [Electron](https://www.electronjs.org/) mit Python-Backend (via [PyInstaller](https://pyinstaller.org/))
 
 ---
 
@@ -154,7 +166,7 @@ backend/          # FastAPI, SQLite, Services
 └── requirements.txt
 
 frontend/         # Next.js 16 + React 19 + shadcn/ui + Tailwind v4 (pnpm)
-src-tauri/        # Tauri App-Shell, Sidecar-Konfig
+electron/         # Electron App-Shell, Desktop-Packaging
 .github/          # CI/CD, Issue-Templates, PR-Template
 README.md
 ```
@@ -233,7 +245,7 @@ ENV=development              # oder: production
 LOG_LEVEL=DEBUG              # oder: INFO (Production)
 
 # CORS – Lokale Entwicklung
-ALLOWED_ORIGINS=http://localhost:3000,tauri://localhost,http://192.168.2.116:3000
+ALLOWED_ORIGINS=http://localhost:3000,http://192.168.2.116:3000
 
 # Für Produktion (Deployment)
 # ENV=production
@@ -276,7 +288,7 @@ NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
 | Umgebung | NEXT_PUBLIC_API_URL |
 |----------|---------------------|
 | Local Dev | `http://127.0.0.1:8000` |
-| Tauri Desktop | `http://127.0.0.1:8000` (Sidecar) |
+| Electron Desktop | `http://127.0.0.1:8000` (bundled backend) |
 | Deployment | `https://api.billino.de` |
 
 **API-Service-Integration:**
@@ -396,10 +408,14 @@ Frontend-Routen (Auszug):
 
 ---
 
-### Desktop (Tauri v2)
+### Desktop (Electron)
 ```bash
-cd src-tauri
-cargo tauri dev
+# Dev-Modus (Backend muss separat laufen)
+cd electron
+npm run dev
+
+# Installer bauen (Frontend + Backend müssen vorher gebaut werden)
+npm run dist:win
 ```
 
 ---
@@ -527,12 +543,17 @@ jobs:
 - [x] **Bugfix** - Bugfix Summary Invoice erstellung mit mehreren Profilen
 - [x] **Feature** - Komplexe Filter und Sortierung der Tabellen
 
-**Post-v1.2.0 Phasen (zukünftig):**
-- [ ] **Phase 13** – Tauri Shell (Desktop App Bootstrap)
-- [ ] **Phase 14** – Backend Sidecar (Python-Integration in Tauri)
+**v2.0.0 Phasen (Februar 2026):**
+- [x] **Phase 13** – Electron Shell (Desktop App Bootstrap, Custom Protocol) ✅ v2.0.0
+- [x] **Phase 14** – Backend Bundle (PyInstaller-Integration in Electron) ✅ v2.0.0
+- [x] **Phase 14.1** – Desktop Lifecycle (Auto-Backup, Graceful Shutdown) ✅ v2.0.0
+- [x] **Phase 14.2** – NSIS Installer (Windows Setup.exe) ✅ v2.0.0
+
+**Post-v2.0.0 Phasen (zukünftig):**
 - [ ] **Phase 15** – E-Invoice Foundations (XRechnung/ZUGFeRD Integration)
-- [ ] **Phase 16** – Cloud-Sync & Multi-Device
-- [ ] **Phase 17** – Release & Production Deployment
+- [ ] **Phase 16** – Datenexport (CSV/XLSX)
+- [ ] **Phase 17** – Cloud-Sync & Multi-Device
+- [ ] **Phase 18** – Release & Production Deployment
 
 ---
 
@@ -654,7 +675,7 @@ DELETE /pdfs/789                 # PDF löschen
 - [ ] CI/CD Pipeline grün (Backend + Frontend Tests)  
 - [ ] README/Docs aktualisiert  
 - [ ] Keine Secrets im Code  
-- [ ] Build mit `tauri dev` lauffähig  
+- [ ] Build mit `electron` lauffähig  
 - [ ] PDF-Ausgabe geprüft  
 - [ ] (optional) E-Rechnung validiert (Validator)  
 
@@ -769,17 +790,17 @@ erDiagram
 
 ---
 
-## 📈 Entwicklungsstand (Dezember 2025)
+## 📈 Entwicklungsstand (Februar 2026)
 
-### Aktuelle Metriken (v1.2.0)
-- **Test-Suite**: 167+ Backend Tests + Frontend Tests (88% Coverage)
-- **Codebase**: ~6.000+ Lines of Code (ohne Scripts/Generated)
+### Aktuelle Metriken (v2.0.0)
+- **Test-Suite**: 295+ Backend Tests + Frontend Tests (88% Coverage)
+- **Codebase**: ~8.000+ Lines of Code (ohne Scripts/Generated)
 - **API-Endpunkte**: 30+ RESTful Endpoints
 - **Frontend-Features**: Backend-Core + Invoice-Form + Customer Management + Profile Management vollständig
 - **Logging**: Strukturiertes Backend + Frontend Logging System
 - **UI-Components**: 25+ shadcn/ui Components integriert
 
-### Code-Quality (v1.2.0)
+### Code-Quality (v2.0.0)
 - **Umfassende Validierung**: Alle Eingaben werden validiert (Pydantic/SQLModel + Zod)
 - **Error Handling**: Strukturierte HTTP-Fehlerantworten mit Field-Level Details
 - **Type Safety**: Vollständig typisiert mit Python Type Hints + TypeScript
@@ -791,13 +812,12 @@ erDiagram
 - **Backup System**: Automatische Datenbank-Backups mit Rotation
 
 ### Release Status
-- ✅ **v1.0.0 MVP**: November 2025 (Invoicing Core, PDF Generation)
+- ✅ **v2.0.0 Current**: Februar 2026 (Desktop-App mit Electron + PyInstaller-Bundle)
+- ✅ **v1.2.0**: Dezember 2025 (Komplexe Filter und Sortierung)
 - ✅ **v1.1.0**: Dezember 2025 (PDF Viewer, Customer Management, Profiles, Backup)
-- ✅ **v1.2.0 Current**: Dezember 2025 (Komplexe Filter und Sortierung)
+- ✅ **v1.0.0 MVP**: November 2025 (Invoicing Core, PDF Generation)
 
-### Nächste Schritte (v2.0.0+)
-#### Release 2.0.0
-1. **Desktop Integration**: Tauri v2 Shell mit Python Sidecar
+### Nächste Schritte (v2.1.0+)
 #### Release 2.1.0
 1. **Datenexport**: CSV/XLSX Export für relevante Daten
 
@@ -824,6 +844,7 @@ erDiagram
 - React 19 Docs: https://react.dev  
 
 ### Desktop & E-Invoice
-- Tauri v2 Docs: https://v2.tauri.app/  
+- Electron Docs: https://www.electronjs.org/docs  
+- electron-builder: https://www.electron.build/  
 - PyInstaller: https://pyinstaller.org/  
 - XRechnung (KoSIT FAQ): https://en.e-rechnung-bund.de/e-invoicing-faq/xrechnung/  

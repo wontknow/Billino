@@ -7,7 +7,7 @@ export function Header() {
       <Link href="/" className="font-semibold">
         Billino
       </Link>
-      <div className="text-xs md:text-sm text-muted-foreground">v1.2.0</div>
+      <div className="text-xs md:text-sm text-muted-foreground">v2.0.0</div>
     </header>
   );
 }

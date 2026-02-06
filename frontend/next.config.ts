@@ -2,6 +2,7 @@
 import type { NextConfig } from "next";
 
 const isStaticExport = process.env.NEXT_OUTPUT === "export";
+const isDesktopBuild = process.env.NEXT_DESKTOP === "true";
 
 const normalizedBasePath = (() => {
   const basePath = process.env.NEXT_BASE_PATH?.trim();
@@ -14,10 +15,13 @@ const trailingSlash =
   (isStaticExport && process.env.NEXT_TRAILING_SLASH !== "false");
 
 const nextConfig: NextConfig = {
-  // Enable static export only when explicitly requested (e.g., Tauri bundles)
+  // Enable static export only when explicitly requested (e.g., Electron desktop builds)
   output: isStaticExport ? "export" : undefined,
   basePath: normalizedBasePath,
-  assetPrefix: process.env.NEXT_ASSET_PREFIX ?? (isStaticExport ? "./" : undefined),
+  // Desktop builds use the app:// custom protocol which handles absolute paths.
+  // Non-desktop static exports use "./" for file:// or relative hosting compatibility.
+  assetPrefix:
+    process.env.NEXT_ASSET_PREFIX ?? (isStaticExport && !isDesktopBuild ? "./" : undefined),
   turbopack: {
     root: __dirname,
   },

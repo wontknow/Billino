@@ -6,7 +6,7 @@ Billino is an **over-engineered, offline-capable invoicing application** with cl
 
 - **Backend**: FastAPI + SQLite + SQLModel (Python 3.11+)
 - **Frontend**: Next.js 16 (App Router) + React 19 + shadcn/ui + Tailwind CSS v4 + TypeScript
-- **Desktop**: Tauri v2 (planned)
+- **Desktop**: Electron (with bundled FastAPI backend)
 - **Database**: SQLite with Foreign Key constraints
 - **PDF Generation**: ReportLab (A4 and A6 formats)
 
@@ -449,7 +449,7 @@ refactor: simplify tax calculation logic
 # backend/.env
 ENV=development              # or: production
 LOG_LEVEL=DEBUG              # or: INFO
-ALLOWED_ORIGINS=http://localhost:3000,tauri://localhost
+ALLOWED_ORIGINS=http://localhost:3000
 ```
 
 ### Frontend Environment Variables
