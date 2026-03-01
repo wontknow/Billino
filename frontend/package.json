@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "export": "cross-env NEXT_OUTPUT=export NEXT_ASSET_PREFIX=./ NEXT_BASE_PATH= NEXT_TRAILING_SLASH=true next build",
+    "export:desktop": "cross-env NEXT_OUTPUT=export NEXT_DESKTOP=true NEXT_BASE_PATH= NEXT_TRAILING_SLASH=true next build",
     "test": "jest --config jest.config.cjs --passWithNoTests",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
