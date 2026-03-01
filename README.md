@@ -1,7 +1,7 @@
 # ✂️ Invoice Tool für Kleinunternehmer 
 
 <!-- Core badges -->
-[![Download Setup](https://img.shields.io/badge/⬇_Download-Billino_Setup_v2.0.0-blue?style=for-the-badge)](https://github.com/wontknow/Billino/releases/latest/download/Billino.Setup.2.0.0.exe)
+[![Download Setup](https://img.shields.io/badge/⬇_Download-Billino_Setup_v2.0.1-blue?style=for-the-badge)](https://github.com/wontknow/Billino/releases/latest/download/Billino.Setup.2.0.1.exe)
 
 [![BE Build Status](https://github.com/wontknow/Billino/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/wontknow/Billino/actions)
 [![FE Build Status](https://github.com/wontknow/Billino/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/wontknow/Billino/actions)
@@ -130,6 +130,7 @@ Ein over-engineered **offlinefähiges Rechnungsprogramm** mit klarer FE/BE-Trenn
 - Cloud-Sync & Multi-Device
 
 ### 📦 Version History
+- **v2.0.1** ✅ (März 2026): VC++ Redistributable wird automatisch vom Installer mitinstalliert (Fix: Crash auf PCs ohne VC++ Runtime)
 - **v2.0.0** ✅ (Februar 2026): Desktop-App mit Electron + PyInstaller-Bundle
 - **v1.2.0** ✅ (Dezember 2025): Komplexe Filter und Sortierung der Tabellen
 - **v1.1.0** ✅ (Dezember 2025): PDF Viewer, Customer Management, Profile Management, Backup System
@@ -814,7 +815,8 @@ erDiagram
 - **Backup System**: Automatische Datenbank-Backups mit Rotation
 
 ### Release Status
-- ✅ **v2.0.0 Current**: Februar 2026 (Desktop-App mit Electron + PyInstaller-Bundle)
+- ✅ **v2.0.1 Current**: März 2026 (Fix: VC++ Runtime automatisch mitinstalliert)
+- ✅ **v2.0.0**: Februar 2026 (Desktop-App mit Electron + PyInstaller-Bundle)
 - ✅ **v1.2.0**: Dezember 2025 (Komplexe Filter und Sortierung)
 - ✅ **v1.1.0**: Dezember 2025 (PDF Viewer, Customer Management, Profiles, Backup)
 - ✅ **v1.0.0 MVP**: November 2025 (Invoicing Core, PDF Generation)

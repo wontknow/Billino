@@ -1,6 +1,6 @@
 {
   "name": "billino-desktop",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Billino – Offline-Rechnungssoftware für Kleinunternehmer",
   "author": "wontknow",
   "license": "MIT",
@@ -67,7 +67,8 @@
       "installerIcon": "icons/icon.ico",
       "uninstallerIcon": "icons/icon.ico",
       "installerHeaderIcon": "icons/icon.ico",
-      "deleteAppDataOnUninstall": false
+      "deleteAppDataOnUninstall": false,
+      "include": "build/installer.nsh"
     },
     "mac": {
       "target": [
