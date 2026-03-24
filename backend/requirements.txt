@@ -1,11 +1,11 @@
-fastapi==0.132.0
-uvicorn==0.41.0
+fastapi==0.135.2
+uvicorn==0.42.0
 pytest==9.0.2
 httpx==0.28.1
-pytest-cov==7.0.0
-black==26.1.0
-isort==8.0.0
+pytest-cov==7.1.0
+black==26.3.1
+isort==8.0.1
 sqlmodel==0.0.37
 reportlab==4.4.10
-python-dotenv==1.2.1
+python-dotenv==1.2.2
 apscheduler==3.11.2
